@@ -26,21 +26,29 @@ Secure the application and manage user accounts using **Better-Auth** with Prism
 ## Technical Flow
 
 ### 1. Unified Access Control
-Middleware (`middleware.ts`) protects all routes except static assets and public API routes.
-- **Header Injection:** Middleware injects `x-current-path` header to allow Server Components to know the current URL.
-- **Admin Auth:** Basic Auth for `/admin` routes.
+Middleware (`src/proxy.ts`) injects metadata for Server Components and handles early routing checks.
+- **Header Injection:** Injects `x-current-path` header to allow Server Components to know the current URL.
+- **RBAC Protection:** Admin routes (`/admin`) are protected by checking the user's `role` field in the session.
+- **Redirects:** Non-admin users attempting to access `/admin` are redirected to `/dashboard`.
 
-### 2. Redirect Logic
-- **Layouts:** `ProjectLayout` and `DashboardLayout` check for authentication.
-- **Unauthenticated:** Redirects to `/auth/login?callbackUrl=...` using the `x-current-path` header.
-- **Authenticated:** Users are redirected back to their original destination after login.
+### 2. RBAC (Role-Based Access Control)
+The system uses a tiered role system stored in the database:
+- **USER:** Default role for all signups.
+- **ADMIN:** Full access to Sales, Projects, and Requests management.
+- **Promotion:** Admins are promoted via a CLI script (`scripts/promote-admin.ts`) for enhanced security.
 
-### 3. Sign Up Flow
-1. User clicks "Get Started" (redirects to `/dashboard` if already logged in).
-2. Navigates to `/auth/register`.
-3. Completes signup or social login.
-4. Session is established via cookies.
-5. User is redirected to `/dashboard` or the `callbackUrl`.
+---
+
+## Technical Details
+
+### User Model Extension
+Added `role` field (String, default: "USER") to the Prisma `User` model.
+
+### Better-Auth Configuration (`src/lib/auth.ts`)
+Configured `additionalFields` to include `role` in the session object, enabling efficient client and server-side checks.
+
+### Server-Side Protection (`src/lib/auth-server.ts`)
+`requireAdmin()` helper provides a standard way to protect both Page layouts and API Routes.
 
 ---
 
@@ -49,5 +57,7 @@ Middleware (`middleware.ts`) protects all routes except static assets and public
 - [x] Create `/auth/login/page.tsx`
 - [x] Create `/auth/register/page.tsx`
 - [x] Create `/profile/page.tsx`
-- [x] Implement Middleware for Admin Auth and Path Injection
-- [x] Update Navbar/Hero links to use conditional forwarding
+- [x] Implement Middleware for Path Injection
+- [x] Implement Session-based RBAC for `/admin`
+- [x] Remove legacy Basic Auth from `proxy.ts`
+- [x] Create Admin Promotion CLI script

@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-server";
+import { requireAdmin } from "@/lib/auth-server";
 import { TopicSwitchService } from "@/services/topic-switch.service";
 
 export async function POST(
@@ -8,14 +8,9 @@ export async function POST(
     context: { params: Promise<{ id: string }> } // Fix for Next.js 15+ async params
 ) {
     try {
-        const user = await getCurrentUser();
-        // TODO: Add proper Admin Role check. 
-        // For now, assuming anyone hitting this route in the "admin" layout implies some protection,
-        // but robust RBAC is needed. Since we don't have a rigid RBAC system in the prompt memories,
-        // we'll rely on the existing auth check and maybe an email allowlist if we wanted to be safe.
-        // But for this prototype:
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const admin = await requireAdmin();
+        if (!admin) {
+            return NextResponse.json({ error: "Unauthorized. Admin role required." }, { status: 403 });
         }
 
         const params = await context.params;
@@ -31,7 +26,7 @@ export async function POST(
             return NextResponse.json({ error: "Invalid status" }, { status: 400 });
         }
 
-        const result = await TopicSwitchService.reviewRequest(requestId, status, user.id);
+        const result = await TopicSwitchService.reviewRequest(requestId, status, admin.id);
 
         return NextResponse.json({ success: true, request: result });
     } catch (error: any) {

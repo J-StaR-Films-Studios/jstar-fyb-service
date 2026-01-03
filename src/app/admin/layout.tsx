@@ -9,9 +9,11 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const user = await getCurrentUser();
-    // Basic protection - in real app, check role
+    const user = await getCurrentUser() as any;
+
+    // Auth & RBAC Protection
     if (!user) redirect('/auth/login');
+    if (user.role !== 'ADMIN') redirect('/dashboard');
 
     const navItems = [
         { href: '/admin', label: 'Overview', icon: Home },

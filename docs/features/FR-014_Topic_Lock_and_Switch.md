@@ -34,14 +34,16 @@ This system ensures that:
 
 ### UI Components
 #### [MODIFY] [BuilderClient.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/builder/components/BuilderClient.tsx)
-- Add check: If `project.isLocked`, disable "Back" navigation to previous steps (like topic selection).
+- **Navigation Lock**: Disables "Back" navigation when the project is locked to prevent accidental topic changes after payment.
 
-#### [NEW] [TopicLockModal.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/billing/components/TopicLockModal.tsx)
-- Modal component shown before initiating payment.
-- Contains warning text and "I understand" checkbox.
+#### [MODIFY] [ChapterOutliner.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/builder/components/ChapterOutliner.tsx)
+- **Navigation Recovery**: Added a "Change Topic" link that allows users to loop back to Step 1. This is critical for users whose topic switch request was approved (leaving the project in an unlocked but previously "Generated" state).
 
-#### [NEW] [TopicSwitchRequestForm.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/support/components/TopicSwitchRequestForm.tsx)
-- Form for user to request switch (Reason dropdown, File upload for proof).
+### Proof of Rejection Implementation
+To minimize infrastructure dependencies, "Proof" for topic switch requests is handled as follows:
+- **Client**: `TopicSwitchRequestForm` converts the uploaded image (max 2MB) to a **Base64 Data URL** using `FileReader`.
+- **Database**: The Base64 string is stored directly in the `proofUrl` field of the `TopicSwitchRequest` model.
+- **Admin**: `ProofModal` renders the Base64 string in a dialog popup to avoid browser "About:Blank" blocks on direct Data URL navigation.
 
 ## Verification Plan
 

@@ -20,3 +20,15 @@ export async function getCurrentUser() {
     const session = await getSession();
     return session?.user ?? null;
 }
+
+/**
+ * Helper to require ADMIN role.
+ * Throws a redirect or returns null for API routes.
+ */
+export async function requireAdmin() {
+    const user = await getCurrentUser() as any;
+    if (!user || user.role !== 'ADMIN') {
+        return null;
+    }
+    return user;
+}
