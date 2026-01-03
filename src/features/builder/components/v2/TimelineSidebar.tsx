@@ -69,6 +69,7 @@ export interface TimelineSidebarProps {
         title: string;
         status: 'locked' | 'draft' | 'in-progress' | 'complete';
         subsections?: string[];
+        wordCount?: number;
     }[];
     activeChapterNumber: number;
     onChapterSelect: (number: number) => void;
@@ -92,9 +93,14 @@ export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, o
             <div className="p-6 border-b border-white/5 shrink-0">
                 <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block">Current Project</span>
                 <h2 className="text-white font-bold leading-tight mb-2 line-clamp-2">{projectTitle || 'Loading Project...'}</h2>
-                <div className="flex items-center gap-2 text-xs">
-                    <span className="bg-green-500/10 text-green-400 px-2 py-0.5 rounded animate-pulse">Online</span>
-                    <span className="text-gray-500">Last edited 2m ago</span>
+                <div className="flex items-center gap-3 text-xs">
+                    <span className="text-gray-400">
+                        {chapters.reduce((acc, c) => acc + (c.wordCount || 0), 0).toLocaleString()} words
+                    </span>
+                    <span className="text-gray-600">•</span>
+                    <span className="text-primary font-bold">
+                        {Math.round((chapters.filter(c => (c.wordCount || 0) > 50).length / 5) * 100)}% complete
+                    </span>
                 </div>
             </div>
 

@@ -312,6 +312,14 @@ Before moving to Phase 2, verify:
 - **Mobile Chat**: Integrated "AI Chat" tab in `MobileFloatingNav` and "Enhance" button in `SectionEditor` (saves content -> opens chat).
 - **Dynamic Stats**: Replaced hardcoded word count/progress with live data calculations.
 
+#### Hotfix 2026-01-04: Progress Percentage Calculation
+- **Problem**: The "Complete" percentage was stuck at 0% because the code filtered for `status === 'complete'`, but chapter statuses in the database are `'GENERATED'`, `'EDITING'`, or `'DRAFT'` — never `'complete'`.
+- **Solution**: Updated `MobileTimelineView.tsx` and `TimelineSidebar.tsx` to use the formula:
+  ```typescript
+  Math.round((chapters.filter(c => (c.wordCount || 0) > 50).length / 5) * 100)
+  ```
+  This calculates: **(chapters with >50 words) / 5 total chapters × 100**
+
 ---
 
 ## PHASE 2 [COMPLETE ✅]: Research Integration

@@ -31,9 +31,7 @@ export function MobileTimelineView({ chapters, onChapterClick }: MobileTimelineV
                         <Clock className="w-5 h-5 text-gray-400" />
                         <div>
                             <span className="text-2xl font-display font-bold text-white">
-                                {Math.round((
-                                    (chapters?.filter(c => c.status === 'complete').length || 0)
-                                ) / (chapters?.length || 1) * 100)}%
+                                {Math.round(((chapters?.filter(c => (c.wordCount || 0) > 50).length || 0) / 5) * 100)}%
                             </span>
                             <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mt-1">Complete</p>
                         </div>
