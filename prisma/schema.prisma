@@ -250,12 +250,29 @@ model TopicSwitchRequest {
   projectId   String
   reason      String
   proofUrl    String?
-  status      String    @default("pending")
+  status      String    @default("pending") // pending | pending_payment | approved | denied
   fee         Int?
+  paymentRef  String?   // Paystack reference for fee payment
+  paidAt      DateTime?
   createdAt   DateTime  @default(now())
   resolvedAt  DateTime?
   resolvedBy  String?
   explanation String?
+}
+
+// Archives old project content before topic switch (for data analysis)
+model TopicSwitchArchive {
+  id           String   @id @default(cuid())
+  requestId    String   // Links to TopicSwitchRequest
+  projectId    String
+  oldTopic     String
+  oldTwist     String?
+  oldAbstract  String?
+  oldOutline   Json?    // The ChapterOutline.content JSON
+  oldChapters  Json?    // Array of { number, title, content, wordCount }
+  archivedAt   DateTime @default(now())
+  
+  @@index([projectId])
 }
 
 model InAppNotification {

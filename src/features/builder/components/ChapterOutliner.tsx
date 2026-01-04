@@ -20,6 +20,7 @@ import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TopicLockModal } from "@/features/billing/components/TopicLockModal";
+import { TopicChangeWarningModal } from "./TopicChangeWarningModal";
 
 export function ChapterOutliner() {
     const { data, isPaid, unlockPaywall, updateData, setMode } = useBuilderStore();
@@ -32,6 +33,21 @@ export function ChapterOutliner() {
 
     // Lock Warning Logic
     const [isLockModalOpen, setIsLockModalOpen] = useState(false);
+
+    // Topic Change Warning Logic (for recently unlocked projects)
+    // Detect: project is unlocked (isLocked=false) AND isPaid AND has no abstract
+    // This combination means admin approved a topic switch and content was cleared
+    const wasRecentlyUnlocked = isPaid && !data.isLocked && !data.abstract && data.topic;
+    const [showTopicChangeWarning, setShowTopicChangeWarning] = useState(false);
+    const hasShownWarningRef = useRef(false);
+
+    // Show warning modal on mount if project is in "recently unlocked" state
+    useEffect(() => {
+        if (wasRecentlyUnlocked && !hasShownWarningRef.current) {
+            hasShownWarningRef.current = true;
+            setShowTopicChangeWarning(true);
+        }
+    }, [wasRecentlyUnlocked]);
 
     // Initial Trigger (opens modal)
     const handleUnlock = () => {
@@ -292,6 +308,22 @@ export function ChapterOutliner() {
                 onConfirm={proceedToPayment}
                 topic={data.topic || "Your Project"}
             />
+
+            {/* Topic Change Warning Modal - shown when project was unlocked for topic switch */}
+            <TopicChangeWarningModal
+                isOpen={showTopicChangeWarning}
+                projectTopic={data.topic || "Your Project"}
+                onProceed={() => {
+                    setShowTopicChangeWarning(false);
+                    // Go to TOPIC step to let user pick a new topic
+                    useBuilderStore.setState({ step: 'TOPIC' });
+                }}
+                onCancel={() => {
+                    setShowTopicChangeWarning(false);
+                    router.push('/dashboard');
+                }}
+            />
         </>
     );
 }
+

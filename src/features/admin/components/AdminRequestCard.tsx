@@ -1,7 +1,7 @@
 
 import { TopicSwitchRequest } from "@prisma/client";
 import { formatDistanceToNow } from "date-fns";
-import { Check, X, FileText, User } from "lucide-react";
+import { Check, X, FileText, User, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RequestRowActions } from "@/app/admin/requests/RequestRowActions"; // Reuse actions
 import { ProofModal } from "./ProofModal";
@@ -12,6 +12,30 @@ interface AdminRequestCardProps {
         user?: { name: string | null; email: string };
     };
 }
+
+const getStatusStyles = (status: string) => {
+    switch (status) {
+        case 'pending':
+            return "bg-yellow-500/10 text-yellow-500";
+        case 'pending_payment':
+            return "bg-blue-500/10 text-blue-500";
+        case 'approved':
+            return "bg-green-500/10 text-green-500";
+        case 'denied':
+            return "bg-red-500/10 text-red-500";
+        default:
+            return "bg-gray-500/10 text-gray-500";
+    }
+};
+
+const getStatusLabel = (status: string) => {
+    switch (status) {
+        case 'pending_payment':
+            return 'Awaiting Payment';
+        default:
+            return status;
+    }
+};
 
 export function AdminRequestCard({ request }: AdminRequestCardProps) {
     return (
@@ -27,14 +51,21 @@ export function AdminRequestCard({ request }: AdminRequestCardProps) {
                         <div className="text-xs text-gray-500">{request.user?.email}</div>
                     </div>
                 </div>
-                <span className={cn(
-                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
-                    request.status === 'pending' ? "bg-yellow-500/10 text-yellow-500" :
-                        request.status === 'approved' ? "bg-green-500/10 text-green-500" :
-                            "bg-red-500/10 text-red-500"
-                )}>
-                    {request.status}
-                </span>
+                <div className="flex items-center gap-2">
+                    {/* Fee Badge */}
+                    {request.fee && request.fee > 0 && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 flex items-center gap-1">
+                            <CreditCard className="w-3 h-3" />
+                            ₦{request.fee.toLocaleString()}
+                        </span>
+                    )}
+                    <span className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
+                        getStatusStyles(request.status)
+                    )}>
+                        {getStatusLabel(request.status)}
+                    </span>
+                </div>
             </div>
 
             {/* Request Details */}
@@ -49,6 +80,12 @@ export function AdminRequestCard({ request }: AdminRequestCardProps) {
                         {request.reason === 'changed_mind' ? 'Changed Mind' : 'Lecturer Rejected'}
                     </span>
                 </div>
+                {request.explanation && (
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-gray-500 uppercase font-bold">Explanation</span>
+                        <span className="text-sm text-gray-400 line-clamp-2">{request.explanation}</span>
+                    </div>
+                )}
             </div>
 
             {/* Actions */}
@@ -61,7 +98,13 @@ export function AdminRequestCard({ request }: AdminRequestCardProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <RequestRowActions requestId={request.id} currentStatus={request.status} />
+                    {/* Only show review actions for pending requests */}
+                    {request.status === 'pending' && (
+                        <RequestRowActions requestId={request.id} currentStatus={request.status} />
+                    )}
+                    {request.status === 'pending_payment' && (
+                        <span className="text-xs text-blue-400">Waiting for user payment</span>
+                    )}
                 </div>
             </div>
         </div>

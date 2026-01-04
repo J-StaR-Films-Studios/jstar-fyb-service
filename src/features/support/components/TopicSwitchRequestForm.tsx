@@ -29,7 +29,8 @@ export function TopicSwitchRequestForm({ project }: TopicSwitchRequestFormProps)
                     projectId: project.id,
                     reason,
                     explanation,
-                    proofUrl: proofFile // Send Base64 string directly
+                    proofUrl: proofFile, // Send Base64 string directly
+                    fee: reason === 'changed_mind' ? 2000 : undefined // ₦2,000 fee for changed mind
                 })
             });
 
@@ -37,9 +38,6 @@ export function TopicSwitchRequestForm({ project }: TopicSwitchRequestFormProps)
                 const data = await res.json();
                 throw new Error(data.error || "Failed to submit");
             }
-
-            // If reason is changed_mind, we'd redirect to payment (Flow TBD).
-
 
             toast.success("Request submitted successfully!");
             setIsSuccess(true);
@@ -59,7 +57,9 @@ export function TopicSwitchRequestForm({ project }: TopicSwitchRequestFormProps)
                 <h3 className="text-lg font-bold text-white mb-2">Request Submitted</h3>
                 <p className="text-gray-400 text-sm">
                     We've received your request. Our support team will review it shortly.
-                    {reason === 'lecturer_rejected' ? ' You will be notified once approved.' : ' Please check your email for payment instructions.'}
+                    {reason === 'lecturer_rejected'
+                        ? ' You will be notified once approved.'
+                        : ' Once approved, you\'ll receive a payment link to complete your topic switch.'}
                 </p>
             </div>
         );
