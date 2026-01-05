@@ -349,6 +349,23 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                         )}
                     </div>
                 </aside>
+
+                {/* Enhance Popover - Desktop */}
+                {showEnhancePopover && activeChapter && (
+                    <EnhanceOptionsPopover
+                        projectId={projectId}
+                        chapterNumber={activeChapterNumber}
+                        selectedContent={contentToEnhance}
+                        chapterContext={activeChapter.content}
+                        onApply={(enhancedContent) => {
+                            const newContent = activeChapter.content === contentToEnhance
+                                ? enhancedContent
+                                : activeChapter.content.replace(contentToEnhance, enhancedContent);
+                            handleSave(newContent);
+                        }}
+                        onClose={() => setShowEnhancePopover(false)}
+                    />
+                )}
             </div>
         );
     }

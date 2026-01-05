@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
-import { Bold, Italic, List, Image, Check, Loader2, Heading, Sparkles } from 'lucide-react';
+import { Bold, Italic, List, Image, Heading, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ImagePickerDialog } from './ImagePickerDialog';
+import { NovelEditor } from './NovelEditor';
+import { type Editor as TipTapEditor } from '@tiptap/core';
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 
@@ -21,32 +23,12 @@ interface WritingCanvasProps {
 }
 
 export function WritingCanvas({ title, content, onValidChange, headerRight, saveStatus: externalSaveStatus, onEnhanceClick, projectId }: WritingCanvasProps) {
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const [localContent, setLocalContent] = useState(content || '');
+    const [editor, setEditor] = useState<TipTapEditor | null>(null);
     const [internalSaveStatus, setInternalSaveStatus] = useState<SaveStatus>('idle');
     const [showImagePicker, setShowImagePicker] = useState(false);
 
     // Use external status if provided, otherwise internal
     const saveStatus = externalSaveStatus ?? internalSaveStatus;
-
-    // Sync local state when content prop changes (e.g., chapter switching)
-    useEffect(() => {
-        setLocalContent(content || '');
-    }, [content]);
-
-    // Auto-resize textarea to fit content
-    const adjustHeight = useCallback(() => {
-        const textarea = textareaRef.current;
-        if (textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = `${Math.max(textarea.scrollHeight, 600)}px`;
-        }
-    }, []);
-
-    // Adjust height on content change and initial mount
-    useEffect(() => {
-        adjustHeight();
-    }, [localContent, adjustHeight]);
 
     // Debounced save callback - 1.5 second delay
     const debouncedSave = useDebouncedCallback(
@@ -63,92 +45,75 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
         1500
     );
 
-    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newValue = e.target.value;
-        setLocalContent(newValue);
-        adjustHeight();
-        // Trigger debounced save
-        debouncedSave(newValue);
+    const handleContentUpdate = (newContent: string) => {
+        debouncedSave(newContent);
     };
 
-    // Rich text formatting helper
-    const insertFormatting = (format: 'bold' | 'italic' | 'list' | 'image' | 'heading') => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-
-        if (format === 'image') {
-            setShowImagePicker(true);
-            return;
-        }
-
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selectedText = localContent.substring(start, end);
-
-        let newText = '';
-        let cursorOffset = 0;
+    // Rich text formatting helper - mapped to Novel/TipTap commands
+    const toggleFormatting = (format: 'bold' | 'italic' | 'list' | 'heading' | 'image') => {
+        if (!editor) return;
 
         switch (format) {
             case 'bold':
-                newText = `**${selectedText || 'bold text'}**`;
-                cursorOffset = selectedText ? 0 : -2;
+                // @ts-ignore
+                editor.chain().focus().toggleBold().run();
                 break;
             case 'italic':
-                newText = `*${selectedText || 'italic text'}*`;
-                cursorOffset = selectedText ? 0 : -1;
+                // @ts-ignore
+                editor.chain().focus().toggleItalic().run();
                 break;
             case 'heading':
-                newText = `\n## ${selectedText || 'Heading'}\n`;
-                cursorOffset = selectedText ? 0 : -1;
+                // @ts-ignore
+                editor.chain().focus().toggleHeading({ level: 2 }).run();
                 break;
             case 'list':
-                newText = `\n- ${selectedText || 'List item'}`;
-                cursorOffset = 0;
+                // @ts-ignore
+                editor.chain().focus().toggleBulletList().run();
+                break;
+            case 'image':
+                setShowImagePicker(true);
                 break;
         }
-
-        const newContent = localContent.substring(0, start) + newText + localContent.substring(end);
-        setLocalContent(newContent);
-        debouncedSave(newContent);
-
-        // Restore cursor position and focus
-        setTimeout(() => {
-            textarea.focus();
-            const newPos = start + newText.length + cursorOffset;
-            textarea.setSelectionRange(newPos, newPos);
-        }, 0);
     };
 
     const handleImageInsert = (imageMarkdown: string) => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
+        if (!editor) return;
 
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-
-        const newContent = localContent.substring(0, start) + imageMarkdown + localContent.substring(end);
-        setLocalContent(newContent);
-        debouncedSave(newContent);
-
-        setTimeout(() => {
-            textarea.focus();
-            const newPos = start + imageMarkdown.length;
-            textarea.setSelectionRange(newPos, newPos);
-        }, 0);
+        // Extract URL and Alt from markdown: ![alt](url)
+        const match = imageMarkdown.match(/!\[(.*?)\]\((.*?)\)/);
+        if (match) {
+            const [, alt, src] = match;
+            // @ts-ignore
+            editor.chain().focus().setImage({ src, alt }).run();
+        } else {
+            // Fallback just insert text if parsing fails
+            editor.chain().focus().insertContent(imageMarkdown).run();
+        }
     };
 
     const handleEnhance = () => {
         if (!onEnhanceClick) return;
-        const textarea = textareaRef.current;
-        if (!textarea) {
-            onEnhanceClick(localContent);
+
+        if (!editor) {
+            console.warn("Editor not initialized");
             return;
         }
 
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selected = start !== end ? localContent.substring(start, end) : localContent;
-        onEnhanceClick(selected);
+        const { from, to } = editor.state.selection;
+        const text = editor.state.doc.textBetween(from, to, ' ');
+
+        // If no text selected, might want to grab all or current paragraph?
+        // For now, mirroring previous behavior: pass empty if nothing selected, 
+        // OR pass full content? Previous impl passed selection or full content if start===end?
+        // Let's pass selection if exists, else full content.
+
+        if (!text && from === to) {
+            // @ts-ignore
+            const fullText = editor.storage.markdown?.getMarkdown() || '';
+            onEnhanceClick(fullText);
+        } else {
+            onEnhanceClick(text);
+        }
     }
 
     return (
@@ -158,19 +123,19 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
                 <div className="flex items-center gap-1">
                     {title && <h2 className="text-sm font-bold text-gray-400 mr-4 uppercase tracking-wider">{title}</h2>}
                     <div className="h-4 w-px bg-white/10 mx-2" />
-                    <button onClick={() => insertFormatting('bold')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Bold">
+                    <button onClick={() => toggleFormatting('bold')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Bold">
                         <Bold className="w-4 h-4" />
                     </button>
-                    <button onClick={() => insertFormatting('italic')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Italic">
+                    <button onClick={() => toggleFormatting('italic')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Italic">
                         <Italic className="w-4 h-4" />
                     </button>
-                    <button onClick={() => insertFormatting('heading')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Heading">
+                    <button onClick={() => toggleFormatting('heading')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Heading">
                         <Heading className="w-4 h-4" />
                     </button>
-                    <button onClick={() => insertFormatting('list')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="List">
+                    <button onClick={() => toggleFormatting('list')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="List">
                         <List className="w-4 h-4" />
                     </button>
-                    <button onClick={() => insertFormatting('image')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Image">
+                    <button onClick={() => toggleFormatting('image')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Image">
                         <Image className="w-4 h-4" />
                     </button>
                 </div>
@@ -180,15 +145,13 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-8 md:px-12 lg:px-16" onClick={() => textareaRef.current?.focus()}>
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-8 md:px-12 lg:px-16">
                 <div className="max-w-4xl mx-auto h-full min-h-[500px]">
-                    <textarea
-                        ref={textareaRef}
-                        value={localContent}
-                        onChange={handleChange}
-                        className="w-full h-full bg-transparent border-none outline-none resize-none text-lg leading-loose text-gray-300 placeholder-gray-700 font-serif"
-                        placeholder="Start writing your chapter..."
-                        spellCheck={false}
+                    <NovelEditor
+                        content={content || ''}
+                        onUpdate={handleContentUpdate}
+                        projectId={projectId}
+                        onEditorReady={(e) => setEditor(e as any)}
                     />
                 </div>
             </div>

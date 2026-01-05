@@ -5,6 +5,8 @@ import { X, Bold, Heading, List, Image, Mic, Sparkles, MessageSquare, Check, Loa
 import { useDebouncedCallback } from 'use-debounce';
 import { VersionHistoryDropdown } from './VersionHistoryDropdown';
 import { ImagePickerDialog } from './ImagePickerDialog';
+import { NovelEditor } from './NovelEditor';
+import { type EditorInstance } from 'novel';
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 
@@ -22,10 +24,10 @@ interface SectionEditorProps {
 }
 
 export function SectionEditor({ title, content: initialContent, wordCount: initialWordCount = 0, onClose, onSave, onOpenChat, projectId, chapterNumber, currentVersion, onEnhanceClick }: SectionEditorProps) {
+    const [editor, setEditor] = useState<EditorInstance | null>(null);
     const [editedContent, setEditedContent] = useState(initialContent);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
     const [showImagePicker, setShowImagePicker] = useState(false);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Calculate word count on the fly
     const currentWordCount = useMemo(() => {
@@ -43,8 +45,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
         1500
     );
 
-    const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newContent = e.target.value;
+    const handleContentUpdate = (newContent: string) => {
         setEditedContent(newContent);
         debouncedSave(newContent);
     };
@@ -58,82 +59,65 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
 
     const handleEnhance = () => {
         if (!onEnhanceClick) return;
-        const textarea = textareaRef.current;
-        if (!textarea) {
+
+        if (!editor) {
             onEnhanceClick(editedContent);
             return;
         }
 
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selected = start !== end ? editedContent.substring(start, end) : editedContent;
-        onEnhanceClick(selected);
+        const { from, to } = editor.state.selection;
+        const text = editor.state.doc.textBetween(from, to, ' ');
+
+        if (!text && from === to) {
+            // @ts-ignore
+            const fullText = editor.storage.markdown?.getMarkdown() || editedContent;
+            onEnhanceClick(fullText);
+        } else {
+            onEnhanceClick(text);
+        }
     };
 
     const handleImageInsert = (imageMarkdown: string) => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
+        if (!editor) return;
 
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-
-        const newContent = editedContent.substring(0, start) + imageMarkdown + editedContent.substring(end);
-        setEditedContent(newContent);
-        debouncedSave(newContent);
-
-        setTimeout(() => {
-            textarea.focus();
-            const newPos = start + imageMarkdown.length;
-            textarea.setSelectionRange(newPos, newPos);
-        }, 0);
+        // Extract URL and Alt from markdown: ![alt](url)
+        const match = imageMarkdown.match(/!\[(.*?)\]\((.*?)\)/);
+        if (match) {
+            const [, alt, src] = match;
+            // @ts-ignore
+            editor.chain().focus().setImage({ src, alt }).run();
+        } else {
+            editor.chain().focus().insertContent(imageMarkdown).run();
+        }
     };
 
-    // Rich text formatting helper
-    const insertFormatting = (format: 'bold' | 'heading' | 'list' | 'image' | 'italic') => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-
+    // Rich text formatting helper - now uses TipTap commands
+    const toggleFormatting = (format: 'bold' | 'heading' | 'list' | 'image' | 'italic') => {
         if (format === 'image') {
             setShowImagePicker(true);
             return;
         }
 
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selectedText = editedContent.substring(start, end);
-
-        let newText = '';
-        let cursorOffset = 0;
+        if (!editor) return;
 
         switch (format) {
             case 'bold':
-                newText = `**${selectedText || 'bold text'}**`;
-                cursorOffset = selectedText ? 0 : -2;
+                // @ts-ignore
+                editor.chain().focus().toggleBold().run();
                 break;
             case 'italic':
-                newText = `*${selectedText || 'italic text'}*`;
-                cursorOffset = selectedText ? 0 : -1;
+                // @ts-ignore
+                editor.chain().focus().toggleItalic().run();
                 break;
             case 'heading':
-                newText = `\n## ${selectedText || 'Heading'}\n`;
-                cursorOffset = selectedText ? 0 : -1;
+                // @ts-ignore
+                editor.chain().focus().toggleHeading({ level: 2 }).run();
                 break;
             case 'list':
-                newText = `\n- ${selectedText || 'List item'}`;
-                cursorOffset = 0;
+                // @ts-ignore
+                editor.chain().focus().toggleBulletList().run();
                 break;
         }
-
-        const newContent = editedContent.substring(0, start) + newText + editedContent.substring(end);
-        setEditedContent(newContent);
-        debouncedSave(newContent);
-
-        // Restore cursor position
-        setTimeout(() => {
-            textarea.focus();
-            const newPos = start + newText.length + cursorOffset;
-            textarea.setSelectionRange(newPos, newPos);
-        }, 0);
     };
 
     // Save status indicator
@@ -180,6 +164,10 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                         onRestore={(content) => {
                             setEditedContent(content);
                             onSave(content);
+                            // Also update the editor content
+                            if (editor) {
+                                editor.commands.setContent(content);
+                            }
                         }}
                     />
                     <button onClick={handleDone} className="text-primary font-bold text-sm">
@@ -189,13 +177,13 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
             </header>
 
             {/* Editor Canvas */}
-            <main className="flex-1 p-6 overflow-y-auto">
-                <textarea
-                    ref={textareaRef}
-                    className="w-full h-full bg-transparent outline-none text-lg leading-loose resize-none text-gray-200 placeholder-gray-700 font-light font-sans"
-                    placeholder="Structure your thoughts here..."
-                    value={editedContent}
-                    onChange={handleContentChange}
+            <main className="flex-1 p-6 pb-32 overflow-y-auto">
+                <NovelEditor
+                    content={initialContent}
+                    onUpdate={handleContentUpdate}
+                    projectId={projectId}
+                    onEditorReady={(e) => setEditor(e as any)}
+                    className="min-h-[calc(100vh-250px)]"
                 />
             </main>
 
@@ -212,7 +200,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
             <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur border border-white/10 rounded-full px-4 py-2 flex items-center gap-4 shadow-xl z-50">
                 <button
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertFormatting('bold')}
+                    onClick={() => toggleFormatting('bold')}
                     className="text-white hover:text-primary transition-colors"
                     title="Bold"
                 >
@@ -220,7 +208,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 </button>
                 <button
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertFormatting('italic')}
+                    onClick={() => toggleFormatting('italic')}
                     className="text-gray-400 hover:text-white transition-colors"
                     title="Italic"
                 >
@@ -228,7 +216,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 </button>
                 <button
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertFormatting('heading')}
+                    onClick={() => toggleFormatting('heading')}
                     className="text-gray-400 hover:text-white transition-colors"
                     title="Heading"
                 >
@@ -236,7 +224,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 </button>
                 <button
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertFormatting('list')}
+                    onClick={() => toggleFormatting('list')}
                     className="text-gray-400 hover:text-white transition-colors"
                     title="List"
                 >
@@ -245,7 +233,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 <div className="w-px h-4 bg-white/20"></div>
                 <button
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertFormatting('image')}
+                    onClick={() => toggleFormatting('image')}
                     className="text-gray-400 hover:text-white transition-colors"
                     title="Image"
                 >

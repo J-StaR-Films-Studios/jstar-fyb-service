@@ -185,3 +185,178 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* ============================================= */
+/* Novel / TipTap Editor Styles - Dark Mode */
+/* ============================================= */
+
+.novel-editor-wrapper .ProseMirror {
+  outline: none !important;
+  min-height: 500px;
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: #d1d5db;
+}
+
+.novel-editor-wrapper .ProseMirror:focus {
+  outline: none !important;
+}
+
+/* Headings */
+.novel-editor-wrapper .ProseMirror h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.novel-editor-wrapper .ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.novel-editor-wrapper .ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.novel-editor-wrapper .ProseMirror h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Paragraphs */
+.novel-editor-wrapper .ProseMirror p {
+  margin-bottom: 0.75rem;
+}
+
+/* Bold and Italic */
+.novel-editor-wrapper .ProseMirror strong {
+  font-weight: 700;
+  color: #f9fafb;
+}
+
+.novel-editor-wrapper .ProseMirror em {
+  font-style: italic;
+  color: #e5e7eb;
+}
+
+/* Lists */
+.novel-editor-wrapper .ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.novel-editor-wrapper .ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.novel-editor-wrapper .ProseMirror li {
+  margin-bottom: 0.25rem;
+}
+
+.novel-editor-wrapper .ProseMirror li p {
+  margin-bottom: 0.25rem;
+}
+
+/* Links */
+.novel-editor-wrapper .ProseMirror a {
+  color: #8b5cf6;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.novel-editor-wrapper .ProseMirror a:hover {
+  color: #a78bfa;
+}
+
+/* Blockquotes */
+.novel-editor-wrapper .ProseMirror blockquote {
+  border-left: 3px solid #8b5cf6;
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Code blocks */
+.novel-editor-wrapper .ProseMirror pre {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.novel-editor-wrapper .ProseMirror code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.novel-editor-wrapper .ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Horizontal Rule */
+.novel-editor-wrapper .ProseMirror hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 1.5rem 0;
+}
+
+/* Images */
+.novel-editor-wrapper .ProseMirror img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+/* Task lists (checkboxes) */
+.novel-editor-wrapper .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.novel-editor-wrapper .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.novel-editor-wrapper .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+  margin-top: 0.25rem;
+  accent-color: #8b5cf6;
+}
+
+/* Placeholder */
+.novel-editor-wrapper .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #4b5563;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Selection */
+.novel-editor-wrapper .ProseMirror ::selection {
+  background: rgba(139, 92, 246, 0.3);
+}
