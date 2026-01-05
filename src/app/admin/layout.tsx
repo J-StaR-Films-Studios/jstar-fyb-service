@@ -20,6 +20,7 @@ export default async function AdminLayout({
         { href: '/admin/projects', label: 'Projects', icon: LayoutDashboard },
         { href: '/admin/leads', label: 'Leads', icon: Users },
         { href: '/admin/requests', label: 'Switch Requests', icon: FileText },
+        { href: '/admin/settings', label: 'Settings', icon: BadgeDollarSign }, // Using BadgeDollarSign as a placeholder or import Settings icon if available
     ];
 
     return (
