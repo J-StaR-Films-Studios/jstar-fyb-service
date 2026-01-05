@@ -88,32 +88,56 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     // Note: API returns `project.chapters` (Array) if available, or legacy object
                     // Let's handle Array format primarily as we migrated
 
+                    const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
                     let mappedChapters: Chapter[] = [];
 
-                    if (Array.isArray(data.chapters)) {
-                        mappedChapters = data.chapters.map((c: any) => ({
-                            id: c.id,
-                            number: c.number,
-                            title: c.title,
-                            content: c.content,
-                            status: c.status?.toLowerCase() || 'draft',
-                            wordCount: c.wordCount || 0,
-                            subsections: parseSubsections(c.content),
-                            version: c.version || 1
-                        }));
-                    } else {
-                        // Legacy object support fallback
-                        const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
+                    if (Array.isArray(data.chapters) && data.chapters.length > 0) {
+                        // Map existing chapters from API
+                        const existingChapters = new Map(
+                            data.chapters.map((c: any) => [c.number, {
+                                id: c.id,
+                                number: c.number,
+                                title: c.title,
+                                content: c.content,
+                                status: c.status?.toLowerCase() || 'draft',
+                                wordCount: c.wordCount || 0,
+                                subsections: parseSubsections(c.content),
+                                version: c.version || 1
+                            }])
+                        );
+
+                        // Always create all 5 chapters, using existing data or empty stubs
                         mappedChapters = Array.from({ length: 5 }, (_, i) => {
                             const num = i + 1;
-                            const content = data.chapters[`chapter_${num}`] || '';
+                            const existing = existingChapters.get(num);
+                            if (existing) {
+                                return existing as Chapter;
+                            }
+                            // Empty chapter stub
                             return {
-                                id: `legacy-${num}`,
+                                id: `chapter-${num}`,
+                                number: num,
+                                title: CHAPTER_TITLES[i],
+                                content: '',
+                                status: 'draft' as const,
+                                wordCount: 0,
+                                subsections: [],
+                                version: 1
+                            };
+                        });
+                    } else {
+                        // Legacy object support fallback OR empty API response
+                        // Always create 5 chapters with 'draft' status so user can generate
+                        mappedChapters = Array.from({ length: 5 }, (_, i) => {
+                            const num = i + 1;
+                            const content = data.chapters?.[`chapter_${num}`] || '';
+                            return {
+                                id: `chapter-${num}`,
                                 number: num,
                                 title: CHAPTER_TITLES[i],
                                 content: content,
-                                status: content ? 'draft' : 'locked', // simplified
-                                wordCount: content.split(/\s+/).length,
+                                status: 'draft' as const, // Always draft so generate button shows
+                                wordCount: content ? content.split(/\s+/).length : 0,
                                 subsections: parseSubsections(content),
                                 version: 1
                             };
@@ -122,6 +146,20 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
 
                     if (data.topic) setProjectTitle(data.topic);
                     setChapters(mappedChapters);
+                } else {
+                    // API returned no chapters at all - initialize empty structure
+                    const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
+                    const emptyChapters: Chapter[] = Array.from({ length: 5 }, (_, i) => ({
+                        id: `chapter-${i + 1}`,
+                        number: i + 1,
+                        title: CHAPTER_TITLES[i],
+                        content: '',
+                        status: 'draft' as const,
+                        wordCount: 0,
+                        subsections: [],
+                        version: 1
+                    }));
+                    setChapters(emptyChapters);
                 }
             } catch (error) {
                 console.error('Failed to load chapters', error);
@@ -238,6 +276,56 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                         chapters={chapters}
                         activeChapterNumber={activeChapterNumber}
                         onChapterSelect={setActiveChapterNumber}
+                        onGenerateChapter={async (chapterNumber) => {
+                            // Logic borrowed from ChapterGenerator.tsx
+                            try {
+                                setChapters(prev => prev.map(c =>
+                                    c.number === chapterNumber ? { ...c, status: 'in-progress' } : c
+                                ));
+
+                                const response = await fetch('/api/generate/chapter', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ projectId, chapterNumber })
+                                });
+
+                                if (!response.ok) throw new Error('Failed to generate');
+
+                                const reader = response.body?.getReader();
+                                const decoder = new TextDecoder();
+                                let content = '';
+
+                                if (reader) {
+                                    while (true) {
+                                        const { done, value } = await reader.read();
+                                        if (done) break;
+                                        content += decoder.decode(value, { stream: true });
+
+                                        // Live update
+                                        setChapters(prev => prev.map(c =>
+                                            c.number === chapterNumber ? {
+                                                ...c,
+                                                content,
+                                                wordCount: content.split(/\s+/).length,
+                                                subsections: parseSubsections(content)
+                                            } : c
+                                        ));
+                                    }
+                                }
+
+                                // Final save
+                                handleSave(content);
+
+                                // Mark complete
+                                setChapters(prev => prev.map(c =>
+                                    c.number === chapterNumber ? { ...c, status: 'complete' } : c
+                                ));
+
+                            } catch (error) {
+                                console.error('Generation failed', error);
+                                // Revert status on error logic could go here
+                            }
+                        }}
                     />
                 </div>
 
