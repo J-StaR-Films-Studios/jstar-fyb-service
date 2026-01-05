@@ -14,7 +14,7 @@ interface MobileFloatingNavProps {
 export function MobileFloatingNav({ activeTab, onTabChange }: MobileFloatingNavProps) {
 
     return (
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#030014]/90 backdrop-blur-2xl border border-white/10 rounded-full p-2 shadow-2xl flex items-center gap-2 z-50 max-w-[90vw] overflow-x-auto no-scrollbar">
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#030014]/90 backdrop-blur-2xl border border-white/10 rounded-full p-2 shadow-2xl flex items-center gap-1 z-50 max-w-[95vw] overflow-hidden">
 
             <button
                 onClick={() => onTabChange('write')}

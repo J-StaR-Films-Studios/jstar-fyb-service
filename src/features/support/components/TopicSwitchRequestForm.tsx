@@ -80,7 +80,7 @@ export function TopicSwitchRequestForm({ project }: TopicSwitchRequestFormProps)
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-300">Reason for Switch</label>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                             type="button"
                             onClick={() => setReason("lecturer_rejected")}

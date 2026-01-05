@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useChatFlow } from "../hooks/useChatFlow";
 import { ProposalCard } from "./ProposalCard";
+import { BotSwitcher } from "./BotSwitcher";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "@/lib/auth-client";
 import { mergeAnonymousData, clearAllConversations } from "../actions/chat";
@@ -19,9 +20,10 @@ import { signInAction, signOutAction } from "@/features/auth/actions";
 
 interface ChatInterfaceProps {
     initialUser?: any; // Replace 'any' with proper User type if available, e.g. from better-auth
+    hideHeader?: boolean;
 }
 
-export function ChatInterface({ initialUser }: ChatInterfaceProps) {
+export function ChatInterface({ initialUser, hideHeader = false }: ChatInterfaceProps) {
     const router = useRouter();
     const { data: session } = useSession();
     // Prioritize session user if available (client update), otherwise fallback to server passed user
@@ -86,60 +88,56 @@ export function ChatInterface({ initialUser }: ChatInterfaceProps) {
     };
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-dark text-white overflow-hidden font-sans">
+        <div className={`flex flex-col bg-dark text-white overflow-hidden font-sans ${hideHeader ? 'h-[calc(100vh-80px)]' : 'h-[100dvh]'}`}>
             {/* Header */}
-            <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-dark/80 backdrop-blur-md z-20 shrink-0">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-white/5 text-gray-400">
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <h1 className="font-display font-bold text-lg tracking-wide hidden md:block">Project Consultant</h1>
-                        <h1 className="font-display font-bold text-lg tracking-wide md:hidden">Jay</h1>
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-xs text-gray-400 font-mono">Active</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    {/* Complexity Widget - Desktop */}
-                    <div className="hidden md:block">
-                        <ComplexityMeter score={complexity} />
-                    </div>
-
-                    {/* Clear Chat Button */}
-                    <button
-                        onClick={() => setShowClearConfirm(true)}
-                        className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
-                        title="Clear Chat"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-
-                    {/* Auth Button */}
-                    {user ? (
-                        <div className="flex items-center gap-3 pl-3 border-l border-white/10">
-                            <UserAvatar name={user.name} image={user.image} size="sm" />
-                            <button
-                                onClick={() => signOutAction()}
-                                className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
-                            >
-                                <LogOut className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => router.push('/auth/login?callbackUrl=' + encodeURIComponent('/chat'))}
-                            className="px-4 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/20 text-xs font-bold text-primary transition-all flex items-center gap-2"
-                        >
-                            <User className="w-3 h-3" />
-                            Sign In to Save
+            {!hideHeader && (
+                <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-dark/80 backdrop-blur-md z-20 shrink-0">
+                    {/* Header content... */}
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-white/5 text-gray-400">
+                            <ArrowLeft className="w-5 h-5" />
                         </button>
-                    )}
-                </div>
-            </header>
+                        <BotSwitcher currentBot="jay" />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {/* Complexity Widget - Desktop */}
+                        <div className="hidden md:block">
+                            <ComplexityMeter score={complexity} />
+                        </div>
+
+                        {/* Clear Chat Button */}
+                        <button
+                            onClick={() => setShowClearConfirm(true)}
+                            className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
+                            title="Clear Chat"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+
+                        {/* Auth Button */}
+                        {user ? (
+                            <div className="flex items-center gap-3 pl-3 border-l border-white/10">
+                                <UserAvatar name={user.name} image={user.image} size="sm" />
+                                <button
+                                    onClick={() => signOutAction()}
+                                    className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => router.push('/auth/login?callbackUrl=' + encodeURIComponent('/chat'))}
+                                className="px-4 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/20 text-xs font-bold text-primary transition-all flex items-center gap-2"
+                            >
+                                <User className="w-3 h-3" />
+                                Sign In to Save
+                            </button>
+                        )}
+                    </div>
+                </header>
+            )}
 
             {/* Clear Chat Confirmation Modal */}
             <AnimatePresence>

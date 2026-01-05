@@ -64,7 +64,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                 customLabel={displayStatus} // Pass dynamic writing status
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col-reverse sm:grid sm:grid-cols-2 gap-3">
                 <button
                     onClick={() => setShowAbstract(true)}
                     className="py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold hover:bg-white/10 transition-colors flex items-center justify-center gap-2"

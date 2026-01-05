@@ -19,8 +19,8 @@ export default async function ProfilePage() {
                 <h1 className="text-3xl font-display font-bold mb-8">My Profile</h1>
 
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
-                    <div className="flex items-center gap-6 mb-8">
-                        <UserAvatar name={user.name} image={user.image} size="lg" className="w-24 h-24 text-3xl" />
+                    <div className="flex flex-col md:flex-row items-center gap-6 mb-8 text-center md:text-left">
+                        <UserAvatar name={user.name} image={user.image} size="lg" className="w-24 h-24 text-3xl shrink-0" />
                         <div>
                             <h2 className="text-2xl font-bold text-white">{user.name}</h2>
                             <p className="text-gray-400">{user.email}</p>
@@ -33,7 +33,7 @@ export default async function ProfilePage() {
                     <div className="space-y-6">
                         <div className="p-4 rounded-xl bg-black/20 border border-white/5">
                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Account ID</h3>
-                            <p className="font-mono text-sm text-gray-300">{user.id}</p>
+                            <p className="font-mono text-sm text-gray-300 break-all">{user.id}</p>
                         </div>
 
                         <div className="border-t border-white/10 pt-6">

@@ -33,6 +33,10 @@ This system ensures that:
 - In `recordPayment`: Call `projectsService.lockProject(projectId)` immediately after payment success.
 
 ### UI Components
+#### [MODIFY] [TopicSwitchRequestForm.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/support/components/TopicSwitchRequestForm.tsx)
+- Contains the selection logic for "Reason" and file upload handling.
+- **Responsive Design:** Buttons stack on mobile (`col-span-1`) and split on desktop (`grid-cols-2`).
+
 #### [MODIFY] [BuilderClient.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/builder/components/BuilderClient.tsx)
 - **Navigation Lock**: Disables "Back" navigation when the project is locked to prevent accidental topic changes after payment.
 

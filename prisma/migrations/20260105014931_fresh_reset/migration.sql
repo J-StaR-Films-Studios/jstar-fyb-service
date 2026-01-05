@@ -7,6 +7,7 @@ CREATE TABLE "User" (
     "image" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'USER',
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -259,11 +260,29 @@ CREATE TABLE "TopicSwitchRequest" (
     "proofUrl" TEXT,
     "status" TEXT NOT NULL DEFAULT 'pending',
     "fee" INTEGER,
+    "paymentRef" TEXT,
+    "paidAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "resolvedAt" TIMESTAMP(3),
     "resolvedBy" TEXT,
+    "explanation" TEXT,
 
     CONSTRAINT "TopicSwitchRequest_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TopicSwitchArchive" (
+    "id" TEXT NOT NULL,
+    "requestId" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "oldTopic" TEXT NOT NULL,
+    "oldTwist" TEXT,
+    "oldAbstract" TEXT,
+    "oldOutline" JSONB,
+    "oldChapters" JSONB,
+    "archivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "TopicSwitchArchive_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -319,6 +338,9 @@ CREATE INDEX "Chapter_projectId_idx" ON "Chapter"("projectId");
 CREATE UNIQUE INDEX "Chapter_projectId_number_key" ON "Chapter"("projectId", "number");
 
 -- CreateIndex
+CREATE INDEX "TopicSwitchArchive_projectId_idx" ON "TopicSwitchArchive"("projectId");
+
+-- CreateIndex
 CREATE INDEX "InAppNotification_userId_readAt_idx" ON "InAppNotification"("userId", "readAt");
 
 -- CreateIndex
@@ -340,10 +362,10 @@ ALTER TABLE "Message" ADD CONSTRAINT "Message_conversationId_fkey" FOREIGN KEY (
 ALTER TABLE "Project" ADD CONSTRAINT "Project_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Payment" ADD CONSTRAINT "Payment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Payment" ADD CONSTRAINT "Payment_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ResearchDocument" ADD CONSTRAINT "ResearchDocument_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;

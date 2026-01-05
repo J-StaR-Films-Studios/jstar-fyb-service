@@ -40,6 +40,9 @@ flowchart LR
 
 ## Hotfixes / Changelog
 
-### Hotfix 2026-01-04: AI SDK 5.0 Compatibility
 - **Problem:** `HubChatInterface` was using outdated `useChat` properties (`api`, `initialMessages`, `input`) resulting in build errors.
 - **Solution:** Refactored the component to use `DefaultChatTransport`, local state, and `setMessages` for the initial greeting. Added `parts` parsing for message rendering.
+
+### 2026-01-05: Mobile Immersive Mode
+- **Feature:** Implemented "Immersive Mode" for Hub Chat on mobile.
+- **Behavior:** Hides the application's `MobileBottomNav` when in the Hub view to maximize vertical screen real estate for the keyboard and chat timeline.
