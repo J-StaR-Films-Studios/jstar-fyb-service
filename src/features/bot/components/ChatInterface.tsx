@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "@/lib/auth-client";
 import { mergeAnonymousData, clearAllConversations } from "../actions/chat";
 import { signInAction, signOutAction } from "@/features/auth/actions";
+import { generateUUID } from "@/lib/uuid";
 
 interface ChatInterfaceProps {
     initialUser?: any; // Replace 'any' with proper User type if available, e.g. from better-auth
@@ -75,7 +76,7 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
             // 2. Clear localStorage
             localStorage.removeItem('jstar_confirmed_topic');
             // Generate fresh anonymous ID
-            const newId = crypto.randomUUID();
+            const newId = generateUUID();
             localStorage.setItem('jstar_anonymous_id', newId);
 
             // 3. Clear local state
