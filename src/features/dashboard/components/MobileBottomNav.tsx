@@ -58,10 +58,10 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
 
                 {/* 4. Chat (New) */}
                 <Link
-                    href="/chat"
+                    href={hasActiveProject ? "/hub" : "/chat"}
                     className={cn(
                         "flex flex-col items-center gap-1 transition-colors pb-1",
-                        isActive('/chat') ? "text-white" : "text-gray-500 hover:text-white"
+                        isActive('/chat') || isActive('/hub') ? "text-white" : "text-gray-500 hover:text-white"
                     )}
                 >
                     <MessageSquare className="w-5 h-5" />
