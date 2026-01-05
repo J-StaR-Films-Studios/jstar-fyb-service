@@ -13,6 +13,8 @@ import Link from 'next/link';
 import { DocumentUpload } from '../DocumentUpload';
 import { ResearchStatus } from '../ResearchStatus';
 import { AcademicCopilot } from './AcademicCopilot';
+import { VersionHistoryDropdown } from './VersionHistoryDropdown';
+import { EnhanceOptionsPopover } from './EnhanceOptionsPopover';
 
 interface Chapter {
     id: string;
@@ -53,6 +55,10 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
     const [mobileView, setMobileView] = useState<'timeline' | 'editor' | 'context'>('timeline');
     const [activeSection, setActiveSection] = useState<{ title: string; content: string } | null>(null);
     const isDesktop = useMediaQuery("(min-width: 768px)");
+
+    // Enhance State
+    const [showEnhancePopover, setShowEnhancePopover] = useState(false);
+    const [contentToEnhance, setContentToEnhance] = useState('');
 
     // Auto-clear saved status after 2s
     useEffect(() => {
@@ -243,7 +249,26 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                             : `Chapter ${activeChapterNumber} / ${activeChapter?.title || 'Untitled'}`}
                         content={activeChapter?.content}
                         onValidChange={handleSave}
-                        headerRight={<SaveStatusBadge />}
+                        onEnhanceClick={(text) => {
+                            setContentToEnhance(text);
+                            setShowEnhancePopover(true);
+                        }}
+                        headerRight={
+                            <div className="flex items-center gap-2">
+                                {activeChapter && (
+                                    <VersionHistoryDropdown
+                                        projectId={projectId}
+                                        chapterNumber={activeChapterNumber}
+                                        currentVersion={activeChapter.version}
+                                        currentContent={activeChapter.content}
+                                        onRestore={(content) => {
+                                            handleSave(content);
+                                        }}
+                                    />
+                                )}
+                                <SaveStatusBadge />
+                            </div>
+                        }
                     />
                 </main>
 
@@ -370,11 +395,13 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     onClose={() => setMobileView('timeline')}
                     onSave={(content) => {
                         handleSave(content);
-                        setMobileView('timeline');
                     }}
                     onOpenChat={() => {
                         handleMobileTabChange('chat');
                     }}
+                    projectId={projectId}
+                    chapterNumber={activeChapter.number}
+                    currentVersion={activeChapter.version || 1}
                 />
             )}
 
@@ -411,6 +438,24 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Enhance Popover - shared across desktop/mobile */}
+            {showEnhancePopover && activeChapter && (
+                <EnhanceOptionsPopover
+                    projectId={projectId}
+                    chapterNumber={activeChapterNumber}
+                    selectedContent={contentToEnhance}
+                    chapterContext={activeChapter.content}
+                    onApply={(enhancedContent) => {
+                        // Replace the selected content in chapter
+                        const newContent = activeChapter.content === contentToEnhance
+                            ? enhancedContent
+                            : activeChapter.content.replace(contentToEnhance, enhancedContent);
+                        handleSave(newContent);
+                    }}
+                    onClose={() => setShowEnhancePopover(false)}
+                />
             )}
         </div>
     );

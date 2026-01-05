@@ -1,7 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { X, Bold, Heading, List, Image, Mic, Sparkles, MessageSquare } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { X, Bold, Heading, List, Image, Mic, Sparkles, MessageSquare, Check, Loader2 } from 'lucide-react';
+import { useDebouncedCallback } from 'use-debounce';
+import { VersionHistoryDropdown } from './VersionHistoryDropdown';
+
+type SaveStatus = 'idle' | 'saving' | 'saved';
 
 interface SectionEditorProps {
     title: string;
@@ -10,18 +14,109 @@ interface SectionEditorProps {
     onClose: () => void;
     onSave: (content: string) => void;
     onOpenChat?: () => void;
+    projectId: string;
+    chapterNumber: number;
+    currentVersion: number;
 }
 
-export function SectionEditor({ title, content: initialContent, wordCount: initialWordCount = 0, onClose, onSave, onOpenChat }: SectionEditorProps) {
+export function SectionEditor({ title, content: initialContent, wordCount: initialWordCount = 0, onClose, onSave, onOpenChat, projectId, chapterNumber, currentVersion }: SectionEditorProps) {
     const [editedContent, setEditedContent] = useState(initialContent);
+    const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Calculate word count on the fly
     const currentWordCount = useMemo(() => {
         return editedContent.trim() ? editedContent.trim().split(/\s+/).length : 0;
     }, [editedContent]);
 
-    const handleSave = () => {
+    // Debounced auto-save - 1.5 second delay
+    const debouncedSave = useDebouncedCallback(
+        (content: string) => {
+            setSaveStatus('saving');
+            onSave(content);
+            setTimeout(() => setSaveStatus('saved'), 400);
+            setTimeout(() => setSaveStatus('idle'), 2000);
+        },
+        1500
+    );
+
+    const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newContent = e.target.value;
+        setEditedContent(newContent);
+        debouncedSave(newContent);
+    };
+
+    const handleDone = () => {
+        // Force immediate save on Done
+        debouncedSave.flush();
         onSave(editedContent);
+        onClose();
+    };
+
+    // Rich text formatting helper
+    const insertFormatting = (format: 'bold' | 'heading' | 'list' | 'image') => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = editedContent.substring(start, end);
+
+        let newText = '';
+        let cursorOffset = 0;
+
+        switch (format) {
+            case 'bold':
+                newText = `**${selectedText || 'bold text'}**`;
+                cursorOffset = selectedText ? 0 : -2;
+                break;
+            case 'heading':
+                newText = `\n## ${selectedText || 'Heading'}\n`;
+                cursorOffset = selectedText ? 0 : -1;
+                break;
+            case 'list':
+                newText = `\n- ${selectedText || 'List item'}`;
+                cursorOffset = 0;
+                break;
+            case 'image':
+                newText = `![${selectedText || 'alt text'}](url)`;
+                cursorOffset = selectedText ? -1 : -5;
+                break;
+        }
+
+        const newContent = editedContent.substring(0, start) + newText + editedContent.substring(end);
+        setEditedContent(newContent);
+        debouncedSave(newContent);
+
+        // Restore cursor position
+        setTimeout(() => {
+            textarea.focus();
+            const newPos = start + newText.length + cursorOffset;
+            textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+    };
+
+    // Save status indicator
+    const StatusIndicator = () => {
+        if (saveStatus === 'idle') {
+            return (
+                <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div> Editing
+                </span>
+            );
+        }
+        if (saveStatus === 'saving') {
+            return (
+                <span className="text-[10px] text-yellow-400 flex items-center justify-center gap-1">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> Saving...
+                </span>
+            );
+        }
+        return (
+            <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
+                <Check className="w-2.5 h-2.5" /> Saved
+            </span>
+        );
     };
 
     return (
@@ -34,32 +129,67 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 </button>
                 <div className="text-center">
                     <h2 className="font-bold text-sm text-gray-200">{title}</h2>
-                    <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div> Editing
-                    </span>
+                    <StatusIndicator />
                 </div>
-                <button onClick={handleSave} className="text-primary font-bold text-sm px-2 -mr-2">
-                    Done
-                </button>
+                <div className="flex items-center gap-2">
+                    <VersionHistoryDropdown
+                        projectId={projectId}
+                        chapterNumber={chapterNumber}
+                        currentVersion={currentVersion}
+                        currentContent={editedContent}
+                        onRestore={(content) => {
+                            setEditedContent(content);
+                            onSave(content);
+                        }}
+                    />
+                    <button onClick={handleDone} className="text-primary font-bold text-sm">
+                        Done
+                    </button>
+                </div>
             </header>
 
             {/* Editor Canvas */}
             <main className="flex-1 p-6 overflow-y-auto">
                 <textarea
+                    ref={textareaRef}
                     className="w-full h-full bg-transparent outline-none text-lg leading-loose resize-none text-gray-200 placeholder-gray-700 font-light font-sans"
                     placeholder="Structure your thoughts here..."
                     value={editedContent}
-                    onChange={(e) => setEditedContent(e.target.value)}
+                    onChange={handleContentChange}
                 />
             </main>
 
             {/* Floating Formatting Pill */}
             <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur border border-white/10 rounded-full px-4 py-2 flex items-center gap-4 shadow-xl z-50">
-                <button className="text-white hover:text-primary transition-colors"><Bold className="w-4 h-4" /></button>
-                <button className="text-gray-400 hover:text-white transition-colors"><Heading className="w-4 h-4" /></button>
-                <button className="text-gray-400 hover:text-white transition-colors"><List className="w-4 h-4" /></button>
+                <button
+                    onClick={() => insertFormatting('bold')}
+                    className="text-white hover:text-primary transition-colors"
+                    title="Bold"
+                >
+                    <Bold className="w-4 h-4" />
+                </button>
+                <button
+                    onClick={() => insertFormatting('heading')}
+                    className="text-gray-400 hover:text-white transition-colors"
+                    title="Heading"
+                >
+                    <Heading className="w-4 h-4" />
+                </button>
+                <button
+                    onClick={() => insertFormatting('list')}
+                    className="text-gray-400 hover:text-white transition-colors"
+                    title="List"
+                >
+                    <List className="w-4 h-4" />
+                </button>
                 <div className="w-px h-4 bg-white/20"></div>
-                <button className="text-gray-400 hover:text-white transition-colors"><Image className="w-4 h-4" /></button>
+                <button
+                    onClick={() => insertFormatting('image')}
+                    className="text-gray-400 hover:text-white transition-colors"
+                    title="Image"
+                >
+                    <Image className="w-4 h-4" />
+                </button>
             </div>
 
             {/* Bottom Action Bar */}
@@ -75,7 +205,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                     {onOpenChat && (
                         <button
                             onClick={() => {
-                                handleSave();
+                                onSave(editedContent);
                                 onOpenChat();
                             }}
                             className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors text-gray-400 hover:text-white"

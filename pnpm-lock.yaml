@@ -32,6 +32,9 @@ importers:
       '@react-email/components':
         specifier: ^1.0.2
         version: 1.0.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@types/diff':
+        specifier: ^8.0.0
+        version: 8.0.0
       ai:
         specifier: ^5.0.113
         version: 5.0.113(zod@4.2.0)
@@ -47,6 +50,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      diff:
+        specifier: ^8.0.2
+        version: 8.0.2
       framer-motion:
         specifier: ^12.23.26
         version: 12.23.26(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -86,6 +92,9 @@ importers:
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
+      use-debounce:
+        specifier: ^10.0.6
+        version: 10.0.6(react@19.2.1)
       zod:
         specifier: ^4.2.0
         version: 4.2.0
@@ -873,6 +882,10 @@ packages:
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
 
+  '@types/diff@8.0.0':
+    resolution: {integrity: sha512-o7jqJM04gfaYrdCecCVMbZhNdG6T1MHg/oQoRFdERLV+4d+V7FijhiEAbFu0Usww84Yijk9yH58U4Jk4HbtzZw==}
+    deprecated: This is a stub types definition. diff provides its own type definitions, so you do not need this installed.
+
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
 
@@ -1468,6 +1481,10 @@ packages:
 
   didyoumean@1.2.2:
     resolution: {integrity: sha512-gxtyfqMg7GKyhQmb056K7M3xszy/myH8w+B4RT+QXBQsvAOdc3XymqDDPHx1BgPgsdAA5SIifona89YtRATDzw==}
+
+  diff@8.0.2:
+    resolution: {integrity: sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg==}
+    engines: {node: '>=0.3.1'}
 
   dingbat-to-unicode@1.0.1:
     resolution: {integrity: sha512-98l0sW87ZT58pU4i61wa2OHwxbiYSbuxsCBozaVnYX2iCnr3bLM3fIes1/ej7h1YdOKuKt/MLs706TVnALA65w==}
@@ -3027,6 +3044,12 @@ packages:
   url-parse@1.5.10:
     resolution: {integrity: sha512-WypcfiRhfeUP9vvF0j6rw0J3hrWrw6iZv3+22h6iRMJ/8z1Tj6XfLP4DsUix5MhMPnXpiHDoKyoZ/bdCkwBCiQ==}
 
+  use-debounce@10.0.6:
+    resolution: {integrity: sha512-C5OtPyhAZgVoteO9heXMTdW7v/IbFI+8bSVKYCJrSmiWWCLsbUxiBSp4t9v0hNBTGY97bT72ydDIDyGSFWfwXg==}
+    engines: {node: '>= 16.0.0'}
+    peerDependencies:
+      react: '*'
+
   use-sync-external-store@1.6.0:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
     peerDependencies:
@@ -3810,6 +3833,10 @@ snapshots:
     dependencies:
       '@types/ms': 2.1.0
 
+  '@types/diff@8.0.0':
+    dependencies:
+      diff: 8.0.2
+
   '@types/estree-jsx@1.0.5':
     dependencies:
       '@types/estree': 1.0.8
@@ -4359,6 +4386,8 @@ snapshots:
       dequal: 2.0.3
 
   didyoumean@1.2.2: {}
+
+  diff@8.0.2: {}
 
   dingbat-to-unicode@1.0.1: {}
 
@@ -6409,6 +6438,10 @@ snapshots:
     dependencies:
       querystringify: 2.2.0
       requires-port: 1.0.0
+
+  use-debounce@10.0.6(react@19.2.1):
+    dependencies:
+      react: 19.2.1
 
   use-sync-external-store@1.6.0(react@19.2.1):
     dependencies:
