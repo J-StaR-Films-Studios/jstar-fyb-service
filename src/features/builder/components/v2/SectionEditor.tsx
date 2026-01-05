@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
-import { X, Bold, Heading, List, Image, Mic, Sparkles, MessageSquare, Check, Loader2 } from 'lucide-react';
+import { X, Bold, Heading, List, Image, Mic, Sparkles, MessageSquare, Check, Loader2, Italic } from 'lucide-react';
 import { useDebouncedCallback } from 'use-debounce';
 import { VersionHistoryDropdown } from './VersionHistoryDropdown';
+import { ImagePickerDialog } from './ImagePickerDialog';
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 
@@ -17,11 +18,13 @@ interface SectionEditorProps {
     projectId: string;
     chapterNumber: number;
     currentVersion: number;
+    onEnhanceClick?: (content: string) => void;
 }
 
-export function SectionEditor({ title, content: initialContent, wordCount: initialWordCount = 0, onClose, onSave, onOpenChat, projectId, chapterNumber, currentVersion }: SectionEditorProps) {
+export function SectionEditor({ title, content: initialContent, wordCount: initialWordCount = 0, onClose, onSave, onOpenChat, projectId, chapterNumber, currentVersion, onEnhanceClick }: SectionEditorProps) {
     const [editedContent, setEditedContent] = useState(initialContent);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+    const [showImagePicker, setShowImagePicker] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Calculate word count on the fly
@@ -53,10 +56,47 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
         onClose();
     };
 
-    // Rich text formatting helper
-    const insertFormatting = (format: 'bold' | 'heading' | 'list' | 'image') => {
+    const handleEnhance = () => {
+        if (!onEnhanceClick) return;
+        const textarea = textareaRef.current;
+        if (!textarea) {
+            onEnhanceClick(editedContent);
+            return;
+        }
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = start !== end ? editedContent.substring(start, end) : editedContent;
+        onEnhanceClick(selected);
+    };
+
+    const handleImageInsert = (imageMarkdown: string) => {
         const textarea = textareaRef.current;
         if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        const newContent = editedContent.substring(0, start) + imageMarkdown + editedContent.substring(end);
+        setEditedContent(newContent);
+        debouncedSave(newContent);
+
+        setTimeout(() => {
+            textarea.focus();
+            const newPos = start + imageMarkdown.length;
+            textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+    };
+
+    // Rich text formatting helper
+    const insertFormatting = (format: 'bold' | 'heading' | 'list' | 'image' | 'italic') => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        if (format === 'image') {
+            setShowImagePicker(true);
+            return;
+        }
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -70,6 +110,10 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 newText = `**${selectedText || 'bold text'}**`;
                 cursorOffset = selectedText ? 0 : -2;
                 break;
+            case 'italic':
+                newText = `*${selectedText || 'italic text'}*`;
+                cursorOffset = selectedText ? 0 : -1;
+                break;
             case 'heading':
                 newText = `\n## ${selectedText || 'Heading'}\n`;
                 cursorOffset = selectedText ? 0 : -1;
@@ -77,10 +121,6 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
             case 'list':
                 newText = `\n- ${selectedText || 'List item'}`;
                 cursorOffset = 0;
-                break;
-            case 'image':
-                newText = `![${selectedText || 'alt text'}](url)`;
-                cursorOffset = selectedText ? -1 : -5;
                 break;
         }
 
@@ -159,9 +199,19 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 />
             </main>
 
+            {/* Image Picker Dialog */}
+            {showImagePicker && (
+                <ImagePickerDialog
+                    projectId={projectId}
+                    onClose={() => setShowImagePicker(false)}
+                    onInsert={handleImageInsert}
+                />
+            )}
+
             {/* Floating Formatting Pill */}
             <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur border border-white/10 rounded-full px-4 py-2 flex items-center gap-4 shadow-xl z-50">
                 <button
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => insertFormatting('bold')}
                     className="text-white hover:text-primary transition-colors"
                     title="Bold"
@@ -169,6 +219,15 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                     <Bold className="w-4 h-4" />
                 </button>
                 <button
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => insertFormatting('italic')}
+                    className="text-gray-400 hover:text-white transition-colors"
+                    title="Italic"
+                >
+                    <Italic className="w-4 h-4" />
+                </button>
+                <button
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => insertFormatting('heading')}
                     className="text-gray-400 hover:text-white transition-colors"
                     title="Heading"
@@ -176,6 +235,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                     <Heading className="w-4 h-4" />
                 </button>
                 <button
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => insertFormatting('list')}
                     className="text-gray-400 hover:text-white transition-colors"
                     title="List"
@@ -184,6 +244,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 </button>
                 <div className="w-px h-4 bg-white/20"></div>
                 <button
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => insertFormatting('image')}
                     className="text-gray-400 hover:text-white transition-colors"
                     title="Image"
@@ -197,7 +258,10 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 <span className="text-xs text-gray-500 font-mono">{currentWordCount} words</span>
 
                 {/* Smart Action Button */}
-                <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent rounded-lg text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+                <button
+                    onClick={handleEnhance}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent rounded-lg text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+                >
                     <Sparkles className="w-4 h-4 fill-white" /> Enhance
                 </button>
 

@@ -1,10 +1,12 @@
 'use client';
 
-import { Bold, Italic, List, Sparkles, Maximize2 } from 'lucide-react';
-import { useRef, useEffect, useCallback, useState, ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
+import { Bold, Italic, List, Image, Check, Loader2, Heading, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ImagePickerDialog } from './ImagePickerDialog';
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type SaveStatus = 'idle' | 'saving' | 'saved';
 
 interface WritingCanvasProps {
     title?: string;
@@ -15,12 +17,14 @@ interface WritingCanvasProps {
     saveStatus?: SaveStatus;
     /** Callback when Enhance button is clicked - receives selected text or full content */
     onEnhanceClick?: (selectedText: string) => void;
+    projectId: string;
 }
 
-export function WritingCanvas({ title, content, onValidChange, headerRight, saveStatus: externalSaveStatus, onEnhanceClick }: WritingCanvasProps) {
+export function WritingCanvas({ title, content, onValidChange, headerRight, saveStatus: externalSaveStatus, onEnhanceClick, projectId }: WritingCanvasProps) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [localContent, setLocalContent] = useState(content || '');
     const [internalSaveStatus, setInternalSaveStatus] = useState<SaveStatus>('idle');
+    const [showImagePicker, setShowImagePicker] = useState(false);
 
     // Use external status if provided, otherwise internal
     const saveStatus = externalSaveStatus ?? internalSaveStatus;
@@ -68,9 +72,14 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
     };
 
     // Rich text formatting helper
-    const insertFormatting = (format: 'bold' | 'italic' | 'list') => {
+    const insertFormatting = (format: 'bold' | 'italic' | 'list' | 'image' | 'heading') => {
         const textarea = textareaRef.current;
         if (!textarea) return;
+
+        if (format === 'image') {
+            setShowImagePicker(true);
+            return;
+        }
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -88,6 +97,10 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
                 newText = `*${selectedText || 'italic text'}*`;
                 cursorOffset = selectedText ? 0 : -1;
                 break;
+            case 'heading':
+                newText = `\n## ${selectedText || 'Heading'}\n`;
+                cursorOffset = selectedText ? 0 : -1;
+                break;
             case 'list':
                 newText = `\n- ${selectedText || 'List item'}`;
                 cursorOffset = 0;
@@ -98,7 +111,7 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
         setLocalContent(newContent);
         debouncedSave(newContent);
 
-        // Restore cursor position
+        // Restore cursor position and focus
         setTimeout(() => {
             textarea.focus();
             const newPos = start + newText.length + cursorOffset;
@@ -106,78 +119,99 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
         }, 0);
     };
 
+    const handleImageInsert = (imageMarkdown: string) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
 
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        const newContent = localContent.substring(0, start) + imageMarkdown + localContent.substring(end);
+        setLocalContent(newContent);
+        debouncedSave(newContent);
+
+        setTimeout(() => {
+            textarea.focus();
+            const newPos = start + imageMarkdown.length;
+            textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+    };
+
+    const handleEnhance = () => {
+        if (!onEnhanceClick) return;
+        const textarea = textareaRef.current;
+        if (!textarea) {
+            onEnhanceClick(localContent);
+            return;
+        }
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = start !== end ? localContent.substring(start, end) : localContent;
+        onEnhanceClick(selected);
+    }
 
     return (
         <div className="flex-1 flex flex-col relative bg-[#050508] h-full overflow-hidden">
-
-            {/* Editor Toolbar */}
-            <div className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-dark/50 backdrop-blur z-10 shrink-0">
-                <div className="flex items-center gap-4">
-                    <span className="text-gray-500 text-sm hidden md:inline-block">{title || 'Select a section...'}</span>
-                </div>
-                <div className="flex items-center gap-2 bg-black/20 rounded-lg p-1">
-                    <button
-                        onClick={() => insertFormatting('bold')}
-                        className="p-2 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-                        title="Bold (Ctrl+B)"
-                    >
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-8 py-4 border-b border-white/5 bg-black/20 shrink-0 z-10 backdrop-blur-sm">
+                <div className="flex items-center gap-1">
+                    {title && <h2 className="text-sm font-bold text-gray-400 mr-4 uppercase tracking-wider">{title}</h2>}
+                    <div className="h-4 w-px bg-white/10 mx-2" />
+                    <button onClick={() => insertFormatting('bold')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Bold">
                         <Bold className="w-4 h-4" />
                     </button>
-                    <button
-                        onClick={() => insertFormatting('italic')}
-                        className="p-2 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-                        title="Italic (Ctrl+I)"
-                    >
+                    <button onClick={() => insertFormatting('italic')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Italic">
                         <Italic className="w-4 h-4" />
                     </button>
-                    <button
-                        onClick={() => insertFormatting('list')}
-                        className="p-2 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-                        title="List"
-                    >
+                    <button onClick={() => insertFormatting('heading')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Heading">
+                        <Heading className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => insertFormatting('list')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="List">
                         <List className="w-4 h-4" />
                     </button>
-                    <div className="w-px h-4 bg-white/10 mx-1"></div>
-                    <button
-                        onClick={() => {
-                            const textarea = textareaRef.current;
-                            if (!textarea) return;
-                            const start = textarea.selectionStart;
-                            const end = textarea.selectionEnd;
-                            const selected = start !== end ? localContent.substring(start, end) : localContent;
-                            onEnhanceClick?.(selected);
-                        }}
-                        className="px-3 py-1.5 bg-primary/20 text-primary text-xs font-bold rounded hover:bg-primary/30 transition-colors flex items-center gap-2"
-                    >
-                        <Sparkles className="w-3 h-3" /> Enhance
+                    <button onClick={() => insertFormatting('image')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Image">
+                        <Image className="w-4 h-4" />
                     </button>
                 </div>
-                {headerRight || <div className="w-4 md:w-24"></div>}
+
+                <div className="flex items-center gap-4">
+                    {headerRight}
+                </div>
             </div>
 
-            {/* Scrollable Canvas - This is the only scroll container */}
-            <div className="flex-1 overflow-y-auto w-full flex justify-center p-4 md:p-8 bg-[#050508]">
-                <div className="w-full max-w-5xl pb-32">
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-8 md:px-12 lg:px-16" onClick={() => textareaRef.current?.focus()}>
+                <div className="max-w-4xl mx-auto h-full min-h-[500px]">
                     <textarea
                         ref={textareaRef}
-                        className="w-full min-h-[600px] bg-transparent outline-none text-lg md:text-xl leading-relaxed text-gray-200 resize-none font-serif placeholder-gray-700 focus:placeholder-gray-600 transition-colors px-4"
-                        spellCheck={false}
-                        placeholder="Start writing or generate content..."
                         value={localContent}
                         onChange={handleChange}
+                        className="w-full h-full bg-transparent border-none outline-none resize-none text-lg leading-loose text-gray-300 placeholder-gray-700 font-serif"
+                        placeholder="Start writing your chapter..."
+                        spellCheck={false}
                     />
                 </div>
             </div>
 
-            {/* FAB: Focus Mode */}
-            <button
-                className="absolute bottom-8 right-8 w-12 h-12 bg-black/50 hover:bg-primary border border-white/10 hover:border-primary rounded-full flex items-center justify-center transition-all group shadow-2xl z-20"
-                title="Focus Mode"
-            >
-                <Maximize2 className="w-5 h-5 text-gray-400 group-hover:text-white" />
-            </button>
+            {/* Floating Action Button for AI Encode/Enhance */}
+            <div className="absolute bottom-8 right-8 z-20">
+                <button
+                    onClick={handleEnhance}
+                    className="group flex items-center gap-2 pl-4 pr-5 py-3 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-primary/20 transition-all duration-300 hover:scale-105 active:scale-95"
+                >
+                    <Sparkles className="w-5 h-5" />
+                    <span className="font-bold text-sm tracking-wide">ENHANCE</span>
+                </button>
+            </div>
 
+            {/* Image Picker Dialog */}
+            {showImagePicker && (
+                <ImagePickerDialog
+                    projectId={projectId}
+                    onClose={() => setShowImagePicker(false)}
+                    onInsert={handleImageInsert}
+                />
+            )}
         </div>
     );
 }

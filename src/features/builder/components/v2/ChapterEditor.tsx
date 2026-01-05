@@ -244,6 +244,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                 {/* Main Content */}
                 <main className="flex-1 flex flex-col relative h-full w-full">
                     <WritingCanvas
+                        projectId={projectId}
                         title={activeChapter?.title?.toLowerCase().startsWith('chapter')
                             ? activeChapter.title
                             : `Chapter ${activeChapterNumber} / ${activeChapter?.title || 'Untitled'}`}
@@ -398,6 +399,10 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     }}
                     onOpenChat={() => {
                         handleMobileTabChange('chat');
+                    }}
+                    onEnhanceClick={(text) => {
+                        setContentToEnhance(text);
+                        setShowEnhancePopover(true);
                     }}
                     projectId={projectId}
                     chapterNumber={activeChapter.number}
