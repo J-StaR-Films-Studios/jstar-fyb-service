@@ -12,7 +12,6 @@ import { ModeSelection } from "./ModeSelection";
 import { ConciergeWaiting } from "./ConciergeWaiting";
 import { ChapterGenerator } from "./ChapterGenerator";
 import { UpsellBridge } from "./UpsellBridge";
-import { ProjectAssistant } from "./ProjectAssistant";
 import { DocumentUpload } from "./DocumentUpload";
 import { OutlinePreview } from "./OutlinePreview";
 import { usePaymentVerification } from "../hooks/usePaymentVerification";
@@ -291,12 +290,6 @@ export function ChapterOutliner() {
                             <div className="mt-16">
                                 <ProjectActionCenter projectId={data.projectId!} />
                             </div>
-
-                            {data.projectId && (
-                                <div className="mt-16">
-                                    <ProjectAssistant projectId={data.projectId} />
-                                </div>
-                            )}
 
                             {data.projectId && (
                                 <div className="mt-16">

@@ -87,16 +87,26 @@ ${projectContext}
         // 5. Persist Conversation (User Level)
         let activeConvId = conversationId;
         if (!activeConvId) {
-            // Check if there's a recent open conversation or create new
-            // For Nengi, we might just want one main persistent thread per user for now, 
-            // but let's stick to standard flow: create new if none passed.
-            const conv = await prisma.conversation.create({
-                data: {
+            // Find existing Nengi conversation or create new one
+            const existingConv = await prisma.conversation.findFirst({
+                where: {
                     userId: user.id,
                     title: "Hub Chat with Nengi"
-                }
+                },
+                orderBy: { updatedAt: 'desc' }
             });
-            activeConvId = conv.id;
+
+            if (existingConv) {
+                activeConvId = existingConv.id;
+            } else {
+                const conv = await prisma.conversation.create({
+                    data: {
+                        userId: user.id,
+                        title: "Hub Chat with Nengi"
+                    }
+                });
+                activeConvId = conv.id;
+            }
         }
 
         // 6. Stream Response
@@ -136,5 +146,94 @@ ${projectContext}
     } catch (error: any) {
         console.error('[Hub Chat API] Error:', error);
         return new Response(JSON.stringify({ error: 'Nengi is taking a nap. Try again later.' }), { status: 500 });
+    }
+}
+
+// GET: Fetch existing conversation history
+export async function GET() {
+    try {
+        const user = await getCurrentUser();
+        if (!user) {
+            return new Response('Unauthorized', { status: 401 });
+        }
+
+        // Find existing Nengi conversation
+        const conversation = await prisma.conversation.findFirst({
+            where: {
+                userId: user.id,
+                title: "Hub Chat with Nengi"
+            },
+            include: {
+                messages: {
+                    orderBy: { createdAt: 'asc' },
+                    take: 100
+                }
+            },
+            orderBy: { updatedAt: 'desc' }
+        });
+
+        if (!conversation) {
+            return Response.json({ conversationId: null, messages: [] });
+        }
+
+        // Get user's projects for context-aware first message
+        const projects = await prisma.project.findMany({
+            where: { userId: user.id },
+            select: {
+                id: true,
+                topic: true,
+                progressPercentage: true
+            },
+            take: 3,
+            orderBy: { updatedAt: 'desc' }
+        });
+
+        return Response.json({
+            conversationId: conversation.id,
+            messages: conversation.messages.map(m => ({
+                id: m.id,
+                role: m.role,
+                content: m.content
+            })),
+            projects
+        });
+
+    } catch (error: any) {
+        console.error('[Hub Chat GET] Error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to fetch conversation' }), { status: 500 });
+    }
+}
+
+// DELETE: Clear conversation history
+export async function DELETE() {
+    try {
+        const user = await getCurrentUser();
+        if (!user) {
+            return new Response('Unauthorized', { status: 401 });
+        }
+
+        // Find and delete existing Nengi conversation
+        const conversation = await prisma.conversation.findFirst({
+            where: {
+                userId: user.id,
+                title: "Hub Chat with Nengi"
+            }
+        });
+
+        if (conversation) {
+            // Delete messages first, then conversation
+            await prisma.message.deleteMany({
+                where: { conversationId: conversation.id }
+            });
+            await prisma.conversation.delete({
+                where: { id: conversation.id }
+            });
+        }
+
+        return Response.json({ success: true });
+
+    } catch (error: any) {
+        console.error('[Hub Chat DELETE] Error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to clear conversation' }), { status: 500 });
     }
 }

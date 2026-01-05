@@ -2,19 +2,39 @@
 
 import { signOut } from "@/lib/auth-client";
 import { useState, useRef, useEffect } from "react";
-import { LogOut, User as UserIcon, LayoutDashboard, Plus, Hammer, MessageSquare } from "lucide-react";
+import { LogOut, User as UserIcon, LayoutDashboard, Plus, Hammer, MessageSquare, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MobileBottomNav } from "@/features/dashboard/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/UserAvatar";
+import { useSupport } from "@/features/support/context/SupportContext";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+// Helper component to avoid hook call issues in the dropdown
+const SupportButton = ({ onClose }: { onClose: () => void }) => {
+    const { openSupport } = useSupport();
+    return (
+        <button
+            onClick={() => {
+                openSupport();
+                onClose();
+            }}
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+        >
+            <HelpCircle className="w-4 h-4" />
+            Contact Support
+        </button>
+    );
+};
 
 interface SaasShellProps {
     children: React.ReactNode;
     user: {
         name?: string | null;
         image?: string | null;
+        email?: string | null;
+        id?: string;
     };
     headerContent?: React.ReactNode;
     fullWidth?: boolean;
@@ -40,6 +60,18 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
 
     // Dropdown state
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Inject user data into SupportContext
+    const { setUser } = useSupport();
+    useEffect(() => {
+        if (user) {
+            setUser({
+                name: user.name,
+                email: user.email,
+                id: user.id
+            });
+        }
+    }, [user, setUser]);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown on click outside
@@ -89,7 +121,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* HUB Button - Desktop Only */}
+                    {/* HUB Button - Desktop Only (Hybrid Routing) */}
                     {!isHub && (
                         <Button
                             asChild
@@ -97,9 +129,9 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             size="sm"
                             className="hidden md:flex text-gray-400 hover:text-white hover:bg-white/5"
                         >
-                            <Link href="/hub">
+                            <Link href={hasActiveProject ? "/hub" : "/chat"}>
                                 <MessageSquare className="w-4 h-4 mr-2" />
-                                AI Hub
+                                {hasActiveProject ? "AI Hub" : "Start Chat"}
                             </Link>
                         </Button>
                     )}
@@ -174,6 +206,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                                     <UserIcon className="w-4 h-4" />
                                     Profile
                                 </Link>
+                                <SupportButton onClose={() => setIsDropdownOpen(false)} />
                                 <button
                                     onClick={handleSignOut}
                                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors text-left"

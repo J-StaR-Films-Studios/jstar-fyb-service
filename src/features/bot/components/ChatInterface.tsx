@@ -346,35 +346,39 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
                 </ErrorBoundary>
             </main>
 
-            {/* Mobile Complexity Meter */}
-            <div className="md:hidden absolute bottom-[88px] left-0 right-0 px-4 pointer-events-none">
-                <div className="bg-dark/90 backdrop-blur-md border border-white/10 rounded-lg p-2 flex justify-between items-center pointer-events-auto">
-                    <span className="text-xs text-gray-400 font-mono uppercase">Complexity</span>
-                    <div className="scale-75 origin-right">
-                        <ComplexityMeter score={complexity} />
-                    </div>
-                </div>
-            </div>
-
             {/* Input Area */}
             <footer className="p-4 bg-dark/80 backdrop-blur-xl border-t border-white/5 shrink-0 z-30">
-                <form onSubmit={onSubmit} className="flex gap-3 relative max-w-4xl mx-auto">
+                {/* Mobile Complexity Meter - Inside footer for correct positioning */}
+                <div className="md:hidden mb-3">
+                    <div className="bg-dark/90 backdrop-blur-md border border-white/10 rounded-lg p-2 flex justify-between items-center">
+                        <span className="text-xs text-gray-400 font-mono uppercase">Complexity</span>
+                        <div className="scale-75 origin-right">
+                            <ComplexityMeter score={complexity} />
+                        </div>
+                    </div>
+                </div>
+
+                <form onSubmit={onSubmit} className="flex gap-3 relative max-w-4xl mx-auto items-end">
                     <button type="button" className="p-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-colors md:hidden">
                         <Plus className="w-6 h-6" />
                     </button>
 
                     <div className="flex-1 relative">
-                        <input
-                            type="text"
+                        <textarea
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    onSubmit(e);
+                                }
+                            }}
                             placeholder={state === "CLOSING" ? "Enter your WhatsApp number..." : "Type your reply..."}
                             disabled={state === "ANALYZING"}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-12 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all font-light disabled:opacity-50"
+                            rows={1}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-4 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all font-light disabled:opacity-50 resize-none max-h-40 overflow-y-auto"
+                            style={{ minHeight: '56px' }}
                         />
-                        <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors">
-                            <Mic className="w-5 h-5" />
-                        </button>
                     </div>
 
                     <button

@@ -3,6 +3,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { GeminiFileSearchService } from '@/lib/gemini-file-search';
+import { MONJI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
 
 export const maxDuration = 300;
 
@@ -95,7 +96,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         project.complexity ? `- **Complexity Level:** ${project.complexity}/5` : null,
     ].filter(Boolean).join('\n') || '- No academic context available yet.';
 
-    const systemPrompt = `You are the Academic Copilot for J Star FYB Service, an expert research assistant helping Nigerian students write their final year projects.
+    const systemPrompt = `${MONJI_SYSTEM_PROMPT}
 
 ## Project Context
 - **Topic:** ${project.topic}
@@ -114,7 +115,7 @@ ${chapterContext}
 ## Generated Outline
 ${outlineData}
 
-## Your Role
+## Additional Instructions
 You are **NOT** a general assistant. You are specifically trained on THIS student's project. You should:
 1. **Reference their specific topic and twist** when giving advice.
 2. **Use the Research Library** for all writing suggestions to ensure grounded, accurate content.
@@ -230,4 +231,34 @@ You are **NOT** a general assistant. You are specifically trained on THIS studen
     });
 
     return result.toUIMessageStreamResponse();
+}
+
+// DELETE: Clear project chat history
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { id: projectId } = await params;
+
+        // Find and delete all project conversations and messages
+        const conversations = await prisma.projectConversation.findMany({
+            where: { projectId }
+        });
+
+        if (conversations.length > 0) {
+            // Delete messages first, then conversations
+            await prisma.projectChatMessage.deleteMany({
+                where: {
+                    conversationId: { in: conversations.map(c => c.id) }
+                }
+            });
+            await prisma.projectConversation.deleteMany({
+                where: { projectId }
+            });
+        }
+
+        return Response.json({ success: true });
+
+    } catch (error: any) {
+        console.error('[Project Chat DELETE] Error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to clear conversation' }), { status: 500 });
+    }
 }

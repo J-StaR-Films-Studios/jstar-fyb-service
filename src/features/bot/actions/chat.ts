@@ -22,11 +22,21 @@ const saveConversationSchema = z.object({
     { message: 'Either conversationId or at least one of anonymousId/userId must be provided' }
 );
 
+// Conversation titles for each bot type
+const BOT_CONVERSATION_TITLES = {
+    jay: 'Jay Onboarding Chat',
+    nengi: 'Hub Chat with Nengi',
+    monji: 'Monji Workspace Chat'
+} as const;
+
+type BotType = keyof typeof BOT_CONVERSATION_TITLES;
+
 type SaveConversationParams = {
     conversationId?: string;
     anonymousId?: string; // For guest users
     userId?: string;      // For auth users (future)
     messages: CoreMessage[];
+    botType?: BotType;    // Which bot this conversation is with
 };
 
 // Helper to safely serialize CoreMessage content
@@ -49,6 +59,7 @@ export async function saveConversation({
     anonymousId,
     userId,
     messages,
+    botType = 'jay', // Default to Jay for backward compatibility
 }: SaveConversationParams) {
     try {
         // Validate inputs
@@ -86,12 +97,13 @@ export async function saveConversation({
 
         if (!conversation) {
             try {
-                const firstMessageContent = serializeMessageContent(messages[0]?.content || '');
+                // Use bot-specific title for proper conversation isolation
+                const conversationTitle = BOT_CONVERSATION_TITLES[botType];
                 conversation = await prisma.conversation.create({
                     data: {
                         anonymousId,
                         userId,
-                        title: firstMessageContent.slice(0, 50) || 'New Chat',
+                        title: conversationTitle,
                     },
                 });
             } catch (error) {
@@ -153,11 +165,14 @@ export async function getConversation(conversationId: string) {
 
 export async function getLatestConversation({
     anonymousId,
-    userId
+    userId,
+    botType = 'jay' // Default to Jay for backward compatibility
 }: {
     anonymousId?: string;
     userId?: string;
+    botType?: BotType;
 }) {
+    const conversationTitle = BOT_CONVERSATION_TITLES[botType];
     if (!anonymousId && !userId) return null;
 
     // CRITICAL SECURITY FIX: Data Isolation - Never mix authenticated and anonymous sessions
@@ -176,9 +191,11 @@ export async function getLatestConversation({
         }
 
         // CRITICAL SECURITY FIX: Strict data isolation - only return conversations for this specific user
+        // Also filter by bot type to prevent cross-contamination between Jay/Nengi/Monji
         return await prisma.conversation.findFirst({
             where: {
                 userId: userId,
+                title: conversationTitle, // Filter by bot type!
                 // Note: We allow conversations with anonymousId set, as these are migrated sessions.
                 // The userId check is sufficient for security.
             },
@@ -197,7 +214,8 @@ export async function getLatestConversation({
         return await prisma.conversation.findFirst({
             where: {
                 anonymousId: anonymousId,
-                userId: null // CRITICAL SECURITY FIX: Ensure we don't return user-assigned conversations
+                userId: null, // CRITICAL SECURITY FIX: Ensure we don't return user-assigned conversations
+                title: conversationTitle // Filter by bot type!
             },
             include: {
                 messages: {

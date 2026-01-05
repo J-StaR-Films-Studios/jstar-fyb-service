@@ -99,3 +99,15 @@ flowchart TD
 ### Hotfix 2026-01-05: Re-Lock After Switch
 - **Problem:** After topic switch, the project remained unlocked indefinitely.
 - **Solution:** `/api/projects/[id]/outline` POST now re-locks paid projects (`isUnlocked && !isLocked`) after outline save.
+
+### Hotfix 2026-01-05: Non-Atomic Lock State Updates (CRITICAL)
+- **Problem:** `billing.service.ts:updateProjectUnlock()` made two separate DB calls - first setting `isUnlocked: true`, then calling `lockProject()` separately. If the second call failed or user navigated away between calls, the project ended up in an inconsistent state (`isUnlocked: true, isLocked: false`).
+- **Solution:** Made update atomic by including `isUnlocked: true`, `isLocked: true`, and `lockedAt` in a single DB call. Removed the separate `lockProject()` call.
+
+### Hotfix 2026-01-05: Unlock Route Missing Lock Flag
+- **Problem:** `/api/projects/[id]/unlock/route.ts` only set `isUnlocked: true` without setting `isLocked: true`, creating potential inconsistent state.
+- **Solution:** Added `isLocked: true` and `lockedAt` to the same atomic update.
+
+### Hotfix 2026-01-05: Redundant DB Query in Builder Page
+- **Problem:** `builder/page.tsx` made a second DB query for `isUnlocked` when it was already available on the `recentProject` object from the first query.
+- **Solution:** Captured `isUnlocked` directly from `recentProject` during mapping, eliminating the redundant query and potential race condition.

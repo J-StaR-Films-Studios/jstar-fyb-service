@@ -106,9 +106,13 @@ export const BillingService = {
      * Unlock a project for full access
      */
     async updateProjectUnlock(projectId: string, amountKobo?: number) {
+        // CRITICAL FIX: Atomic update of both isUnlocked AND isLocked in same DB call
+        // Previous bug: Two separate calls could leave project in inconsistent state
         let updateData: any = {
             isUnlocked: true,
-            status: 'RESEARCH_IN_PROGRESS' // Or whatever the next state should be after payment
+            isLocked: true,  // Topic Lock: Enforced atomically with unlock
+            lockedAt: new Date(),
+            status: 'RESEARCH_IN_PROGRESS'
         };
 
         if (amountKobo) {
@@ -131,9 +135,7 @@ export const BillingService = {
             where: { id: projectId },
             data: updateData
         });
-        // Also lock the topic (Business Rule: Topic Lock)
-        await ProjectsService.lockProject(projectId);
-        console.log(`[BillingService] Unlocked project (paid) and Locked topic: ${projectId}`);
+        console.log(`[BillingService] Unlocked project (paid) and Locked topic atomically: ${projectId}`);
     },
 
     async sendReceiptEmail(userId: string, paymentId: string) {

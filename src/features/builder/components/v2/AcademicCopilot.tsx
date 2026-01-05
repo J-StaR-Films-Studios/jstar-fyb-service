@@ -16,8 +16,10 @@ import {
     ArrowRight,
     Terminal,
     ChevronDown,
-    Layout
+    Layout,
+    Trash2
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PERSONALITIES } from '@/features/bot/prompts/system';
@@ -31,6 +33,7 @@ interface AcademicCopilotProps {
 export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber }: AcademicCopilotProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [localInput, setLocalInput] = useState('');
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
 
     // Avatar cycling state for personality transition
     const [showAI, setShowAI] = useState(false);
@@ -118,8 +121,76 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         }
     };
 
+    const handleClearChat = async () => {
+        try {
+            // Clear messages from the AI SDK state
+            setMessages([]);
+            // Also clear from the database if there's a project conversation
+            await fetch(`/api/projects/${projectId}/chat`, { method: 'DELETE' });
+            setShowClearConfirm(false);
+        } catch (err) {
+            console.error('[AcademicCopilot] Clear failed:', err);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-dark/20 overflow-hidden relative">
+            {/* Clear Chat Confirmation Modal */}
+            <AnimatePresence>
+                {showClearConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                        onClick={() => setShowClearConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-dark border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                    <Trash2 className="w-5 h-5 text-red-400" />
+                                </div>
+                                <h3 className="font-display font-bold text-lg">Clear Chat?</h3>
+                            </div>
+                            <p className="text-sm text-gray-400 mb-6">
+                                This will delete all messages with Monji and start fresh. This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowClearConfirm(false)}
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleClearChat}
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-bold transition-colors"
+                                >
+                                    Clear All
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Trash Button - Fixed in corner */}
+            <div className="absolute top-2 right-2 z-20">
+                <button
+                    onClick={() => setShowClearConfirm(true)}
+                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-red-400 transition-colors"
+                    title="Clear Chat"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </button>
+            </div>
+
             {/* Ambient Background Glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none"></div>
 

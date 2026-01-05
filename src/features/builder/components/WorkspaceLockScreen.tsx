@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { TopicLockModal } from "@/features/billing/components/TopicLockModal";
+import { useSupport } from "@/features/support/context/SupportContext";
 
 interface WorkspaceLockScreenProps {
     projectId: string;
@@ -19,6 +20,7 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
     const [isVerifying, setIsVerifying] = useState(false);
     const [showLockModal, setShowLockModal] = useState(false);
     const router = useRouter();
+    const { openSupport } = useSupport();
 
     React.useEffect(() => {
         if (paymentReference) {
@@ -188,7 +190,7 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
             </div>
 
             <p className="mt-8 text-xs text-gray-600">
-                Need help? <a href="#" className="underline hover:text-gray-400">Contact Support</a>
+                Need help? <button onClick={() => openSupport({ page: 'workspace-lock', projectId })} className="underline hover:text-gray-400">Contact Support</button>
             </p>
 
             {/* Topic Lock Warning Modal */}

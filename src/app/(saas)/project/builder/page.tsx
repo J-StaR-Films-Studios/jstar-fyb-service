@@ -15,6 +15,7 @@ export default async function BuilderPage({ searchParams }: PageProps) {
     const targetProjectId = params?.projectId; // From upgrade callback URL
 
     let serverProject: Partial<ProjectData> | null = null;
+    let isUnlocked = false; // Track payment status from the fetched project
 
     if (user) {
         let recentProject = null;
@@ -59,6 +60,10 @@ export default async function BuilderPage({ searchParams }: PageProps) {
         }
 
         if (recentProject) {
+            // OPTIMIZATION: Capture isUnlocked from the already-fetched project
+            // No separate DB query needed - Prisma includes all scalar fields by default
+            isUnlocked = recentProject.isUnlocked || false;
+
             // Map to ProjectData
             let parsedOutline: Chapter[] = [];
             if (recentProject.outline && recentProject.outline.content) {
@@ -90,12 +95,9 @@ export default async function BuilderPage({ searchParams }: PageProps) {
         }
     }
 
-    // @ts-ignore
-    const isUnlocked = serverProject ? (await prisma.project.findUnique({ where: { id: serverProject.projectId! }, select: { isUnlocked: true } }))?.isUnlocked : false;
-
     return (
         <Suspense fallback={<div className="min-h-screen bg-dark flex items-center justify-center text-white/50">Loading Builder...</div>}>
-            <BuilderClient serverProject={serverProject} serverIsPaid={isUnlocked || false} />
+            <BuilderClient serverProject={serverProject} serverIsPaid={isUnlocked} />
         </Suspense>
     );
 }
