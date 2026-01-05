@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import Image from 'next/image';
 import {
     BrainCircuit,
     Send,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { PERSONALITIES } from '@/features/bot/prompts/system';
 
 interface AcademicCopilotProps {
     projectId: string;
@@ -29,6 +31,27 @@ interface AcademicCopilotProps {
 export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber }: AcademicCopilotProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [localInput, setLocalInput] = useState('');
+
+    // Avatar cycling state for personality transition
+    const [showAI, setShowAI] = useState(false);
+    const cycleTimings = [3000, 5000, 5000, 10000]; // ms
+    const cycleIndexRef = useRef(0);
+
+    useEffect(() => {
+        const cycle = () => {
+            setShowAI(prev => !prev);
+            cycleIndexRef.current = (cycleIndexRef.current + 1) % cycleTimings.length;
+            const nextDelay = cycleTimings[cycleIndexRef.current];
+            timeoutRef.current = setTimeout(cycle, nextDelay);
+        };
+
+        let timeoutRef = { current: null as NodeJS.Timeout | null };
+        timeoutRef.current = setTimeout(cycle, cycleTimings[0]);
+
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, []);
 
     // API endpoint for project-specific chat
     const apiEndpoint = projectId ? `/api/projects/${projectId}/chat` : '/api/chat';
@@ -109,12 +132,37 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                     /* V3: Empty State Widgets */
                     <div className="h-full flex flex-col items-center justify-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                         <div className="text-center space-y-2">
-                            <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto text-primary glow-box mb-4">
-                                <BrainCircuit className="w-8 h-8" />
+                            <div className="relative w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4">
+                                {/* Monji Avatar */}
+                                <div className={cn(
+                                    "absolute inset-0 transition-all duration-700 ease-in-out border-2 border-amber-500/30 rounded-2xl overflow-hidden",
+                                    showAI ? "opacity-0 scale-90" : "opacity-100 scale-100"
+                                )}>
+                                    <Image
+                                        src={PERSONALITIES.monji.avatar}
+                                        alt="Monji"
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </div>
+                                {/* AI Icon */}
+                                <div className={cn(
+                                    "absolute inset-0 flex items-center justify-center bg-primary/20 border-2 border-primary/30 rounded-2xl transition-all duration-700 ease-in-out",
+                                    showAI ? "opacity-100 scale-100" : "opacity-0 scale-110"
+                                )}>
+                                    <BrainCircuit className="w-8 h-8 text-primary" />
+                                </div>
                             </div>
-                            <h3 className="font-display font-bold text-white text-lg">Academic Copilot</h3>
-                            <p className="text-xs text-gray-400 max-w-[220px] mx-auto leading-relaxed">
-                                I am trained on your research library. Ask me to verify facts or help you draft content.
+                            <h3 className="font-display font-bold text-white text-lg transition-all duration-500">
+                                {showAI ? "Academic AI" : "Monji"}
+                            </h3>
+                            <p className="text-xs text-gray-400 max-w-[220px] mx-auto leading-relaxed min-h-[48px] flex items-center">
+                                <span className="transition-opacity duration-500">
+                                    {showAI
+                                        ? "Powered by your research library. Ask me anything about your project."
+                                        : "Your academic copilot. I'm trained on your research library to help you write with confidence."
+                                    }
+                                </span>
                             </p>
                         </div>
 

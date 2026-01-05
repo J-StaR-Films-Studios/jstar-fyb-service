@@ -5,16 +5,19 @@ import { Lock, ArrowLeft, Sparkles, CheckCircle2, ShieldCheck, Loader2 } from "l
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { TopicLockModal } from "@/features/billing/components/TopicLockModal";
 
 interface WorkspaceLockScreenProps {
     projectId: string;
     requiredAmount: number;
     paymentReference?: string;
+    projectTopic?: string;
 }
 
-export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReference }: WorkspaceLockScreenProps) {
+export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReference, projectTopic }: WorkspaceLockScreenProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
+    const [showLockModal, setShowLockModal] = useState(false);
     const router = useRouter();
 
     React.useEffect(() => {
@@ -51,7 +54,15 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
         }
     };
 
-    const handleUnlock = async () => {
+    // Step 1: Show warning modal first
+    const handleUnlockClick = () => {
+        setShowLockModal(true);
+    };
+
+    // Step 2: Actually proceed to payment after confirmation
+    const proceedToPayment = async () => {
+        setShowLockModal(false);
+
         try {
             setIsLoading(true);
             const response = await fetch("/api/pay/initialize", {
@@ -144,7 +155,7 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
                 {/* Actions */}
                 <div className="space-y-3">
                     <button
-                        onClick={handleUnlock}
+                        onClick={handleUnlockClick}
                         disabled={isLoading}
                         className="w-full py-4 bg-primary hover:bg-primary/90 rounded-xl font-bold text-white uppercase tracking-wide transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -179,6 +190,14 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
             <p className="mt-8 text-xs text-gray-600">
                 Need help? <a href="#" className="underline hover:text-gray-400">Contact Support</a>
             </p>
+
+            {/* Topic Lock Warning Modal */}
+            <TopicLockModal
+                isOpen={showLockModal}
+                onClose={() => setShowLockModal(false)}
+                onConfirm={proceedToPayment}
+                topic={projectTopic || "Your Project Topic"}
+            />
         </div>
     );
 }

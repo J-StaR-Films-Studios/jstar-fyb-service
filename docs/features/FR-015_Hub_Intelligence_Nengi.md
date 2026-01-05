@@ -4,7 +4,9 @@
 The Hub Intelligence feature provides users with a universal "Brain Dump" and creative partner named **Nengi**. Unlike Jay (Sales) or Monji (Academic Writing), Nengi is a generalist designed for brainstorming, emotional support, and connecting ideas across multiple user projects. Users with at least one active project are automatically routed to Nengi in the Hub.
 
 ## Architecture
+- **Page:** `src/app/(saas)/hub/page.tsx`
 - **Interface:** `src/features/bot/components/HubChatInterface.tsx`
+- **Switcher:** `src/features/bot/components/BotSwitcher.tsx`
 - **API Route:** `src/app/api/hub/chat/route.ts`
 - **System Prompt:** `src/features/bot/prompts/system.ts` (`NENGI_SYSTEM_PROMPT`)
 - **Dependencies:** `@ai-sdk/react`, `framer-motion`, `lucide-react`
@@ -46,3 +48,9 @@ flowchart LR
 ### 2026-01-05: Mobile Immersive Mode
 - **Feature:** Implemented "Immersive Mode" for Hub Chat on mobile.
 - **Behavior:** Hides the application's `MobileBottomNav` when in the Hub view to maximize vertical screen real estate for the keyboard and chat timeline.
+
+### 2026-01-05: Crew Switcher (BotSwitcher)
+- **Feature:** Introduced `BotSwitcher.tsx`, a dropdown component in the header allowing users to switch between AI personas (Nengi, Jay, Monji).
+- **Behavior:** Monji option links to the user's latest project workspace (`/project/[id]/workspace`). If no project exists, it falls back to `/dashboard`.
+- **Routing Change:** Removed forced redirect from `/chat` to `/hub`. Users can now access Jay anytime via the switcher.
+- **Files Changed:** `BotSwitcher.tsx`, `hub/page.tsx`, `chat/page.tsx`, `SaasShell.tsx`.

@@ -111,6 +111,7 @@ model Project {
   outlineGenerated         Boolean               @default(false)
   isLocked                 Boolean               @default(false)
   lockedAt                 DateTime?
+  topicSwitchCount         Int                   @default(0)
   progressPercentage       Int                   @default(0)
   contentProgress          Json?
   documentProgress         Json?
@@ -250,9 +251,9 @@ model TopicSwitchRequest {
   projectId   String
   reason      String
   proofUrl    String?
-  status      String    @default("pending") // pending | pending_payment | approved | denied
+  status      String    @default("pending")
   fee         Int?
-  paymentRef  String?   // Paystack reference for fee payment
+  paymentRef  String?
   paidAt      DateTime?
   createdAt   DateTime  @default(now())
   resolvedAt  DateTime?
@@ -260,18 +261,17 @@ model TopicSwitchRequest {
   explanation String?
 }
 
-// Archives old project content before topic switch (for data analysis)
 model TopicSwitchArchive {
-  id           String   @id @default(cuid())
-  requestId    String   // Links to TopicSwitchRequest
-  projectId    String
-  oldTopic     String
-  oldTwist     String?
-  oldAbstract  String?
-  oldOutline   Json?    // The ChapterOutline.content JSON
-  oldChapters  Json?    // Array of { number, title, content, wordCount }
-  archivedAt   DateTime @default(now())
-  
+  id          String   @id @default(cuid())
+  requestId   String
+  projectId   String
+  oldTopic    String
+  oldTwist    String?
+  oldAbstract String?
+  oldOutline  Json?
+  oldChapters Json?
+  archivedAt  DateTime @default(now())
+
   @@index([projectId])
 }
 

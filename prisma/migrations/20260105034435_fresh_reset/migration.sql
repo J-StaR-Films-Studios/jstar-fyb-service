@@ -114,6 +114,7 @@ CREATE TABLE "Project" (
     "outlineGenerated" BOOLEAN NOT NULL DEFAULT false,
     "isLocked" BOOLEAN NOT NULL DEFAULT false,
     "lockedAt" TIMESTAMP(3),
+    "topicSwitchCount" INTEGER NOT NULL DEFAULT 0,
     "progressPercentage" INTEGER NOT NULL DEFAULT 0,
     "contentProgress" JSONB,
     "documentProgress" JSONB,

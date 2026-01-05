@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { projectId, reason, explanation, proofUrl } = body;
+        const { projectId, reason, explanation, proofUrl, fee } = body;
 
         if (!projectId || !reason || !explanation) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
             projectId,
             reason,
             explanation,
-            proofUrl
+            proofUrl,
+            fee // Pass fee to service
         });
 
         return NextResponse.json({ success: true, request: result });

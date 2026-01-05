@@ -29,11 +29,18 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
     const REQUIRED_AMOUNT = 15000;
 
     if (totalPaid < REQUIRED_AMOUNT) {
+        // Fetch project topic for the warning modal
+        const project = await prisma.project.findUnique({
+            where: { id },
+            select: { topic: true }
+        });
+
         return (
             <WorkspaceLockScreen
                 projectId={id}
                 requiredAmount={REQUIRED_AMOUNT}
                 paymentReference={typeof reference === 'string' ? reference : undefined}
+                projectTopic={project?.topic}
             />
         );
     }

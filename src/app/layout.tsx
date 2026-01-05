@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} ${spaceGrotesk.variable} font-sans antialiased bg-dark`}>
+      <body className={`${outfit.variable} ${spaceGrotesk.variable} font-sans antialiased bg-dark`} suppressHydrationWarning>
         <ErrorBoundary>
           {children}
         </ErrorBoundary>

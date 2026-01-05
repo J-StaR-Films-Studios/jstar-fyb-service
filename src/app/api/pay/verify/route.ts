@@ -146,6 +146,37 @@ const processPaymentVerification = async (reference: string) => {
             ? JSON.parse(data.metadata)
             : data.metadata;
 
+        // TOPIC SWITCH PAYMENT: Handle separately
+        if (metadata?.type === 'topic_switch' && metadata?.requestId) {
+            const { TopicSwitchService } = await import('@/services/topic-switch.service');
+
+            // Update payment status first
+            const updatedPayment = await tx.payment.update({
+                where: { id: payment.id },
+                data: {
+                    status: 'SUCCESS',
+                    gatewayResponse: JSON.stringify(data),
+                    updatedAt: new Date()
+                },
+                include: {
+                    project: true,
+                    user: true
+                }
+            });
+
+            // Process the topic switch (archives content and unlocks project)
+            // Note: This needs to run outside the transaction as it does its own updates
+            // We'll return early and let processPaidSwitch handle the rest
+            return {
+                success: true,
+                payment: updatedPayment,
+                project: null,
+                isTopicSwitch: true,
+                requestId: metadata.requestId,
+                paymentRef: reference
+            };
+        }
+
         const tier = metadata?.tier;
         const isConciergeTier = tier && ['BASIC', 'STANDARD', 'PREMIUM'].includes(tier.toUpperCase());
 
@@ -216,6 +247,30 @@ export async function POST(req: Request) {
 
         // Process payment verification with race condition protection
         const result = await processPaymentVerification(reference);
+
+        // Handle topic switch payments separately
+        if ((result as any).isTopicSwitch && (result as any).requestId) {
+            try {
+                const { TopicSwitchService } = await import('@/services/topic-switch.service');
+                await TopicSwitchService.processPaidSwitch(
+                    (result as any).requestId,
+                    (result as any).paymentRef
+                );
+                console.log('[Verify] Topic switch payment processed successfully');
+            } catch (err) {
+                console.error('[Verify] Failed to process topic switch:', err);
+                // Payment was still successful, but switch processing failed
+                // This should be handled via a manual admin review
+            }
+
+            return NextResponse.json({
+                success: true,
+                message: "Topic switch payment verified successfully",
+                paymentId: result.payment.id,
+                projectId: result.payment.projectId,
+                isTopicSwitch: true
+            });
+        }
 
         // Send email receipt (outside transaction to avoid blocking)
         try {

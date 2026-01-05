@@ -5,6 +5,7 @@ import { ProfileClient } from "./ProfileClient";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { prisma } from "@/lib/prisma";
 import { TopicSwitchRequestForm } from "@/features/support/components/TopicSwitchRequestForm";
+import { TopicSwitchPaymentVerifier } from "@/features/support/components/TopicSwitchPaymentVerifier";
 
 export default async function ProfilePage() {
     const user = await getCurrentUser();
@@ -18,6 +19,8 @@ export default async function ProfilePage() {
             <div className="max-w-2xl mx-auto">
                 <h1 className="text-3xl font-display font-bold mb-8">My Profile</h1>
 
+                {/* Payment Verification Handler */}
+                <TopicSwitchPaymentVerifier />
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
                     <div className="flex flex-col md:flex-row items-center gap-6 mb-8 text-center md:text-left">
                         <UserAvatar name={user.name} image={user.image} size="lg" className="w-24 h-24 text-3xl shrink-0" />
@@ -51,10 +54,22 @@ export default async function ProfilePage() {
 
                     if (!project) return null;
 
+                    // Fetch any active topic switch request
+                    const activeRequest = await prisma.topicSwitchRequest.findFirst({
+                        where: {
+                            projectId: project.id,
+                            status: { in: ['pending', 'pending_payment', 'denied'] }
+                        },
+                        orderBy: { createdAt: 'desc' }
+                    });
+
                     return (
                         <div className="mt-8">
                             <h2 className="text-xl font-display font-bold mb-4">Project Settings</h2>
-                            <TopicSwitchRequestForm project={project} />
+                            <TopicSwitchRequestForm
+                                project={project}
+                                activeRequest={activeRequest}
+                            />
                         </div>
                     );
                 })()}

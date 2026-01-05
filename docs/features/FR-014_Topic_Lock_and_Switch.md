@@ -7,64 +7,95 @@ This system ensures that:
 2.  Users cannot abuse the system by creating unlimited projects for different people under one account.
 3.  Legitimate users (e.g., topic rejected by lecturer) have a path to switch topics either for free (with proof) or for a fee (if changing mind).
 
-## User Review Required
-> [!IMPORTANT]
-> **Schema Changes**: This feature introduces a new `isLocked` field on the `Project` model and a new `TopicSwitchRequest` model.
-> **Blocking Behavior**: Once a project is paid and locked, users will be **blocked** from creating new projects and from navigating back to the topic selection screen in the builder.
+## Architecture
 
-## Proposed Changes
+```mermaid
+flowchart TD
+    subgraph "Initial Flow"
+        A[User Creates Project] --> B[User Pays ₦15,000]
+        B --> C[Project Locked<br>isLocked=true, isUnlocked=true]
+    end
+    
+    subgraph "Topic Switch Flow"
+        C --> D{Needs Topic Change?}
+        D -->|Lecturer Rejected| E[Submit Request + Proof]
+        D -->|Changed Mind| F[Submit Request + ₦2,000 Fee]
+        
+        E --> G[Admin Review]
+        F --> G
+        
+        G -->|Approved Free| H[archiveAndUnlock<br>isLocked=false, clear content]
+        G -->|Approved Paid| I[status=pending_payment]
+        
+        I --> J[User Pays ₦2,000]
+        J --> K[processPaidSwitch<br>isLocked=false, clear content]
+        
+        H --> L[User Regenerates Topic/Abstract/Outline]
+        K --> L
+        
+        L --> M[Save Outline]
+        M --> N[Re-Lock<br>isLocked=true]
+    end
+```
+
+## Key Components
 
 ### Database Schema
-#### [MODIFY] [schema.prisma](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/prisma/schema.prisma)
-- Add `isLocked` (Boolean) and `lockedAt` (DateTime) to `Project` model.
-- Create `TopicSwitchRequest` model to track switch requests.
+- **`Project.isLocked`**: Boolean, true = topic cannot be changed.
+- **`Project.isUnlocked`**: Boolean, true = workspace is paid and accessible.
+- **`Project.topicSwitchCount`**: Int, tracks number of topic switches (enforces one-time limit).
+- **`TopicSwitchRequest`**: Tracks switch requests with status: `pending` → `pending_payment` → `approved` / `denied`.
+- **`TopicSwitchArchive`**: Archives old project content before clearing.
 
-### Backend Logic
-#### [MODIFY] [projects.service.ts](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/services/projects.service.ts)
-- Modify `createProject`: Check if user already has a locked project. If so, throw strict error.
-- New method `lockProject(projectId)`: Sets `isLocked = true`. Called after successful payment.
+### Backend Services
+| Service | File | Purpose |
+|---------|------|---------|
+| `ProjectsService` | `src/services/projects.service.ts` | `createProject`, `lockProject`, `unlockProject`. **Critical**: Reuses paid unlocked projects instead of creating new ones. |
+| `TopicSwitchService` | `src/services/topic-switch.service.ts` | `createRequest`, `reviewRequest`, `processPaidSwitch`, `archiveAndUnlock`. |
 
-#### [NEW] [topic-switch.service.ts](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/services/topic-switch.service.ts)
-- `createRequest(userId, projectId, reason, proof?)`
-- `reviewRequest(requestId, status, adminId)`
-- `processSwitch(projectId)`: Unlocks project.
-
-#### [MODIFY] [billing.service.ts](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/services/billing.service.ts)
-- In `recordPayment`: Call `projectsService.lockProject(projectId)` immediately after payment success.
+### API Routes
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/support/topic-switch` | POST | Submit a switch request |
+| `/api/admin/requests/[id]/review` | POST | Admin approves/denies request |
+| `/api/pay/switch/initialize` | POST | Initialize ₦2,000 payment for approved requests |
+| `/api/pay/verify` | POST | Verifies payments, handles `type: topic_switch` in metadata |
+| `/api/projects/[id]/outline` | POST | Saves outline, **re-locks** paid projects after switch |
 
 ### UI Components
-#### [MODIFY] [TopicSwitchRequestForm.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/support/components/TopicSwitchRequestForm.tsx)
-- Contains the selection logic for "Reason" and file upload handling.
-- **Responsive Design:** Buttons stack on mobile (`col-span-1`) and split on desktop (`grid-cols-2`).
+| Component | Purpose |
+|-----------|---------|
+| `TopicSwitchRequestForm` | Form with reason selection, proof upload. Shows status: Pending/Approved/Denied. |
+| `TopicSwitchPaymentVerifier` | Client component on `/profile` that detects `?reference=switch_...` and triggers verification. |
+| `TopicLockModal` | Warning modal before payment, requires checkbox confirmation. |
+| `WorkspaceLockScreen` | Lock screen with "Unlock Now" button that triggers `TopicLockModal`. |
 
-#### [MODIFY] [BuilderClient.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/builder/components/BuilderClient.tsx)
-- **Navigation Lock**: Disables "Back" navigation when the project is locked to prevent accidental topic changes after payment.
+## Data Flow: Topic Switch Payment
 
-#### [MODIFY] [ChapterOutliner.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/builder/components/ChapterOutliner.tsx)
-- **Navigation Recovery**: Added a "Change Topic" link that allows users to loop back to Step 1. This is critical for users whose topic switch request was approved (leaving the project in an unlocked but previously "Generated" state).
+1.  **Submit Request**: User submits request via `TopicSwitchRequestForm` → `/api/support/topic-switch` (fee passed).
+2.  **Admin Approval**: Admin approves → `TopicSwitchService.reviewRequest` sets status to `pending_payment`.
+3.  **Payment UI**: Profile page shows "Pay ₦2,000" button via `TopicSwitchRequestForm` (detects `pending_payment` status).
+4.  **Payment Init**: User clicks pay → `/api/pay/switch/initialize` → Paystack with `metadata: { type: "topic_switch", requestId }`.
+5.  **Redirect**: User returns to `/profile?payment=verifying&reference=switch_...`.
+6.  **Verification**: `TopicSwitchPaymentVerifier` detects reference → calls `/api/pay/verify`.
+7.  **Processing**: Verify route detects `type: topic_switch` → calls `processPaidSwitch` → archives content, clears project, sets `isLocked: false`.
+8.  **Regeneration**: User goes to builder, regenerates topic/abstract/outline.
+9.  **Re-Lock**: On outline save, `/api/projects/[id]/outline` detects paid unlocked project → sets `isLocked: true`.
 
-### Proof of Rejection Implementation
-To minimize infrastructure dependencies, "Proof" for topic switch requests is handled as follows:
-- **Client**: `TopicSwitchRequestForm` converts the uploaded image (max 2MB) to a **Base64 Data URL** using `FileReader`.
-- **Database**: The Base64 string is stored directly in the `proofUrl` field of the `TopicSwitchRequest` model.
-- **Admin**: `ProofModal` renders the Base64 string in a dialog popup to avoid browser "About:Blank" blocks on direct Data URL navigation.
+## Hotfixes / Changelog
 
-## Verification Plan
+### Hotfix 2026-01-05: Fee Passing Bug
+- **Problem:** `/api/support/topic-switch` was not passing the `fee` field to `TopicSwitchService.createRequest()`, causing fee-based requests to be treated as free.
+- **Solution:** Added `fee` to destructuring and service call.
 
-### Automated Tests
-- **Unit Tests**:
-    - Test `createProject` throws if user has locked project.
-    - Test `lockProject` updates DB correctly.
-    - Test `TopicSwitchRequest` creation.
+### Hotfix 2026-01-05: Step Routing for Unlocked Projects
+- **Problem:** `useBuilderStore.loadProject` routed users to ABSTRACT step even when project was unlocked for topic switch (had topic but no abstract).
+- **Solution:** Added `isUnlockedForTopicSwitch` check to force TOPIC step.
 
-### Manual Verification
-1.  **New User Flow**:
-    - Create project -> Select Topic -> Try to Pay.
-    - Verify Lock Warning Modal appears.
-    - Pay -> Verify Project is `isLocked`.
-    - Try to create NEW project -> Expect Error/Block.
-2.  **Switch Flow**:
-    - Go to Settings/Support.
-    - Request Switch (Reason: Lecturer Rejected).
-    - Mock Admin Approval.
-    - Verify Project is unlocked.
+### Hotfix 2026-01-05: Project ID Preservation
+- **Problem:** `projects.service.ts` created new projects after topic switch instead of reusing the paid one, orphaning payment history.
+- **Solution:** Added check for unlocked PAID projects (`isUnlocked: true`) and updates them instead of creating new.
+
+### Hotfix 2026-01-05: Re-Lock After Switch
+- **Problem:** After topic switch, the project remained unlocked indefinitely.
+- **Solution:** `/api/projects/[id]/outline` POST now re-locks paid projects (`isUnlocked && !isLocked`) after outline save.

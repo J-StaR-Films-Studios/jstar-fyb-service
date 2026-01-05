@@ -85,6 +85,7 @@ export default async function BuilderPage({ searchParams }: PageProps) {
                 mode: recentProject.mode as any,
                 // @ts-ignore - casting string to literal type
                 status: recentProject.status as any,
+                isLocked: recentProject.isLocked || false,
             };
         }
     }
