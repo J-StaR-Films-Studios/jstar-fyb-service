@@ -93,9 +93,26 @@ await sendMessage({
     role: 'user',
     parts: [{ type: 'text', text: 'Hello' }],
 });
+
+// Setting Initial Messages (WORKAROUND)
+// ⚠️ AI SDK 5.0 does not support `initialMessages` in useChat options.
+// Use useEffect + setMessages instead:
+useEffect(() => {
+    if (messages.length === 0) {
+        setMessages([
+            {
+                id: 'welcome',
+                role: 'assistant',
+                content: 'Hello! I am your AI assistant.',
+                parts: [{ type: 'text', text: 'Hello! I am your AI assistant.' }]
+            } as any
+        ]);
+    }
+}, [setMessages]);
 ```
 
 **Bug Reference:** Hotfix 2026-01-03 - `AcademicCopilot.tsx` was sending requests to `/api/chat` instead of `/api/projects/[id]/chat` because the `api` prop was ignored.
+**Bug Reference:** Hotfix 2026-01-04 - `HubChatInterface.tsx` failed to build because `initialMessages` prop is not recognized in v5.0; resolved by using `useEffect` + `setMessages`.
 
 ---
 

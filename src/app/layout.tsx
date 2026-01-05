@@ -3,6 +3,7 @@ import { Outfit, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
+import { SupportProviderClient } from "@/features/support/components/SupportProviderClient";
 import { Toaster } from "sonner";
 
 const outfit = Outfit({
@@ -29,9 +30,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} ${spaceGrotesk.variable} font-sans antialiased bg-dark`}>
+      <body className={`${outfit.variable} ${spaceGrotesk.variable} font-sans antialiased bg-dark`} suppressHydrationWarning>
         <ErrorBoundary>
-          {children}
+          <SupportProviderClient>
+            {children}
+          </SupportProviderClient>
         </ErrorBoundary>
         <OfflineIndicator />
         <Toaster position="top-center" richColors />
@@ -39,3 +42,4 @@ export default function RootLayout({
     </html>
   );
 }
+

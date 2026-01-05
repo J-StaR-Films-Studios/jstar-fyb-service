@@ -17,8 +17,9 @@ export class ProjectsService {
     }
 
     /**
-     * Creates a new project, enforcing the "One Locked Project" rule.
+     * Creates a new project, enforcing the "One Paid Project" rule.
      * If the user is authenticated and has a locked project, this throws an error.
+     * If the user has an UNLOCKED but PAID project (from topic switch), we UPDATE it instead.
      */
     static async createProject(data: {
         topic: string;
@@ -28,17 +29,36 @@ export class ProjectsService {
         anonymousId?: string | null;
     }) {
         if (data.userId) {
+            // Check for locked project - can't create new one
             const lockedProject = await this.getLockedProject(data.userId);
             if (lockedProject) {
                 throw new Error("User already has a locked project. Please switch topics via support or complete your current project.");
             }
-        }
 
-        // Also check if there's an existing UNLOCKED project we should reuse? 
-        // The business logic "Prevent creating new projects (1 per account by default)" 
-        // usually implies we might want to guide them to the existing one, 
-        // but for now, we just block if there is a LOCKED one.
-        // If they have 5 draft projects, that's fine, until they pay for one.
+            // CRITICAL: Check for unlocked but PAID project (from topic switch)
+            // These should be UPDATED, not replaced with a new project, to preserve payment history
+            const paidUnlockedProject = await prisma.project.findFirst({
+                where: {
+                    userId: data.userId,
+                    isLocked: false,
+                    isUnlocked: true, // Has been paid for (workspace unlocked)
+                },
+                orderBy: { updatedAt: 'desc' }
+            });
+
+            if (paidUnlockedProject) {
+                console.log(`[ProjectsService] Reusing paid unlocked project ${paidUnlockedProject.id} instead of creating new`);
+                return prisma.project.update({
+                    where: { id: paidUnlockedProject.id },
+                    data: {
+                        topic: data.topic,
+                        twist: data.twist || "",
+                        abstract: data.abstract,
+                        updatedAt: new Date()
+                    }
+                });
+            }
+        }
 
         return prisma.project.create({
             data: {

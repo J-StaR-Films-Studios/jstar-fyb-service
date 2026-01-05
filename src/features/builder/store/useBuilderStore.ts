@@ -36,6 +36,7 @@ export interface ProjectData {
     mode: ProjectMode;
     status: ProjectStatus;
     isLocked?: boolean;
+    topicSwitchCount?: number;
 }
 
 interface BuilderState {
@@ -267,12 +268,18 @@ export const useBuilderStore = create<BuilderState>()(
 
                 // IMPORTANT: Use server data as the complete source of truth for critical fields
                 // We merge but ensure server projectId, topic, outline ALWAYS win
+
+                // Special case: Project was unlocked for topic switch (isPaid, !isLocked, no abstract)
+                // Should start at TOPIC step to allow user to pick a new topic
+                const isUnlockedForTopicSwitch = isPaid && !projectData.isLocked && !projectData.abstract && projectData.topic;
+
                 set((state) => ({
                     // Determine step based on data presence
-                    step: (projectData.outline && projectData.outline.length > 0) ? 'OUTLINE'
-                        : projectData.abstract ? 'ABSTRACT'
-                            : projectData.topic ? 'ABSTRACT' // If topic exists, go to Abstract
-                                : 'TOPIC',
+                    step: isUnlockedForTopicSwitch ? 'TOPIC' // Force TOPIC step for unlocked topic-switch projects
+                        : (projectData.outline && projectData.outline.length > 0) ? 'OUTLINE'
+                            : projectData.abstract ? 'ABSTRACT'
+                                : projectData.topic ? 'ABSTRACT' // If topic exists, go to Abstract
+                                    : 'TOPIC',
                     data: {
                         // Start with defaults to ensure type safety
                         userId: null,

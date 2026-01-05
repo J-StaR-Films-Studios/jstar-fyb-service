@@ -98,7 +98,8 @@ export function useChatPersistence(userId?: string) {
                 conversationId: conversationId,
                 userId: currentUserId,
                 anonymousId: currentAnonymousId,
-                messages: cleanMessages
+                messages: cleanMessages,
+                botType: 'jay' // Ensure Jay's conversations are saved with correct title
             });
 
         } catch (err) {

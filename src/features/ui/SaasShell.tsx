@@ -2,26 +2,48 @@
 
 import { signOut } from "@/lib/auth-client";
 import { useState, useRef, useEffect } from "react";
-import { LogOut, User as UserIcon, LayoutDashboard, Plus, Hammer } from "lucide-react";
+import { LogOut, User as UserIcon, LayoutDashboard, Plus, Hammer, MessageSquare, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MobileBottomNav } from "@/features/dashboard/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/UserAvatar";
+import { useSupport } from "@/features/support/context/SupportContext";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+// Helper component to avoid hook call issues in the dropdown
+const SupportButton = ({ onClose }: { onClose: () => void }) => {
+    const { openSupport } = useSupport();
+    return (
+        <button
+            onClick={() => {
+                openSupport();
+                onClose();
+            }}
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+        >
+            <HelpCircle className="w-4 h-4" />
+            Contact Support
+        </button>
+    );
+};
 
 interface SaasShellProps {
     children: React.ReactNode;
     user: {
         name?: string | null;
         image?: string | null;
+        email?: string | null;
+        id?: string;
     };
     headerContent?: React.ReactNode;
     fullWidth?: boolean;
     hasActiveProject?: boolean;
+    noPadding?: boolean;
+    hideBottomNav?: boolean;
 }
 
-export const SaasShell = ({ children, user, headerContent, fullWidth = false, hasActiveProject = false }: SaasShellProps) => {
+export const SaasShell = ({ children, user, headerContent, fullWidth = false, hasActiveProject = false, noPadding = false, hideBottomNav = false }: SaasShellProps) => {
     // Generate initials for avatar
     const initials = user.name
         ? user.name
@@ -34,9 +56,22 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
 
     const pathname = usePathname();
     const isDashboard = pathname === "/dashboard";
+    const isHub = pathname === "/hub";
 
     // Dropdown state
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Inject user data into SupportContext
+    const { setUser } = useSupport();
+    useEffect(() => {
+        if (user) {
+            setUser({
+                name: user.name,
+                email: user.email,
+                id: user.id
+            });
+        }
+    }, [user, setUser]);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown on click outside
@@ -61,16 +96,19 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
     };
 
     return (
-        <div className="bg-dark min-h-screen text-white font-sans pb-24 md:pb-0">
+        <div className={cn("bg-dark min-h-screen text-white font-sans md:pb-0", !hideBottomNav && "pb-24")}>
             {/* Header */}
-            <header className="flex justify-between items-center px-6 py-6 sticky top-0 bg-dark/80 backdrop-blur-md z-40 border-b border-white/5">
+            <header className="flex justify-between items-center px-4 py-3 md:px-6 md:py-6 sticky top-0 bg-dark/80 backdrop-blur-md z-40 border-b border-white/5">
                 <div className="flex items-center gap-4">
                     <div>
                         <h1 className="text-xl font-bold font-display">
                             {headerContent ? (
                                 <div className="flex items-center gap-2">
-                                    <Link href="/dashboard" className="font-normal text-gray-400 hover:text-white transition-colors">
+                                    <Link href="/dashboard" className="hidden md:block font-normal text-gray-400 hover:text-white transition-colors">
                                         My Projects
+                                    </Link>
+                                    <Link href="/dashboard" className="md:hidden text-gray-400 hover:text-white transition-colors">
+                                        <LayoutDashboard className="w-5 h-5" />
                                     </Link>
                                     <span className="text-gray-600">/</span>
                                 </div>
@@ -83,6 +121,21 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                 </div>
 
                 <div className="flex items-center gap-4">
+                    {/* HUB Button - Desktop Only (Hybrid Routing) */}
+                    {!isHub && (
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            className="hidden md:flex text-gray-400 hover:text-white hover:bg-white/5"
+                        >
+                            <Link href={hasActiveProject ? "/hub" : "/chat"}>
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                {hasActiveProject ? "AI Hub" : "Start Chat"}
+                            </Link>
+                        </Button>
+                    )}
+
                     {/* Back to Dashboard Button - Validation: Not on Dashboard */}
                     {!isDashboard && (
                         <Button
@@ -131,11 +184,16 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                             className="focus:outline-none focus:ring-2 focus:ring-accent/50 rounded-full"
                         >
-                            <UserAvatar name={user.name} image={user.image} size="md" />
+                            <UserAvatar
+                                name={user.name}
+                                image={user.image}
+                                size="md"
+                                className="w-8 h-8 text-xs md:w-10 md:h-10 md:text-sm"
+                            />
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute right-0 mt-2 w-48 bg-dark-card border border-white/10 rounded-xl shadow-xl py-2 animate-in fade-in zoom-in-95 duration-200 z-50">
+                            <div className="absolute right-0 mt-2 w-48 bg-dark/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl py-2 animate-in fade-in zoom-in-95 duration-200 z-50">
                                 <div className="px-4 py-2 border-b border-white/5 mb-1">
                                     <p className="text-sm font-bold text-white truncate">{user.name}</p>
                                     <p className="text-xs text-gray-500 truncate">User</p>
@@ -148,6 +206,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                                     <UserIcon className="w-4 h-4" />
                                     Profile
                                 </Link>
+                                <SupportButton onClose={() => setIsDropdownOpen(false)} />
                                 <button
                                     onClick={handleSignOut}
                                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors text-left"
@@ -163,14 +222,15 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
 
             {/* Main Content */}
             <main className={cn(
-                "px-6 py-6 space-y-8 mx-auto",
+                "mx-auto",
+                !noPadding && "px-6 py-6 space-y-8",
                 fullWidth ? "w-full" : "max-w-lg md:max-w-4xl"
             )}>
                 {children}
             </main>
 
             {/* Mobile Navigation */}
-            <MobileBottomNav hasActiveProject={hasActiveProject} />
+            {!hideBottomNav && <MobileBottomNav hasActiveProject={hasActiveProject} />}
         </div>
     );
 };

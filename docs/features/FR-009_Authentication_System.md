@@ -54,8 +54,8 @@ Configured `additionalFields` to include `role` in the session object, enabling 
 
 ## Implementation Checklist
 - [x] Configure Better-Auth with Prisma
-- [x] Create `/auth/login/page.tsx`
-- [x] Create `/auth/register/page.tsx`
+- [x] Create `/auth/login/page.tsx` (Added Back/Home navigation buttons)
+- [x] Create `/auth/register/page.tsx` (Added Back/Home navigation buttons)
 - [x] Create `/profile/page.tsx`
 - [x] Implement Middleware for Path Injection
 - [x] Implement Session-based RBAC for `/admin`

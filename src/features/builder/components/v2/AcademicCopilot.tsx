@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import Image from 'next/image';
 import {
     BrainCircuit,
     Send,
@@ -15,10 +16,13 @@ import {
     ArrowRight,
     Terminal,
     ChevronDown,
-    Layout
+    Layout,
+    Trash2
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { PERSONALITIES } from '@/features/bot/prompts/system';
 
 interface AcademicCopilotProps {
     projectId: string;
@@ -29,6 +33,28 @@ interface AcademicCopilotProps {
 export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber }: AcademicCopilotProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [localInput, setLocalInput] = useState('');
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+    // Avatar cycling state for personality transition
+    const [showAI, setShowAI] = useState(false);
+    const cycleTimings = [3000, 5000, 5000, 10000]; // ms
+    const cycleIndexRef = useRef(0);
+
+    useEffect(() => {
+        const cycle = () => {
+            setShowAI(prev => !prev);
+            cycleIndexRef.current = (cycleIndexRef.current + 1) % cycleTimings.length;
+            const nextDelay = cycleTimings[cycleIndexRef.current];
+            timeoutRef.current = setTimeout(cycle, nextDelay);
+        };
+
+        let timeoutRef = { current: null as NodeJS.Timeout | null };
+        timeoutRef.current = setTimeout(cycle, cycleTimings[0]);
+
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, []);
 
     // API endpoint for project-specific chat
     const apiEndpoint = projectId ? `/api/projects/${projectId}/chat` : '/api/chat';
@@ -95,8 +121,76 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         }
     };
 
+    const handleClearChat = async () => {
+        try {
+            // Clear messages from the AI SDK state
+            setMessages([]);
+            // Also clear from the database if there's a project conversation
+            await fetch(`/api/projects/${projectId}/chat`, { method: 'DELETE' });
+            setShowClearConfirm(false);
+        } catch (err) {
+            console.error('[AcademicCopilot] Clear failed:', err);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-dark/20 overflow-hidden relative">
+            {/* Clear Chat Confirmation Modal */}
+            <AnimatePresence>
+                {showClearConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                        onClick={() => setShowClearConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-dark border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                    <Trash2 className="w-5 h-5 text-red-400" />
+                                </div>
+                                <h3 className="font-display font-bold text-lg">Clear Chat?</h3>
+                            </div>
+                            <p className="text-sm text-gray-400 mb-6">
+                                This will delete all messages with Monji and start fresh. This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowClearConfirm(false)}
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleClearChat}
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-bold transition-colors"
+                                >
+                                    Clear All
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Trash Button - Fixed in corner */}
+            <div className="absolute top-2 right-2 z-20">
+                <button
+                    onClick={() => setShowClearConfirm(true)}
+                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-red-400 transition-colors"
+                    title="Clear Chat"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </button>
+            </div>
+
             {/* Ambient Background Glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none"></div>
 
@@ -109,12 +203,37 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                     /* V3: Empty State Widgets */
                     <div className="h-full flex flex-col items-center justify-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                         <div className="text-center space-y-2">
-                            <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto text-primary glow-box mb-4">
-                                <BrainCircuit className="w-8 h-8" />
+                            <div className="relative w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4">
+                                {/* Monji Avatar */}
+                                <div className={cn(
+                                    "absolute inset-0 transition-all duration-700 ease-in-out border-2 border-amber-500/30 rounded-2xl overflow-hidden",
+                                    showAI ? "opacity-0 scale-90" : "opacity-100 scale-100"
+                                )}>
+                                    <Image
+                                        src={PERSONALITIES.monji.avatar}
+                                        alt="Monji"
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </div>
+                                {/* AI Icon */}
+                                <div className={cn(
+                                    "absolute inset-0 flex items-center justify-center bg-primary/20 border-2 border-primary/30 rounded-2xl transition-all duration-700 ease-in-out",
+                                    showAI ? "opacity-100 scale-100" : "opacity-0 scale-110"
+                                )}>
+                                    <BrainCircuit className="w-8 h-8 text-primary" />
+                                </div>
                             </div>
-                            <h3 className="font-display font-bold text-white text-lg">Academic Copilot</h3>
-                            <p className="text-xs text-gray-400 max-w-[220px] mx-auto leading-relaxed">
-                                I am trained on your research library. Ask me to verify facts or help you draft content.
+                            <h3 className="font-display font-bold text-white text-lg transition-all duration-500">
+                                {showAI ? "Academic AI" : "Monji"}
+                            </h3>
+                            <p className="text-xs text-gray-400 max-w-[220px] mx-auto leading-relaxed min-h-[48px] flex items-center">
+                                <span className="transition-opacity duration-500">
+                                    {showAI
+                                        ? "Powered by your research library. Ask me anything about your project."
+                                        : "Your academic copilot. I'm trained on your research library to help you write with confidence."
+                                    }
+                                </span>
                             </p>
                         </div>
 

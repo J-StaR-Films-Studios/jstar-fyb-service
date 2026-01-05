@@ -380,37 +380,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
 
             {/* Context Overlay (Mobile Research/Chat) */}
             {mobileView === 'context' && (
-                <div className="fixed inset-0 z-40 bg-dark flex flex-col pt-24 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="flex border-b border-white/5 shrink-0 px-4">
-                        <button
-                            onClick={() => setActiveTab('research')}
-                            className={cn(
-                                "flex-1 py-4 text-sm font-bold border-b-2 transition-colors",
-                                activeTab === 'research' ? "border-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"
-                            )}
-                        >
-                            Research
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('chat')}
-                            className={cn(
-                                "flex-1 py-4 text-sm font-bold border-b-2 transition-colors",
-                                activeTab === 'chat' ? "border-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"
-                            )}
-                        >
-                            AI Chat
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('diagrams')}
-                            className={cn(
-                                "flex-1 py-4 text-sm font-bold border-b-2 transition-colors",
-                                activeTab === 'diagrams' ? "border-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"
-                            )}
-                        >
-                            Diagrams
-                        </button>
-                    </div>
-
+                <div className="fixed inset-0 z-40 bg-dark flex flex-col pb-24 animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <div className="flex-1 overflow-y-auto">
                         {activeTab === 'research' ? (
                             <div className="p-6 space-y-6">

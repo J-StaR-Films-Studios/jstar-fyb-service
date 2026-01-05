@@ -83,3 +83,9 @@ Reusable avatar component used across all authenticated pages.
 - **ProjectCard**: "Full Doc" button (disabled) replaced with "Enter Workspace" (active).
 - **Navigation**: Project title in card now links directly to workspace.
 
+### 2026-01-05: Mobile Refinements & Hub Access
+- **ProjectCard**: Stacked interaction buttons on mobile ("Abstract" / "Enter Workspace") for better touch targets.
+- **Header**: Added "AI Hub" link to desktop header for quick access.
+- **Profile**: Refactored `ProfilePage` to stack avatar and user info on mobile, fixing "squashed" layout.
+- **Format**: Added `break-all` to Account ID display to prevent overflow on small screens.
+

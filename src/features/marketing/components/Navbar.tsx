@@ -26,7 +26,7 @@ export function Navbar() {
             )}
         >
             <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-                <Link href="/" className="text-2xl font-display font-bold tracking-widest uppercase hover:opacity-80 transition-opacity">
+                <Link href="/" className="text-lg md:text-2xl font-display font-bold tracking-widest uppercase hover:opacity-80 transition-opacity">
                     J Star<span className="text-primary">.FYB</span>
                 </Link>
 
@@ -41,7 +41,7 @@ export function Navbar() {
                     {session?.data ? (
                         <Link
                             href="/dashboard"
-                            className="text-sm font-bold uppercase tracking-wider text-white hover:text-primary transition-colors"
+                            className="hidden md:block text-sm font-bold uppercase tracking-wider text-white hover:text-primary transition-colors"
                         >
                             Dashboard
                         </Link>
@@ -49,9 +49,10 @@ export function Navbar() {
 
                     <Link
                         href="/project/builder"
-                        className="px-6 py-2 bg-white/5 border border-white/10 rounded-full hover:bg-primary hover:border-primary transition-all duration-300 font-bold text-xs uppercase tracking-wider text-white"
+                        className="px-4 py-2 md:px-6 md:py-2 bg-white/5 border border-white/10 rounded-full hover:bg-primary hover:border-primary transition-all duration-300 font-bold text-xs uppercase tracking-wider text-white"
                     >
-                        Start Project
+                        <span className="md:hidden">Start</span>
+                        <span className="hidden md:inline">Start Project</span>
                     </Link>
                 </div>
             </div>

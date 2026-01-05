@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { signIn } from '@/lib/auth-client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ChevronLeft, Home } from 'lucide-react';
 
 function LoginForm() {
     const router = useRouter();
@@ -52,6 +53,28 @@ function LoginForm() {
 
     return (
         <div className="w-full max-w-md p-8">
+            <div className="fixed top-6 left-6 z-50 flex items-center gap-2">
+                <button
+                    onClick={() => {
+                        if (callbackUrl && callbackUrl.includes('/chat')) {
+                            router.push('/chat');
+                        } else {
+                            router.push('/');
+                        }
+                    }}
+                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                    title="Go Back"
+                >
+                    <ChevronLeft className="w-6 h-6" />
+                </button>
+                <Link
+                    href="/"
+                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                    title="Go Home"
+                >
+                    <Home className="w-5 h-5" />
+                </Link>
+            </div>
             <div className="text-center mb-8">
                 <h1 className="text-3xl font-display font-bold text-white mb-2">
                     Welcome Back

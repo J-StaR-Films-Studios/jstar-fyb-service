@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useChatFlow } from "../hooks/useChatFlow";
 import { ProposalCard } from "./ProposalCard";
+import { BotSwitcher } from "./BotSwitcher";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "@/lib/auth-client";
 import { mergeAnonymousData, clearAllConversations } from "../actions/chat";
@@ -19,9 +20,10 @@ import { signInAction, signOutAction } from "@/features/auth/actions";
 
 interface ChatInterfaceProps {
     initialUser?: any; // Replace 'any' with proper User type if available, e.g. from better-auth
+    hideHeader?: boolean;
 }
 
-export function ChatInterface({ initialUser }: ChatInterfaceProps) {
+export function ChatInterface({ initialUser, hideHeader = false }: ChatInterfaceProps) {
     const router = useRouter();
     const { data: session } = useSession();
     // Prioritize session user if available (client update), otherwise fallback to server passed user
@@ -86,60 +88,56 @@ export function ChatInterface({ initialUser }: ChatInterfaceProps) {
     };
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-dark text-white overflow-hidden font-sans">
+        <div className={`flex flex-col bg-dark text-white overflow-hidden font-sans ${hideHeader ? 'h-[calc(100vh-80px)]' : 'h-[100dvh]'}`}>
             {/* Header */}
-            <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-dark/80 backdrop-blur-md z-20 shrink-0">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-white/5 text-gray-400">
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <h1 className="font-display font-bold text-lg tracking-wide hidden md:block">Project Consultant</h1>
-                        <h1 className="font-display font-bold text-lg tracking-wide md:hidden">Jay</h1>
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-xs text-gray-400 font-mono">Active</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    {/* Complexity Widget - Desktop */}
-                    <div className="hidden md:block">
-                        <ComplexityMeter score={complexity} />
-                    </div>
-
-                    {/* Clear Chat Button */}
-                    <button
-                        onClick={() => setShowClearConfirm(true)}
-                        className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
-                        title="Clear Chat"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-
-                    {/* Auth Button */}
-                    {user ? (
-                        <div className="flex items-center gap-3 pl-3 border-l border-white/10">
-                            <UserAvatar name={user.name} image={user.image} size="sm" />
-                            <button
-                                onClick={() => signOutAction()}
-                                className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
-                            >
-                                <LogOut className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => router.push('/auth/login?callbackUrl=' + encodeURIComponent('/chat'))}
-                            className="px-4 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/20 text-xs font-bold text-primary transition-all flex items-center gap-2"
-                        >
-                            <User className="w-3 h-3" />
-                            Sign In to Save
+            {!hideHeader && (
+                <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-dark/80 backdrop-blur-md z-20 shrink-0">
+                    {/* Header content... */}
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-white/5 text-gray-400">
+                            <ArrowLeft className="w-5 h-5" />
                         </button>
-                    )}
-                </div>
-            </header>
+                        <BotSwitcher currentBot="jay" />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {/* Complexity Widget - Desktop */}
+                        <div className="hidden md:block">
+                            <ComplexityMeter score={complexity} />
+                        </div>
+
+                        {/* Clear Chat Button */}
+                        <button
+                            onClick={() => setShowClearConfirm(true)}
+                            className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
+                            title="Clear Chat"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+
+                        {/* Auth Button */}
+                        {user ? (
+                            <div className="flex items-center gap-3 pl-3 border-l border-white/10">
+                                <UserAvatar name={user.name} image={user.image} size="sm" />
+                                <button
+                                    onClick={() => signOutAction()}
+                                    className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => router.push('/auth/login?callbackUrl=' + encodeURIComponent('/chat'))}
+                                className="px-4 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/20 text-xs font-bold text-primary transition-all flex items-center gap-2"
+                            >
+                                <User className="w-3 h-3" />
+                                Sign In to Save
+                            </button>
+                        )}
+                    </div>
+                </header>
+            )}
 
             {/* Clear Chat Confirmation Modal */}
             <AnimatePresence>
@@ -348,35 +346,39 @@ export function ChatInterface({ initialUser }: ChatInterfaceProps) {
                 </ErrorBoundary>
             </main>
 
-            {/* Mobile Complexity Meter */}
-            <div className="md:hidden absolute bottom-[88px] left-0 right-0 px-4 pointer-events-none">
-                <div className="bg-dark/90 backdrop-blur-md border border-white/10 rounded-lg p-2 flex justify-between items-center pointer-events-auto">
-                    <span className="text-xs text-gray-400 font-mono uppercase">Complexity</span>
-                    <div className="scale-75 origin-right">
-                        <ComplexityMeter score={complexity} />
-                    </div>
-                </div>
-            </div>
-
             {/* Input Area */}
             <footer className="p-4 bg-dark/80 backdrop-blur-xl border-t border-white/5 shrink-0 z-30">
-                <form onSubmit={onSubmit} className="flex gap-3 relative max-w-4xl mx-auto">
+                {/* Mobile Complexity Meter - Inside footer for correct positioning */}
+                <div className="md:hidden mb-3">
+                    <div className="bg-dark/90 backdrop-blur-md border border-white/10 rounded-lg p-2 flex justify-between items-center">
+                        <span className="text-xs text-gray-400 font-mono uppercase">Complexity</span>
+                        <div className="scale-75 origin-right">
+                            <ComplexityMeter score={complexity} />
+                        </div>
+                    </div>
+                </div>
+
+                <form onSubmit={onSubmit} className="flex gap-3 relative max-w-4xl mx-auto items-end">
                     <button type="button" className="p-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-colors md:hidden">
                         <Plus className="w-6 h-6" />
                     </button>
 
                     <div className="flex-1 relative">
-                        <input
-                            type="text"
+                        <textarea
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    onSubmit(e);
+                                }
+                            }}
                             placeholder={state === "CLOSING" ? "Enter your WhatsApp number..." : "Type your reply..."}
                             disabled={state === "ANALYZING"}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-12 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all font-light disabled:opacity-50"
+                            rows={1}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-4 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all font-light disabled:opacity-50 resize-none max-h-40 overflow-y-auto"
+                            style={{ minHeight: '56px' }}
                         />
-                        <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors">
-                            <Mic className="w-5 h-5" />
-                        </button>
                     </div>
 
                     <button

@@ -39,7 +39,8 @@ export function useChatSync(
         // and haven't synced yet (or reset due to login)
         if (!hasSyncedHistory.current && anonymousId && anonymousId !== "") {
             const syncHistory = async () => {
-                const latest = await getLatestConversation({ anonymousId, userId });
+                // Pass botType: 'jay' to ensure we only load Jay's conversations, not Nengi's
+                const latest = await getLatestConversation({ anonymousId, userId, botType: 'jay' });
 
                 if (latest && latest.messages.length > 0) {
                     setConversationId(latest.id);

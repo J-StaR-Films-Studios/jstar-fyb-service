@@ -2,20 +2,49 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Upload, AlertCircle, CheckCircle } from "lucide-react";
+import { Loader2, Upload, AlertCircle, CheckCircle, Clock, CreditCard, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Project } from "@prisma/client";
+import { Project, TopicSwitchRequest } from "@prisma/client";
+import { useRouter } from "next/navigation";
 
 interface TopicSwitchRequestFormProps {
     project: Project;
+    activeRequest?: TopicSwitchRequest | null;
 }
 
-export function TopicSwitchRequestForm({ project }: TopicSwitchRequestFormProps) {
+export function TopicSwitchRequestForm({ project, activeRequest }: TopicSwitchRequestFormProps) {
+    const router = useRouter();
     const [reason, setReason] = useState<"lecturer_rejected" | "changed_mind">("lecturer_rejected");
     const [explanation, setExplanation] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [proofFile, setProofFile] = useState<string | null>(null);
+    const [isPayingSwitch, setIsPayingSwitch] = useState(false);
+
+    const handlePaySwitch = async () => {
+        if (!activeRequest) return;
+
+        setIsPayingSwitch(true);
+        try {
+            const res = await fetch("/api/pay/switch/initialize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ requestId: activeRequest.id })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(data.error || "Failed to initialize payment");
+            }
+        } catch (error: any) {
+            toast.error(error.message || "Payment initialization failed");
+        } finally {
+            setIsPayingSwitch(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,12 +70,79 @@ export function TopicSwitchRequestForm({ project }: TopicSwitchRequestFormProps)
 
             toast.success("Request submitted successfully!");
             setIsSuccess(true);
+            router.refresh(); // Refresh to show updated state
         } catch (error) {
             toast.error("Failed to submit request.");
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    // ACTIVE REQUEST STATES
+    if (activeRequest) {
+        // Pending Review
+        if (activeRequest.status === 'pending') {
+            return (
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-6 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-500 mb-4">
+                        <Clock className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">Request Under Review</h3>
+                    <p className="text-gray-400 text-sm">
+                        Your topic switch request is being reviewed by our team. You&apos;ll be notified once a decision is made.
+                    </p>
+                </div>
+            );
+        }
+
+        // Approved - Pending Payment
+        if (activeRequest.status === 'pending_payment') {
+            return (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-500/20 text-green-500 mb-4">
+                        <CheckCircle className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">Request Approved!</h3>
+                    <p className="text-gray-400 text-sm mb-6">
+                        Your topic switch request has been approved. Complete the payment to finalize your topic change.
+                    </p>
+                    <button
+                        onClick={handlePaySwitch}
+                        disabled={isPayingSwitch}
+                        className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                        {isPayingSwitch ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <CreditCard className="w-4 h-4" />
+                        )}
+                        Pay ₦{(activeRequest.fee || 2000).toLocaleString()} to Switch Topic
+                    </button>
+                </div>
+            );
+        }
+
+        // Denied
+        if (activeRequest.status === 'denied') {
+            return (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/20 text-red-500 mb-4">
+                        <XCircle className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">Request Denied</h3>
+                    <p className="text-gray-400 text-sm mb-4">
+                        Unfortunately, your topic switch request was not approved. You may submit a new request with additional information.
+                    </p>
+                    <button
+                        onClick={() => router.refresh()}
+                        className="text-primary underline text-sm hover:text-white transition-colors"
+                    >
+                        Submit New Request
+                    </button>
+                </div>
+            );
+        }
+    }
 
     if (isSuccess) {
         return (
@@ -56,7 +152,7 @@ export function TopicSwitchRequestForm({ project }: TopicSwitchRequestFormProps)
                 </div>
                 <h3 className="text-lg font-bold text-white mb-2">Request Submitted</h3>
                 <p className="text-gray-400 text-sm">
-                    We've received your request. Our support team will review it shortly.
+                    We&apos;ve received your request. Our support team will review it shortly.
                     {reason === 'lecturer_rejected'
                         ? ' You will be notified once approved.'
                         : ' Once approved, you\'ll receive a payment link to complete your topic switch.'}
@@ -80,7 +176,7 @@ export function TopicSwitchRequestForm({ project }: TopicSwitchRequestFormProps)
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-300">Reason for Switch</label>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                             type="button"
                             onClick={() => setReason("lecturer_rejected")}
