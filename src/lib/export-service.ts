@@ -1,5 +1,195 @@
 
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, LevelFormat, convertInchesToTwip, Table, TableRow, TableCell, BorderStyle, WidthType } from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, LevelFormat, convertInchesToTwip, Table, TableRow, TableCell, BorderStyle, WidthType, ImageRun } from "docx";
+
+// Image cache to avoid re-fetching the same image
+const imageCache = new Map<string, { data: ArrayBuffer; type: string; width: number; height: number }>();
+
+/**
+ * Converts MIME type to docx-compatible short format
+ * docx library expects: 'jpg' | 'png' | 'gif' | 'bmp'
+ */
+const mimeToDocxType = (mimeType: string): 'jpg' | 'png' | 'gif' | 'bmp' => {
+    if (mimeType.includes('png')) return 'png';
+    if (mimeType.includes('gif')) return 'gif';
+    if (mimeType.includes('bmp')) return 'bmp';
+    // Default to jpg for jpeg, webp, and unknown types
+    return 'jpg';
+};
+
+/**
+ * Detects image MIME type from extension or Content-Type header
+ */
+const getImageType = (url: string, contentType?: string): string => {
+    if (contentType && contentType.startsWith('image/')) {
+        return contentType;
+    }
+    const ext = url.split('.').pop()?.toLowerCase().split('?')[0];
+    switch (ext) {
+        case 'png': return 'image/png';
+        case 'gif': return 'image/gif';
+        case 'bmp': return 'image/bmp';
+        case 'svg': return 'image/svg+xml';
+        case 'webp': return 'image/webp';
+        case 'jpg':
+        case 'jpeg':
+        default: return 'image/jpeg';
+    }
+};
+
+/**
+ * Fetches image data from URL and returns buffer + metadata
+ */
+const fetchImageData = async (url: string): Promise<{ data: ArrayBuffer; type: string; width: number; height: number } | null> => {
+    // Check cache first
+    if (imageCache.has(url)) {
+        return imageCache.get(url)!;
+    }
+
+    try {
+        // Handle relative URLs (internal images)
+        const fullUrl = url.startsWith('/') ? `${window.location.origin}${url}` : url;
+
+        const response = await fetch(fullUrl);
+        if (!response.ok) {
+            console.warn(`Failed to fetch image: ${url}`);
+            return null;
+        }
+
+        const contentType = response.headers.get('Content-Type') || '';
+        const data = await response.arrayBuffer();
+        const type = getImageType(url, contentType);
+
+        // Get image dimensions using a temporary image element
+        const dimensions = await getImageDimensions(data, type);
+
+        const result = { data, type, ...dimensions };
+        imageCache.set(url, result);
+        return result;
+    } catch (error) {
+        console.warn(`Error fetching image ${url}:`, error);
+        return null;
+    }
+};
+
+/**
+ * Gets image dimensions from ArrayBuffer
+ */
+const getImageDimensions = (data: ArrayBuffer, type: string): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve) => {
+        const blob = new Blob([data], { type });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve({ width: img.width, height: img.height });
+        };
+
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            // Default dimensions if we can't determine
+            resolve({ width: 400, height: 300 });
+        };
+
+        img.src = url;
+    });
+};
+
+/**
+ * Creates an ImageRun paragraph from image data
+ * Scales image to fit within page width while maintaining aspect ratio
+ */
+const createImageParagraph = async (
+    url: string,
+    altText: string,
+    specifiedWidth?: number,
+    specifiedHeight?: number
+): Promise<Paragraph | null> => {
+    const imageData = await fetchImageData(url);
+    if (!imageData) return null;
+
+    // Max width for document (roughly 6 inches = ~432 points = ~576 pixels at 96 DPI)
+    const MAX_WIDTH = 500;
+    const MAX_HEIGHT = 600;
+
+    let width = specifiedWidth || imageData.width;
+    let height = specifiedHeight || imageData.height;
+
+    // Scale to fit within bounds while maintaining aspect ratio
+    if (width > MAX_WIDTH) {
+        const ratio = MAX_WIDTH / width;
+        width = MAX_WIDTH;
+        height = Math.round(height * ratio);
+    }
+    if (height > MAX_HEIGHT) {
+        const ratio = MAX_HEIGHT / height;
+        height = MAX_HEIGHT;
+        width = Math.round(width * ratio);
+    }
+
+    try {
+        return new Paragraph({
+            children: [
+                new ImageRun({
+                    data: imageData.data,
+                    type: mimeToDocxType(imageData.type),
+                    transformation: {
+                        width,
+                        height,
+                    },
+                    altText: {
+                        title: altText || 'Image',
+                        description: altText || 'Embedded image',
+                        name: altText || 'image',
+                    },
+                }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 120, after: 120 },
+        });
+    } catch (error) {
+        console.warn(`Error creating image paragraph for ${url}:`, error);
+        return null;
+    }
+};
+
+/**
+ * Parses markdown/HTML for image references
+ * Returns array of { url, alt, width?, height? } or null if not an image line
+ */
+const parseImageLine = (line: string): { url: string; alt: string; width?: number; height?: number } | null => {
+    const trimmed = line.trim();
+
+    // Markdown image: ![alt](url) - standalone images on their own line
+    const mdMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    if (mdMatch) {
+        return { url: mdMatch[2], alt: mdMatch[1] || 'Image' };
+    }
+
+    // Also try matching if there's trailing content after the image
+    const mdMatchLoose = trimmed.match(/^!\[([^\]]*)\]\(([^)\s]+)\)/);
+    if (mdMatchLoose && trimmed.startsWith('![')) {
+        return { url: mdMatchLoose[2], alt: mdMatchLoose[1] || 'Image' };
+    }
+
+    // HTML img tag: <img src="url" alt="alt" width="w" height="h" />
+    const imgMatch = trimmed.match(/^<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/i);
+    if (imgMatch) {
+        const url = imgMatch[1];
+        const altMatch = trimmed.match(/alt=["']([^"']*)["']/i);
+        const widthMatch = trimmed.match(/width=["']?(\d+)["']?/i);
+        const heightMatch = trimmed.match(/height=["']?(\d+)["']?/i);
+
+        return {
+            url,
+            alt: altMatch?.[1] || 'Image',
+            width: widthMatch ? parseInt(widthMatch[1], 10) : undefined,
+            height: heightMatch ? parseInt(heightMatch[1], 10) : undefined,
+        };
+    }
+
+    return null;
+};
 
 export interface ExportOptions {
     font?: string;
@@ -274,6 +464,34 @@ export const generateDocxBlob = async (content: string, title?: string, userOpti
             }
         }
 
+        // Image Detection (markdown ![alt](url) or HTML <img src="url" />)
+        const imageInfo = parseImageLine(trimmed);
+        if (imageInfo) {
+            const imageParagraph = await createImageParagraph(
+                imageInfo.url,
+                imageInfo.alt,
+                imageInfo.width,
+                imageInfo.height
+            );
+            if (imageParagraph) {
+                children.push(imageParagraph);
+            } else {
+                // Fallback: show image reference as text if fetch failed
+                children.push(new Paragraph({
+                    children: [new TextRun({
+                        text: `[Image: ${imageInfo.alt}]`,
+                        italics: true,
+                        ...runStyle,
+                        color: "666666"
+                    })],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 120, after: 120 }
+                }));
+            }
+            lastWasHeader = false;
+            continue;
+        }
+
         // Headers
         if (trimmed.startsWith('# ')) {
             children.push(new Paragraph({
@@ -313,6 +531,46 @@ export const generateDocxBlob = async (content: string, title?: string, userOpti
                 heading: HeadingLevel.HEADING_3,
                 alignment: AlignmentType.BOTH, // Justified
                 spacing: { before: 240, after: 120 }
+            }));
+            lastWasHeader = true;
+        } else if (trimmed.startsWith('#### ')) {
+            children.push(new Paragraph({
+                children: [new TextRun({
+                    text: trimmed.substring(5),
+                    bold: true,
+                    ...runStyle,
+                    size: (options.fontSize || 12) * 2
+                })],
+                heading: HeadingLevel.HEADING_4,
+                alignment: AlignmentType.BOTH,
+                spacing: { before: 200, after: 100 }
+            }));
+            lastWasHeader = true;
+        } else if (trimmed.startsWith('##### ')) {
+            children.push(new Paragraph({
+                children: [new TextRun({
+                    text: trimmed.substring(6),
+                    bold: true,
+                    ...runStyle,
+                    size: (options.fontSize || 12) * 2
+                })],
+                heading: HeadingLevel.HEADING_5,
+                alignment: AlignmentType.BOTH,
+                spacing: { before: 160, after: 80 }
+            }));
+            lastWasHeader = true;
+        } else if (trimmed.startsWith('###### ')) {
+            children.push(new Paragraph({
+                children: [new TextRun({
+                    text: trimmed.substring(7),
+                    bold: true,
+                    italics: true, // Subtle distinction for H6
+                    ...runStyle,
+                    size: (options.fontSize || 12) * 2
+                })],
+                heading: HeadingLevel.HEADING_6,
+                alignment: AlignmentType.BOTH,
+                spacing: { before: 120, after: 60 }
             }));
             lastWasHeader = true;
         }
