@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         console.log(`[Chat API] Processing ${modelMessages.length} messages. Last: "${modelMessages[modelMessages.length - 1]?.content?.slice(0, 50)}..."`);
 
         const result = await streamTextWithRetry({
-            model: groq('moonshotai/kimi-k2-instruct-0905'), // Llama 3.3 70B equivalent
+            model: groq('moonshotai/kimi-k2-instruct'), // Reliable agentic model
             stopWhen: stepCountIs(5),
             system: SYSTEM_PROMPT,
             messages: modelMessages,

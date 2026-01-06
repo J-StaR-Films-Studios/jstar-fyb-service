@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, BookOpen, FileText, CheckCircle2, Download, Layout } from "lucide-react";
+import { ArrowRight, Bot, BookOpen, FileText, CheckCircle2, Layout } from "lucide-react";
 import Link from "next/link";
 
 interface ProjectActionCenterProps {
@@ -61,10 +61,13 @@ export function ProjectActionCenter({ projectId }: ProjectActionCenterProps) {
                         Open in Workspace
                     </Link>
 
-                    <button className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold text-gray-300 flex items-center justify-center gap-2 transition-all">
-                        <Download className="w-4 h-4" />
-                        Download Outline
-                    </button>
+                    <Link
+                        href={`/project/${projectId}/workspace?tab=chat`}
+                        className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold text-gray-300 flex items-center justify-center gap-2 transition-all hover:border-purple-500/30 hover:text-purple-400"
+                    >
+                        <Bot className="w-4 h-4" />
+                        Chat with Monji
+                    </Link>
                 </div>
             </div>
         </div>

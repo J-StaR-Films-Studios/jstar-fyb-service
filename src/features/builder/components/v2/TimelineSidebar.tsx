@@ -1,6 +1,6 @@
 'use client';
 
-import { LucideIcon, CheckCircle2, Lock, MoreHorizontal, Download, ChevronRight, Circle, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { LucideIcon, CheckCircle2, Lock, MoreHorizontal, ChevronRight, Circle, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -168,14 +168,6 @@ export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, o
                         wordCount={chapter.wordCount}
                     />
                 ))}
-            </div>
-
-            {/* Bottom Actions */}
-            <div className="p-4 border-t border-white/5 shrink-0">
-                <button className="w-full py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2 group">
-                    <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    Export Project
-                </button>
             </div>
         </aside>
     );
