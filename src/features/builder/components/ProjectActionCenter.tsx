@@ -62,11 +62,11 @@ export function ProjectActionCenter({ projectId }: ProjectActionCenterProps) {
                     </Link>
 
                     <Link
-                        href="/chat"
-                        className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold text-gray-300 flex items-center justify-center gap-2 transition-all hover:border-blue-500/30 hover:text-blue-400"
+                        href={`/project/${projectId}/workspace?tab=chat`}
+                        className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold text-gray-300 flex items-center justify-center gap-2 transition-all hover:border-purple-500/30 hover:text-purple-400"
                     >
                         <Bot className="w-4 h-4" />
-                        Chat with AI
+                        Chat with Monji
                     </Link>
                 </div>
             </div>
