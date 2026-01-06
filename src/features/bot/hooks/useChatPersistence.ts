@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { saveConversation } from "../actions/chat";
+import { generateUUID } from "@/lib/uuid";
 
 export function useChatPersistence(userId?: string) {
     const [anonymousId, setAnonymousId] = useState<string>("");
@@ -27,7 +28,7 @@ export function useChatPersistence(userId?: string) {
         if (typeof window !== 'undefined') {
             let id = localStorage.getItem("jstar_anonymous_id");
             if (!id) {
-                id = crypto.randomUUID();
+                id = generateUUID();
                 localStorage.setItem("jstar_anonymous_id", id);
             }
             setAnonymousId(id);

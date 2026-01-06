@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Upload, Link as LinkIcon, FileText, Loader2, Trash2, CheckCircle, XCircle, Eye, Sparkles, BrainCircuit, RefreshCw } from "lucide-react";
 import { useBuilderStore } from "../store/useBuilderStore";
 import { DocumentViewerModal } from "./DocumentViewerModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ResearchDocument } from "@prisma/client";
 
 export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: string, searchQuery?: string }) {
@@ -16,6 +17,11 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
     const [extractionStatus, setExtractionStatus] = useState<Record<string, string>>({});
     const [syncingDocs, setSyncingDocs] = useState<Record<string, boolean>>({}); // Track manual syncs
     const [selectedDocument, setSelectedDocument] = useState<ResearchDocument | null>(null);
+
+    // Modal states
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; docId: string | null }>({ isOpen: false, docId: null });
+    const [syncModal, setSyncModal] = useState<{ isOpen: boolean; result?: 'success' | 'error' }>({ isOpen: false });
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Fetch existing documents
     useEffect(() => {
@@ -39,11 +45,11 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
 
         // Client-side validation for file uploads
         if (mode === "upload" && file) {
-            const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+            const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB - matches server limit
             const ACCEPTED_TYPES = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
 
             if (file.size > MAX_FILE_SIZE) {
-                alert("File exceeds 4MB limit. Please upload a smaller file.");
+                alert("File exceeds 5MB limit. Please compress your PDF at ilovepdf.com/compress_pdf and try again.");
                 return;
             }
 
@@ -136,39 +142,66 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
     };
 
     const handleRetrySync = async () => {
+        setSyncModal({ isOpen: true });
         setSyncingDocs(prev => ({ ...prev, global: true }));
         try {
             const res = await fetch(`/api/projects/${projectId}/research/sync`, { method: 'POST' });
             if (res.ok) {
-                await fetchDocuments(); // Refresh to get new statuses
-                alert('Sync completed successfully');
+                await fetchDocuments();
+                setSyncModal({ isOpen: true, result: 'success' });
             } else {
-                alert('Sync failed');
+                setSyncModal({ isOpen: true, result: 'error' });
             }
         } catch (e) {
             console.error(e);
-            alert('Sync failed');
+            setSyncModal({ isOpen: true, result: 'error' });
         } finally {
             setSyncingDocs(prev => ({ ...prev, global: false }));
         }
     };
 
+    const handleDeleteClick = (docId: string) => {
+        setDeleteModal({ isOpen: true, docId });
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteModal.docId) return;
+
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`/api/documents/${deleteModal.docId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setDocuments(prev => prev.filter(doc => doc.id !== deleteModal.docId));
+                setDeleteModal({ isOpen: false, docId: null });
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const getStatusIcon = (status: string) => {
         switch (status) {
             case "PROCESSED": return <CheckCircle className="w-4 h-4 text-green-400" />;
+            case "COMPLETED": return <CheckCircle className="w-4 h-4 text-green-400" />;
             case "FAILED": return <XCircle className="w-4 h-4 text-red-400" />;
+            case "EXTRACTION_FAILED": return <XCircle className="w-4 h-4 text-orange-400" />;
             case "PROCESSING": return <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />;
+            case "PENDING": return <Loader2 className="w-4 h-4 animate-spin text-blue-400" />;
             default: return <Sparkles className="w-4 h-4 text-gray-400" />;
         }
     };
 
     const getStatusText = (status: string) => {
         switch (status) {
-            case "PROCESSED": return "Processed";
-            case "FAILED": return "Failed";
-            case "PROCESSING": return "Processing...";
-            default: return "Pending Analysis";
+            case "PROCESSED": return "AI Summary Ready";
+            case "COMPLETED": return "Ready";
+            case "FAILED": return "Processing Failed";
+            case "EXTRACTION_FAILED": return "Text Extraction Failed";
+            case "PROCESSING": return "Generating Summary...";
+            case "PENDING": return "Extracting Text...";
+            default: return "Waiting...";
         }
     };
 
@@ -215,7 +248,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                                 <>
                                     <Upload className="w-8 h-8 text-gray-500 mx-auto mb-2" />
                                     <p className="text-gray-400 text-sm">Click to upload PDF or DOCX</p>
-                                    <p className="text-gray-600 text-xs mt-1">Max 4MB</p>
+                                    <p className="text-gray-600 text-xs mt-1">Max 5MB • <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" rel="noopener" className="text-primary hover:underline">Compress PDFs here</a></p>
                                 </>
                             )}
                         </label>
@@ -288,6 +321,11 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                                                 <BrainCircuit className="w-3 h-3 text-purple-400" />
                                                 <span className="text-[10px] text-gray-300 font-medium tracking-wide">AI READY</span>
                                             </>
+                                        ) : doc.importError ? (
+                                            <>
+                                                <XCircle className="w-3 h-3 text-red-500" />
+                                                <span className="text-[10px] text-red-400">SYNC FAILED</span>
+                                            </>
                                         ) : doc.fileType !== 'link' ? (
                                             <>
                                                 <Loader2 className="w-3 h-3 text-gray-500 animate-spin" />
@@ -326,6 +364,28 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                                                 View
                                             </button>
                                         )}
+
+                                        {/* Retry Extraction for failed docs */}
+                                        {(doc.status === "EXTRACTION_FAILED" || doc.status === "FAILED") && (
+                                            <button
+                                                onClick={() => handleExtract(doc.id)}
+                                                disabled={isExtracting}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 rounded-md text-xs transition-colors border border-orange-500/20"
+                                            >
+                                                <RefreshCw className={`w-3 h-3 ${isExtracting ? 'animate-spin' : ''}`} />
+                                                Retry
+                                            </button>
+                                        )}
+
+
+                                        {/* Delete Button */}
+                                        <button
+                                            onClick={() => handleDeleteClick(doc.id)}
+                                            className="flex items-center gap-1.5 px-2 py-1.5 text-red-400 hover:bg-red-500/10 rounded-md text-xs transition-colors"
+                                            title="Delete document"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -357,6 +417,32 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                 researchDoc={selectedDocument}
                 isOpen={!!selectedDocument}
                 onClose={() => setSelectedDocument(null)}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, docId: null })}
+                onConfirm={handleDeleteConfirm}
+                title="Delete Document"
+                message="This will permanently remove the document from your research library. This action cannot be undone."
+                confirmText="Delete"
+                type="danger"
+                isLoading={isDeleting}
+            />
+
+            {/* Sync Status Modal */}
+            <ConfirmModal
+                isOpen={syncModal.isOpen && !!syncModal.result}
+                onClose={() => setSyncModal({ isOpen: false })}
+                onConfirm={() => setSyncModal({ isOpen: false })}
+                title={syncModal.result === 'success' ? 'Sync Complete' : 'Sync Failed'}
+                message={syncModal.result === 'success'
+                    ? 'All documents have been synced to the AI knowledge base.'
+                    : 'Failed to sync documents. Please try again later.'}
+                confirmText="OK"
+                cancelText=""
+                type={syncModal.result === 'success' ? 'success' : 'danger'}
             />
         </div >
     );

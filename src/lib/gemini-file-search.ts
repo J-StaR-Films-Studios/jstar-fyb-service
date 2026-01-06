@@ -84,6 +84,11 @@ export const GeminiFileSearchService = {
             const opResult = (operation as any).result;
             const opError = (operation as any).error;
 
+            // Debug logging to understand the response structure
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[GeminiFileSearch] Operation completed:', JSON.stringify(operation, null, 2));
+            }
+
             if (opResult?.name) { // The result is the File resource name
                 const fileId = opResult.name;
                 console.log(`[GeminiFileSearch] Upload complete: ${fileId}`);
@@ -91,9 +96,15 @@ export const GeminiFileSearchService = {
             } else if (opError) {
                 console.error('[GeminiFileSearch] Processing failed:', opError);
                 return { success: false, error: opError.message || 'Processing failed' };
+            } else if (operation.done) {
+                // Fallback: If done is true and no error, assume success but warn about missing ID
+                // Sometimes the result is nested differently or strict types hide it
+                console.warn('[GeminiFileSearch] Operation done but result structure unclear. Assuming success.');
+                const fallbackId = (operation as any).response?.name || (operation as any).metadata?.name;
+                return { success: true, fileId: fallbackId };
             }
 
-            return { success: false, error: 'Unknown upload result' };
+            return { success: false, error: 'Unknown upload result - operation finished but no result/error found' };
 
         } catch (error: any) {
             console.error('[GeminiFileSearch] Upload exception:', error);

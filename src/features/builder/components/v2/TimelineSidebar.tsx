@@ -1,6 +1,6 @@
 'use client';
 
-import { LucideIcon, CheckCircle2, Lock, MoreHorizontal, Download, ChevronRight, Circle } from 'lucide-react';
+import { LucideIcon, CheckCircle2, Lock, MoreHorizontal, Download, ChevronRight, Circle, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -11,14 +11,22 @@ interface ChapterNodeProps {
     subsections?: string[];
     isActive?: boolean;
     onClick?: () => void;
+    onGenerate?: (e: React.MouseEvent) => void;
+    isGenerating?: boolean;
+    wordCount?: number;
 }
 
-function ChapterNode({ number, title, status, subsections, isActive, onClick }: ChapterNodeProps) {
+function ChapterNode({ number, title, status, subsections, isActive, onClick, onGenerate, isGenerating, wordCount }: ChapterNodeProps) {
+    // Show generate (always visible) if: draft/empty AND no content
+    const showGenerate = (status === 'draft' || (status as string) === 'empty') && !isGenerating && onGenerate && (!wordCount || wordCount < 30);
+    // Show regenerate (on hover) if: has content AND not currently generating
+    const showRegenerate = !showGenerate && !isGenerating && onGenerate && wordCount && wordCount >= 30;
+
     return (
         <div
             onClick={status !== 'locked' ? onClick : undefined}
             className={cn(
-                "group rounded-xl p-3 transition-all border border-transparent",
+                "group rounded-xl p-3 transition-all border border-transparent relative",
                 isActive ? "bg-primary/10 border-primary/20 cursor-default" :
                     status === 'locked' ? "opacity-50 cursor-not-allowed" : "hover:bg-white/5 hover:border-white/5 cursor-pointer"
             )}
@@ -30,9 +38,47 @@ function ChapterNode({ number, title, status, subsections, isActive, onClick }: 
                 )}>
                     Chapter {number}
                 </span>
-                {status === 'complete' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                {status === 'locked' && <Lock className="w-3 h-3 text-gray-600" />}
-                {isActive && <MoreHorizontal className="w-4 h-4 text-primary/50 group-hover:text-primary cursor-pointer" />}
+
+                <div className="flex items-center gap-2">
+                    {/* Status Icons */}
+                    {status === 'complete' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                    {status === 'locked' && <Lock className="w-3 h-3 text-gray-600" />}
+
+                    {/* Generate Button - Always visible for empty chapters */}
+                    {showGenerate && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onGenerate?.(e);
+                            }}
+                            className="bg-primary/20 hover:bg-primary/30 p-1.5 rounded-lg text-primary transition-all hover:scale-110"
+                            title="Generate Chapter with AI"
+                        >
+                            <Sparkles className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+
+                    {/* Regenerate Button - Shows on hover for chapters with content */}
+                    {showRegenerate && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onGenerate?.(e);
+                            }}
+                            className="bg-orange-500/10 hover:bg-orange-500/20 p-1.5 rounded-lg text-orange-400 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+                            title="Regenerate Chapter (will replace existing content)"
+                        >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+
+                    {/* Generating Spinner */}
+                    {(isGenerating || (status === 'in-progress' && !isActive)) && (
+                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                    )}
+
+                    {isActive && <MoreHorizontal className="w-4 h-4 text-primary/50 group-hover:text-primary cursor-pointer" />}
+                </div>
             </div>
 
             <h3 className={cn(
@@ -53,7 +99,7 @@ function ChapterNode({ number, title, status, subsections, isActive, onClick }: 
                 </div>
             )}
 
-            {status === 'in-progress' && !isActive && (
+            {status === 'in-progress' && !isActive && !isGenerating && (
                 <div className="w-full h-1 bg-white/5 rounded-full mt-2">
                     <div className="w-1/3 h-full bg-gray-600 rounded-full"></div>
                 </div>
@@ -70,12 +116,14 @@ export interface TimelineSidebarProps {
         status: 'locked' | 'draft' | 'in-progress' | 'complete';
         subsections?: string[];
         wordCount?: number;
+        content?: string;
     }[];
     activeChapterNumber: number;
     onChapterSelect: (number: number) => void;
+    onGenerateChapter?: (number: number) => void;
 }
 
-export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, onChapterSelect }: TimelineSidebarProps) {
+export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, onChapterSelect, onGenerateChapter }: TimelineSidebarProps) {
     return (
         <aside className="w-80 flex flex-col glass-panel z-20 h-full border-r border-white/5 bg-dark/50 backdrop-blur-xl">
             {/* Brand Header */}
@@ -115,6 +163,9 @@ export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, o
                         subsections={chapter.subsections}
                         isActive={chapter.number === activeChapterNumber}
                         onClick={() => onChapterSelect(chapter.number)}
+                        onGenerate={onGenerateChapter ? () => onGenerateChapter(chapter.number) : undefined}
+                        isGenerating={chapter.status === 'in-progress' && (!chapter.wordCount || chapter.wordCount < 10)}
+                        wordCount={chapter.wordCount}
                     />
                 ))}
             </div>

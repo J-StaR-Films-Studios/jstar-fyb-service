@@ -57,6 +57,43 @@ function parseSections(markdown: string) {
     return sections;
 }
 
+// Helper to build APA-style References section from grounding chunks
+function buildReferencesSection(groundingChunks: any[]): string {
+    if (!groundingChunks || groundingChunks.length === 0) return '';
+
+    const seen = new Set<string>();
+    const references: string[] = [];
+
+    for (const chunk of groundingChunks) {
+        const ctx = chunk.retrievedContext;
+        if (!ctx) continue;
+
+        // Extract title/filename and URI
+        const title = ctx.title || ctx.displayName || 'Unknown Source';
+        const uri = ctx.uri || '';
+
+        // Avoid duplicates
+        const key = title.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        // Format as APA-style reference
+        // Try to extract author/year from title if possible (e.g., "Smith2023_Paper.pdf")
+        const match = title.match(/^([A-Za-z]+)(\d{4})/);
+        if (match) {
+            const author = match[1];
+            const year = match[2];
+            references.push(`- ${author}, (${year}). *${title}*.`);
+        } else {
+            references.push(`- *${title}*.`);
+        }
+    }
+
+    if (references.length === 0) return '';
+
+    return `## References\n\n${references.join('\n')}`;
+}
+
 // Database saving helper
 async function saveChapterToDb(projectId: string, chapterNumber: number, text: string) {
     const sections = parseSections(text);
@@ -225,25 +262,45 @@ export async function POST(req: Request) {
 
         const encoder = new TextEncoder();
         let fullText = '';
+        let groundingChunks: any[] = [];
 
         const stream = new ReadableStream({
             async start(controller) {
                 try {
                     for await (const chunk of geminiStreamResult) {
-                        const chunkText = chunk.text;
-                        if (chunkText) {
-                            fullText += chunkText;
-                            // Send text chunk similar to Vercel AI SDK format
-                            // Just raw text is often fine for useChat with appropriate header,
-                            // or we can simulate the complex protocol. 
-                            // Simplest: just send raw text chunks. 
-                            controller.enqueue(encoder.encode(chunkText));
+                        const candidate = (chunk as any).candidates?.[0];
+
+                        // Manually extract text from parts to avoid SDK warnings about executableCode
+                        // and to ensure we get all text content
+                        if (candidate?.content?.parts) {
+                            for (const part of candidate.content.parts) {
+                                if (part.text) {
+                                    fullText += part.text;
+                                    controller.enqueue(encoder.encode(part.text));
+                                }
+                            }
+                        }
+
+                        // Extract grounding metadata (typically in final chunk or when relevant)
+                        if (candidate?.groundingMetadata?.groundingChunks) {
+                            groundingChunks = candidate.groundingMetadata.groundingChunks;
                         }
                     }
 
-                    // Save on completion
-                    if (fullText) {
-                        await saveChapterToDb(projectId, chapterNumber, fullText);
+                    // Build References section from grounding chunks
+                    let finalContent = fullText;
+                    if (groundingChunks.length > 0) {
+                        const references = buildReferencesSection(groundingChunks);
+                        if (references) {
+                            finalContent = fullText + '\n\n' + references;
+                            // Stream the references section to client
+                            controller.enqueue(encoder.encode('\n\n' + references));
+                        }
+                    }
+
+                    // Save on completion with references included
+                    if (finalContent) {
+                        await saveChapterToDb(projectId, chapterNumber, finalContent);
                     }
 
                     controller.close();

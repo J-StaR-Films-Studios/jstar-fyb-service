@@ -5,32 +5,15 @@ import { Code, Cpu, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSession } from '@/lib/auth-client';
+import { MarketingTimer } from './MarketingTimer';
 
-export function Hero() {
+interface HeroProps {
+    startDate: Date | null;
+    targetDate: Date | null;
+}
+
+export function Hero({ startDate, targetDate }: HeroProps) {
     const session = useSession();
-    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-
-    useEffect(() => {
-        // Set deadline to 7 days from now for demo purposes
-        const deadline = new Date();
-        deadline.setDate(deadline.getDate() + 7);
-
-        const timer = setInterval(() => {
-            const now = new Date();
-            const difference = deadline.getTime() - now.getTime();
-
-            if (difference > 0) {
-                setTimeLeft({
-                    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-                    hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-                    minutes: Math.floor((difference / 1000 / 60) % 60),
-                    seconds: Math.floor((difference / 1000) % 60),
-                });
-            }
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, []);
 
     return (
         <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
@@ -77,7 +60,7 @@ export function Hero() {
                     transition={{ type: "spring", stiffness: 70, damping: 15, delay: 0.2 }}
                     className="text-4xl md:text-6xl lg:text-8xl font-display font-bold leading-tight mb-6 md:mb-8"
                 >
-                    Don't Just Pass.<br />
+                    Don&apos;t Just Pass.<br />
                     <span className="text-gradient">Dominate.</span>
                 </motion.h1>
 
@@ -91,26 +74,18 @@ export function Hero() {
                     Full documentation, code foundations, and agency-grade execution.
                 </motion.p>
 
-                {/* Countdown */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ type: "spring", stiffness: 100, damping: 10, delay: 0.6 }}
-                    className="flex justify-center gap-2 md:gap-4 mb-8 md:mb-12"
-                >
-                    <div className="flex flex-col items-center glass-panel px-3 py-2 md:px-4 md:py-2 rounded-lg">
-                        <span className="text-xl md:text-2xl font-bold text-accent">{timeLeft.days}</span>
-                        <span className="text-[10px] md:text-xs uppercase text-gray-500">Days</span>
-                    </div>
-                    <div className="flex flex-col items-center glass-panel px-3 py-2 md:px-4 md:py-2 rounded-lg">
-                        <span className="text-xl md:text-2xl font-bold text-accent">{timeLeft.hours}</span>
-                        <span className="text-[10px] md:text-xs uppercase text-gray-500">Hrs</span>
-                    </div>
-                    <div className="flex flex-col items-center glass-panel px-3 py-2 md:px-4 md:py-2 rounded-lg">
-                        <span className="text-xl md:text-2xl font-bold text-accent">{timeLeft.minutes}</span>
-                        <span className="text-xs uppercase text-gray-500">Mins</span>
-                    </div>
-                </motion.div>
+                {/* Timer Section */}
+                {startDate && targetDate && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ type: "spring", stiffness: 100, damping: 10, delay: 0.6 }}
+                        className="mb-8 md:mb-12"
+                    >
+                        <p className="text-primary/80 font-mono text-xs uppercase tracking-widest mb-2">Limited Time Offer</p>
+                        <MarketingTimer startDate={startDate} targetDate={targetDate} />
+                    </motion.div>
+                )}
 
                 {/* Buttons */}
                 <motion.div
