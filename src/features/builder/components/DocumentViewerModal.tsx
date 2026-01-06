@@ -350,29 +350,93 @@ export const DocumentViewerModal = ({
                             </div>
 
                             <div className="p-4 md:p-5 space-y-5">
-                                {/* Summary */}
-                                {researchDoc.summary && (
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            <BookOpen className="w-3.5 h-3.5" />
-                                            Summary
-                                        </div>
-                                        <div className="bg-white/[0.02] rounded-xl p-3 border border-white/5">
-                                            <p className="text-gray-300 text-sm leading-relaxed">
-                                                {researchDoc.summary}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Summary / Structured Analysis */}
+                                {(() => {
+                                    let content = null;
+                                    let isJson = false;
+                                    try {
+                                        if (researchDoc.summary) {
+                                            const cleanStr = researchDoc.summary.replace(/```json/g, '').replace(/```/g, '').trim();
+                                            if (cleanStr.startsWith('{')) {
+                                                const parsed = JSON.parse(cleanStr);
+                                                isJson = true;
+                                                content = parsed;
+                                            }
+                                        }
+                                    } catch (e) {
+                                        // Not JSON, treat as plain text
+                                    }
+
+                                    if (isJson && content) {
+                                        return (
+                                            <div className="space-y-4">
+                                                {content.objective && (
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                                                            <BookOpen className="w-3.5 h-3.5" />
+                                                            Objective
+                                                        </div>
+                                                        <div className="bg-blue-500/5 rounded-xl p-3 border border-blue-500/10">
+                                                            <p className="text-gray-300 text-sm leading-relaxed">{content.objective}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {content.motivation && (
+                                                    <div className="space-y-1">
+                                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Motivation</div>
+                                                        <p className="text-gray-400 text-sm">{content.motivation}</p>
+                                                    </div>
+                                                )}
+
+                                                {content.methodology && (
+                                                    <div className="space-y-1">
+                                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Methodology</div>
+                                                        <p className="text-gray-400 text-sm">{content.methodology}</p>
+                                                    </div>
+                                                )}
+
+                                                {content.contribution && (
+                                                    <div className="space-y-1">
+                                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Contribution</div>
+                                                        <p className="text-gray-400 text-sm">{content.contribution}</p>
+                                                    </div>
+                                                )}
+
+                                                {content.limitations && (
+                                                    <div className="space-y-1">
+                                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Limitations</div>
+                                                        <p className="text-gray-400 text-sm">{content.limitations}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    } else if (researchDoc.summary) {
+                                        return (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                                    <BookOpen className="w-3.5 h-3.5" />
+                                                    Summary
+                                                </div>
+                                                <div className="bg-white/[0.02] rounded-xl p-3 border border-white/5">
+                                                    <p className="text-gray-300 text-sm leading-relaxed">
+                                                        {researchDoc.summary}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
 
                                 {/* Metadata Grid */}
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-3 mt-4">
                                     <div className="bg-white/[0.02] rounded-xl p-3 border border-white/5">
                                         <div className="flex items-center gap-1.5 text-[10px] text-gray-500 uppercase tracking-wider mb-1">
                                             <User className="w-3 h-3" />
                                             Author
                                         </div>
-                                        <span className="text-white text-sm font-medium">
+                                        <span className="text-white text-sm font-medium line-clamp-1" title={researchDoc.author || "Unknown"}>
                                             {researchDoc.author || "N/A"}
                                         </span>
                                     </div>

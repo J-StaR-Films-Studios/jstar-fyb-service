@@ -268,17 +268,22 @@ export async function POST(req: Request) {
             async start(controller) {
                 try {
                     for await (const chunk of geminiStreamResult) {
-                        const chunkText = chunk.text;
-                        if (chunkText) {
-                            fullText += chunkText;
-                            // Send text chunk similar to Vercel AI SDK format
-                            controller.enqueue(encoder.encode(chunkText));
+                        const candidate = (chunk as any).candidates?.[0];
+
+                        // Manually extract text from parts to avoid SDK warnings about executableCode
+                        // and to ensure we get all text content
+                        if (candidate?.content?.parts) {
+                            for (const part of candidate.content.parts) {
+                                if (part.text) {
+                                    fullText += part.text;
+                                    controller.enqueue(encoder.encode(part.text));
+                                }
+                            }
                         }
 
-                        // Extract grounding metadata (typically in final chunk)
-                        const candidates = (chunk as any).candidates;
-                        if (candidates?.[0]?.groundingMetadata?.groundingChunks) {
-                            groundingChunks = candidates[0].groundingMetadata.groundingChunks;
+                        // Extract grounding metadata (typically in final chunk or when relevant)
+                        if (candidate?.groundingMetadata?.groundingChunks) {
+                            groundingChunks = candidate.groundingMetadata.groundingChunks;
                         }
                     }
 

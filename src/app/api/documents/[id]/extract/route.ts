@@ -1,13 +1,13 @@
-
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { extractPdfText } from '@/lib/pdf-parser';
+import mammoth from 'mammoth';
 
-// Initialize Groq client
-const groq = createOpenAI({
-    baseURL: 'https://api.groq.com/openai/v1',
-    apiKey: process.env.GROQ_API_KEY,
+// Initialize Google Gemini client
+const google = createGoogleGenerativeAI({
+    apiKey: process.env.GEMINI_API_KEY,
 });
 
 export const maxDuration = 300; // 5 minutes max for extraction
@@ -19,7 +19,7 @@ export async function POST(
     try {
         const { id } = await params;
 
-        // 1. Fetch document
+        // 1. Fetch document with file data
         const doc = await prisma.researchDocument.findUnique({
             where: { id },
         });
@@ -28,96 +28,153 @@ export async function POST(
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
         }
 
-        // 2. Check extractedContent exists
-        // If extractedContent is empty, we can't summarize.
-        // In a real app, we might need PDF parsing here if not done yet.
-        // Assuming previous steps populated `extractedContent`.
-        // If not, we fall back to a placeholder or error.
+        // 2. Try to get or extract text content
+        let textToAnalyze = doc.extractedContent || "";
 
-        // TODO: Ensure PDF text extraction happens before this call or implements it here.
-        // For now, checks 'extractedContent' or 'summary' (if overwriting).
-        // Let's assume we are re-running or running on fresh text.
-        // If extractedContent is missing, we can't process.
+        // If no extracted content but we have file data, try to extract now
+        if (!textToAnalyze && doc.fileData) {
+            console.log(`[Extract] Re-extracting text for document: ${doc.fileName}`);
 
-        // Wait, the previous `DocumentUpload` component called `/api/documents/[id]/extract`.
-        // That implies THIS is the file supposed to do the extraction AND summary?
-        // Or just summary? The name is `extract`. 
-        // Let's assume this endpoint is responsible for PDF -> Text -> Summary.
+            const buffer = Buffer.from(doc.fileData);
+            const mimeType = doc.mimeType || '';
 
-        // However, I don't have a PDF parser libraries installed (e.g. pdf-parse) in the immediate context.
-        // I will assume `extractedContent` was populated by a background job OR 
-        // I'll assume this endpoint receives raw text if standard upload saved it?
-        // Actually, looking at `DocumentUpload.tsx`, it calls this endpoint to "Process".
-        // Use `pdf-parse` if available, or just mock text extraction if I can't check `package.json`.
+            if (mimeType === 'application/pdf') {
+                textToAnalyze = await extractPdfText(buffer);
+            } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                const result = await mammoth.extractRawText({ buffer });
+                textToAnalyze = result.value || '';
+            }
 
-        // Let's rely on the AI model to handle text if we pass it, OR 
-        // simplistic approach: if `extractedContent` is null, try to read `fileData` (Buffer) and parse.
-        // Since I can't easily install new packages, I will check if `extractedContent` is present.
-
-        // OPTION: If this is "Phase 2", maybe we rely on Gemini to read the file?
-        // But we want `gpt-oss-120b`.
-
-        // Simplest Robust Path: 
-        // 1. Check `extractedContent`.
-        // 2. If present, run Summary.
-        // 3. If missing, fail with "Text extraction required".
-        const textToAnalyze = doc.extractedContent || "";
-
-        if (!textToAnalyze) {
-            return NextResponse.json({ error: 'No extracted content found. Please ensure text extraction is complete.' }, { status: 400 });
+            // Save the extracted content for future use
+            if (textToAnalyze) {
+                await prisma.researchDocument.update({
+                    where: { id },
+                    data: { extractedContent: textToAnalyze }
+                });
+                console.log(`[Extract] Saved ${textToAnalyze.length} chars of extracted text`);
+            }
         }
 
-        // 3. Run AI Analysis with the User's Prompt
-        const systemPrompt = `As an AI research assistant, for each research paper in the provided text, extract and summarize the following:
-1. Paper Title
-2. Authors
-3. Publication Year
-4. Objective(s)
-5. Motivation(s)
-6. Methodology
-7. Contribution(s)
-8. Limitation(s)
+        if (!textToAnalyze) {
+            await prisma.researchDocument.update({
+                where: { id },
+                data: { status: 'EXTRACTION_FAILED' }
+            });
+            return NextResponse.json({ error: 'Text extraction failed. The document may be empty or unreadable.' }, { status: 400 });
+        }
 
-Present this information sequentially for each paper using the exact structured format below. Summaries should be concise. Infer information if clear, and state '[Detail not found]' if genuinely missing.
+        // 3. Run AI Analysis with Structured JSON Prompt
+        const systemPrompt = `You are an expert AI research assistant. Analyze the provided research paper text and extract structured metadata.
 
-"Paper Title Extracted From Text"
-Authors: [List of Authors]
-Year: [Publication Year]
+Return ONLY a valid JSON object with the following fields. Do not include markdown formatting or explanations.
 
-Objective:
-* [Summary]
-Motivation:
-* [Summary]
-Methodology:
-* [Summary]
-Contribution:
-* [Summary]
-Limitations:
-* [Summary]`;
+{
+    "title": "Exact paper title",
+    "authors": ["Author 1", "Author 2"],
+    "year": "Publication Year (as string)",
+    "objective": "Concise summary of the research objective",
+    "motivation": "Concise summary of the motivation",
+    "methodology": "Concise summary of the methodology",
+    "contribution": "Concise summary of contributions",
+    "limitations": "Concise summary of limitations",
+    "documentType": "e.g. Journal Article, Conference Paper, etc.",
+    "category": "Primary research topic/domain"
+}`;
 
-        const { text: summary } = await generateText({
-            model: groq('openai/gpt-oss-120b'), // User requested specific model
+        const { text: jsonOutput } = await generateText({
+            model: google('gemini-2.5-flash'),
             system: systemPrompt,
-            prompt: `Analyze the following research document content:\n\n${textToAnalyze.slice(0, 50000)}` // Limit context if needed
+            prompt: `Analyze the following research document content and extract metadata:\n\n${textToAnalyze.slice(0, 50000)}`
         });
 
-        // 4. Save Summary
-        await prisma.researchDocument.update({
+        // Parse JSON output
+        let metadata: any = {};
+        try {
+            // Remove markdown code blocks if present
+            const cleanJson = jsonOutput.replace(/```json/g, '').replace(/```/g, '').trim();
+            metadata = JSON.parse(cleanJson);
+        } catch (e) {
+            console.error('[Extraction] Failed to parse JSON response:', e);
+            // Fallback to storing raw text if JSON fails
+            metadata = {
+                title: "Error parsing metadata",
+                objective: jsonOutput
+            };
+        }
+
+        // 4. Save Structured Metadata
+        const updatedDoc = await prisma.researchDocument.update({
             where: { id },
             data: {
-                summary: summary,
-                // We could also store structured JSON if we parse the output, but pure text is fine for LLM injection.
+                title: metadata.title || null,
+                author: Array.isArray(metadata.authors) ? metadata.authors.join(', ') : (metadata.authors || null),
+                year: metadata.year ? String(metadata.year) : null,
+                objective: metadata.objective || null,
+                motivation: metadata.motivation || null,
+                methodology: metadata.methodology || null,
+                contribution: metadata.contribution || null,
+                limitations: metadata.limitations || null,
+                documentType: metadata.documentType || null,
+                category: metadata.category || null,
+                summary: jsonOutput, // Store raw JSON/text in summary for backup
                 status: 'PROCESSED',
-                aiInsights: 'Summary generated via GPT-OSS-120b'
+                aiInsights: 'Structured metadata extracted via Gemini 2.5 Flash',
+                processedAt: new Date()
             }
         });
+
+        // 5. Auto-Trigger RAG Sync if missing
+        // If the document hasn't been synced to Gemini File Search yet, do it now.
+        if (!doc.importedToFileSearch && doc.fileData && updatedDoc.status === 'PROCESSED') {
+            // We need the project to get the store ID
+            const project = await prisma.project.findUnique({
+                where: { id: doc.projectId },
+                select: { fileSearchStoreId: true }
+            });
+
+            if (project?.fileSearchStoreId) {
+                // Import the service dynamically to avoid circular deps if any (though importing normally is fine here)
+                const { GeminiFileSearchService } = await import('@/lib/gemini-file-search');
+
+                // Run sync in background (fire and forget from client perspective, or await if we want strictness)
+                // Let's await it to ensure "Retry" button fixes everything in one go
+                try {
+                    const uploadResult = await GeminiFileSearchService.uploadDocument(
+                        project.fileSearchStoreId,
+                        doc.fileData,
+                        doc.fileName,
+                        doc.mimeType || 'application/pdf'
+                    );
+
+                    if (uploadResult.success) {
+                        await prisma.researchDocument.update({
+                            where: { id },
+                            data: {
+                                importedToFileSearch: true,
+                                fileSearchFileId: uploadResult.fileId,
+                                importError: null
+                            }
+                        });
+                        console.log(`[Extract] Auto-synced document ${id} to RAG`);
+                    } else {
+                        await prisma.researchDocument.update({
+                            where: { id },
+                            data: { importError: uploadResult.error }
+                        });
+                    }
+                } catch (syncError) {
+                    console.error('[Extract] Auto-sync failed:', syncError);
+                }
+            }
+        }
 
         return NextResponse.json({
             success: true,
             extraction: {
                 metadata: {
                     status: 'PROCESSED',
-                    aiInsights: 'Summary generated'
+                    aiInsights: 'Metadata extracted',
+                    data: metadata
                 }
             }
         });

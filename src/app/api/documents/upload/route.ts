@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { GeminiFileSearchService } from "@/lib/gemini-file-search";
+import { extractPdfText } from "@/lib/pdf-parser";
+import mammoth from "mammoth";
 
 // Security constants
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
@@ -194,6 +196,27 @@ export async function POST(req: Request) {
                 }
             }
 
+            // =====================================================
+            // TEXT EXTRACTION (Phase 1) - Critical for AI processing
+            // =====================================================
+            let extractedContent = '';
+
+            try {
+                if (isPdf) {
+                    console.log(`[DocumentUpload] Extracting text from PDF: ${sanitizedFileName}`);
+                    extractedContent = await extractPdfText(buffer);
+                    console.log(`[DocumentUpload] PDF extraction complete: ${extractedContent.length} chars`);
+                } else if (isDocx) {
+                    console.log(`[DocumentUpload] Extracting text from DOCX: ${sanitizedFileName}`);
+                    const result = await mammoth.extractRawText({ buffer });
+                    extractedContent = result.value || '';
+                    console.log(`[DocumentUpload] DOCX extraction complete: ${extractedContent.length} chars`);
+                }
+            } catch (extractError) {
+                console.error('[DocumentUpload] Text extraction failed:', extractError);
+                // Continue with upload even if extraction fails - can retry later
+            }
+
             const doc = await prisma.researchDocument.create({
                 data: {
                     projectId,
@@ -201,7 +224,8 @@ export async function POST(req: Request) {
                     fileType: file.type.split('/')[1],
                     mimeType: file.type,
                     fileData: buffer,
-                    status: "PENDING" // Consider "PROCESSED" for images if no other processing is needed
+                    extractedContent, // Now populated with actual text!
+                    status: extractedContent ? "PENDING" : "EXTRACTION_FAILED"
                 }
             });
 
