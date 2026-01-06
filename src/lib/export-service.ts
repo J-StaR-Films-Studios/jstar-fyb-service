@@ -1,5 +1,5 @@
 
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, LevelFormat, convertInchesToTwip } from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, LevelFormat, convertInchesToTwip, Table, TableRow, TableCell, BorderStyle, WidthType } from "docx";
 
 export interface ExportOptions {
     font?: string;
@@ -86,6 +86,100 @@ const parseLineToTextRuns = (text: string, options: ExportOptions): TextRun[] =>
 };
 
 /**
+ * Creates a docx Table from markdown table lines.
+ */
+const createTableFromMarkdown = (lines: string[], options: ExportOptions): Table => {
+    // Parse headers
+    const headerLine = lines[0];
+    const headerCells = headerLine.split('|').filter(c => c.trim() !== '').map(c => c.trim());
+
+    // Parse alignment (if specific separator line exists)
+    let alignments = new Array(headerCells.length).fill(AlignmentType.LEFT);
+    let bodyStartIndex = 1;
+
+    if (lines.length > 1 && lines[1].trim().startsWith('|') && lines[1].includes('-')) {
+        const separatorLine = lines[1];
+        const separatorCells = separatorLine.split('|').filter(c => c.trim() !== '').map(c => c.trim());
+
+        alignments = separatorCells.map(cell => {
+            if (cell.startsWith(':') && cell.endsWith(':')) return AlignmentType.CENTER;
+            if (cell.endsWith(':')) return AlignmentType.END;
+            return AlignmentType.START;
+        });
+        bodyStartIndex = 2;
+    }
+
+    const rows: TableRow[] = [];
+
+    // Header Row
+    rows.push(new TableRow({
+        tableHeader: true,
+        children: headerCells.map((text, index) => new TableCell({
+            children: [new Paragraph({
+                alignment: alignments[index] || AlignmentType.START,
+                children: [new TextRun({
+                    text,
+                    bold: true,
+                    font: options.font,
+                    size: (options.fontSize || 12) * 2,
+                    color: "000000"
+                })]
+            })],
+            shading: { fill: "F5F5F5" }, // Light gray background for headers
+            verticalAlign: "center",
+            margins: { top: 100, bottom: 100, left: 100, right: 100 },
+            borders: {
+                top: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                left: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                right: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+            }
+        }))
+    }));
+
+    // Body Rows
+    for (let i = bodyStartIndex; i < lines.length; i++) {
+        const cells = lines[i].split('|').filter(c => c.trim() !== '').map(c => c.trim());
+
+        // Ensure row has same number of cells as header (fill empty if missing)
+        while (cells.length < headerCells.length) cells.push("");
+
+        rows.push(new TableRow({
+            children: cells.map((text, index) => new TableCell({
+                children: [new Paragraph({
+                    alignment: alignments[index] || AlignmentType.START,
+                    children: parseLineToTextRuns(text, options) // Support bold/italic in cells
+                })],
+                verticalAlign: "center",
+                margins: { top: 100, bottom: 100, left: 100, right: 100 },
+                borders: {
+                    top: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                    bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                    left: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                    right: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                }
+            }))
+        }));
+    }
+
+    return new Table({
+        rows: rows,
+        width: {
+            size: 100,
+            type: WidthType.PERCENTAGE,
+        },
+        borders: {
+            top: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+            bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+            left: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+            right: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+            insideHorizontal: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+            insideVertical: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+        }
+    });
+};
+
+/**
  * Generate a DOCX Blob from markdown content with configurable styles.
  */
 export const generateDocxBlob = async (content: string, title?: string, userOptions?: ExportOptions): Promise<Blob> => {
@@ -102,7 +196,7 @@ export const generateDocxBlob = async (content: string, title?: string, userOpti
         .replace(/\\\\/g, '\\');          // Double backslashes
 
     const lines = cleanedContent.split('\n');
-    const children: Paragraph[] = [];
+    const children: (Paragraph | Table)[] = [];
 
     // Title
     if (title && options.includeTitle) {
@@ -132,7 +226,8 @@ export const generateDocxBlob = async (content: string, title?: string, userOpti
         color: "000000" // Always black
     };
 
-    lines.forEach(line => {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const trimmed = line.trim();
 
         if (!trimmed) {
@@ -140,12 +235,43 @@ export const generateDocxBlob = async (content: string, title?: string, userOpti
             // This prevents double spacing (margin-bottom + empty line)
             if (lastWasHeader) {
                 lastWasHeader = false;
-                return;
+                continue;
             }
             children.push(new Paragraph({ text: "" }));
             inList = false;
             lastWasHeader = false;
-            return;
+            continue;
+        }
+
+        // Table Detection
+        // Must start with | and end with | (ignoring whitespace) and have content
+        if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length > 2) {
+            const tableLines: string[] = [];
+            // Look ahead to consume all table lines
+            let j = i;
+            while (j < lines.length) {
+                const nextLine = lines[j].trim();
+                // Check if it's still a table row
+                // We allow the separator row | --- | to count as well
+                if (nextLine.startsWith('|') && nextLine.endsWith('|')) {
+                    tableLines.push(nextLine);
+                    j++;
+                } else {
+                    break;
+                }
+            }
+
+            // Only process as table if we found valid syntax (at least 2 rows usually: header + separator)
+            // But we'll accept 1 row tables too just in case
+            if (tableLines.length > 0) {
+                children.push(createTableFromMarkdown(tableLines, options));
+                children.push(new Paragraph({ text: "" })); // Spacing after table
+
+                // Fast forward loop
+                i = j - 1;
+                lastWasHeader = false;
+                continue;
+            }
         }
 
         // Headers
@@ -159,6 +285,7 @@ export const generateDocxBlob = async (content: string, title?: string, userOpti
                 })],
                 heading: HeadingLevel.HEADING_1,
                 alignment: AlignmentType.CENTER, // User requested Centered H1
+                pageBreakBefore: true, // Force new page for each chapter
                 spacing: { before: 240, after: 120 }
             }));
             lastWasHeader = true;
@@ -235,7 +362,7 @@ export const generateDocxBlob = async (content: string, title?: string, userOpti
             }));
             lastWasHeader = false;
         }
-    });
+    }
 
     const doc = new Document({
         styles: {

@@ -466,6 +466,45 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                         onClose={() => setShowEnhancePopover(false)}
                     />
                 )}
+                {/* Export Modal - Desktop */}
+                <DownloadOptionsModal
+                    isOpen={showExportModal}
+                    onClose={() => setShowExportModal(false)}
+                    onConfirm={async (format, options) => {
+                        let exportChapters = chapters;
+                        // Sync before export
+                        try {
+                            const response = await fetch(`/api/projects/${projectId}/chapters`);
+                            const data = await response.json();
+                            if (data.success && data.chapters && Array.isArray(data.chapters)) {
+                                // Map and merge with current state (simplified map for export)
+                                exportChapters = data.chapters.map((c: any) => ({
+                                    number: c.number,
+                                    title: c.title,
+                                    content: c.content
+                                }));
+                            }
+                        } catch (e) {
+                            console.error("Export sync failed", e);
+                        }
+
+                        const fullContent = exportChapters
+                            .sort((a, b) => a.number - b.number)
+                            .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
+                            .join('\n\n');
+                        const title = projectTitle || 'Project Export';
+                        const filename = sanitizeFilename(title);
+
+                        if (format === 'markdown') {
+                            const blob = generateMarkdownBlob(fullContent, title);
+                            downloadFile(blob, `${filename}.md`);
+                        } else {
+                            const blob = await generateDocxBlob(fullContent, title, options);
+                            downloadFile(blob, `${filename}.docx`);
+                        }
+                    }}
+                    title="Export Project"
+                />
             </div>
         );
     }
@@ -524,6 +563,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     projectId={projectId}
                     chapterNumber={activeChapter.number}
                     currentVersion={activeChapter.version || 1}
+                    onExport={() => setShowExportModal(true)}
                 />
             )}
 
@@ -585,10 +625,27 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                 isOpen={showExportModal}
                 onClose={() => setShowExportModal(false)}
                 onConfirm={async (format, options) => {
-                    const fullContent = chapters
+                    let exportChapters = chapters;
+                    // Sync before export
+                    try {
+                        const response = await fetch(`/api/projects/${projectId}/chapters`);
+                        const data = await response.json();
+                        if (data.success && data.chapters && Array.isArray(data.chapters)) {
+                            // Map and merge with current state (simplified map for export)
+                            exportChapters = data.chapters.map((c: any) => ({
+                                number: c.number,
+                                title: c.title,
+                                content: c.content
+                            }));
+                        }
+                    } catch (e) {
+                        console.error("Export sync failed", e);
+                    }
+
+                    const fullContent = exportChapters
                         .sort((a, b) => a.number - b.number)
                         .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
-                        .join('\n\n---\n\n');
+                        .join('\n\n');
                     const title = projectTitle || 'Project Export';
                     const filename = sanitizeFilename(title);
 

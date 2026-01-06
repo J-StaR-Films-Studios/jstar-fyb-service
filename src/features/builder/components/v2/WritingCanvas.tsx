@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
-import { Bold, Italic, List, Image, Heading, Sparkles } from 'lucide-react';
+import { Bold, Italic, List, Image, Heading, Sparkles, Table as TableIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ImagePickerDialog } from './ImagePickerDialog';
 import { NovelEditor } from './NovelEditor';
@@ -50,7 +50,7 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
     };
 
     // Rich text formatting helper - mapped to Novel/TipTap commands
-    const toggleFormatting = (format: 'bold' | 'italic' | 'list' | 'heading' | 'image') => {
+    const toggleFormatting = (format: 'bold' | 'italic' | 'list' | 'heading' | 'image' | 'table') => {
         if (!editor) return;
 
         switch (format) {
@@ -72,6 +72,10 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
                 break;
             case 'image':
                 setShowImagePicker(true);
+                break;
+            case 'table':
+                // @ts-ignore
+                editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
                 break;
         }
     };
@@ -137,6 +141,9 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
                     </button>
                     <button onClick={() => toggleFormatting('image')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Image">
                         <Image className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => toggleFormatting('table')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Table">
+                        <TableIcon className="w-4 h-4" />
                     </button>
                 </div>
 

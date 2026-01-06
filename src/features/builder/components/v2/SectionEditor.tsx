@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
-import { X, Bold, Heading, List, Image, Mic, Sparkles, MessageSquare, Check, Loader2, Italic } from 'lucide-react';
+import { X, Bold, Heading, List, Image, Mic, Sparkles, MessageSquare, Check, Loader2, Italic, Table as TableIcon, Download } from 'lucide-react';
 import { useDebouncedCallback } from 'use-debounce';
 import { VersionHistoryDropdown } from './VersionHistoryDropdown';
 import { ImagePickerDialog } from './ImagePickerDialog';
@@ -21,9 +21,10 @@ interface SectionEditorProps {
     chapterNumber: number;
     currentVersion: number;
     onEnhanceClick?: (content: string) => void;
+    onExport?: () => void;
 }
 
-export function SectionEditor({ title, content: initialContent, wordCount: initialWordCount = 0, onClose, onSave, onOpenChat, projectId, chapterNumber, currentVersion, onEnhanceClick }: SectionEditorProps) {
+export function SectionEditor({ title, content: initialContent, wordCount: initialWordCount = 0, onClose, onSave, onOpenChat, projectId, chapterNumber, currentVersion, onEnhanceClick, onExport }: SectionEditorProps) {
     const [editor, setEditor] = useState<EditorInstance | null>(null);
     const [editedContent, setEditedContent] = useState(initialContent);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -92,7 +93,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
     };
 
     // Rich text formatting helper - now uses TipTap commands
-    const toggleFormatting = (format: 'bold' | 'heading' | 'list' | 'image' | 'italic') => {
+    const toggleFormatting = (format: 'bold' | 'heading' | 'list' | 'image' | 'italic' | 'table') => {
         if (format === 'image') {
             setShowImagePicker(true);
             return;
@@ -116,6 +117,10 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
             case 'list':
                 // @ts-ignore
                 editor.chain().focus().toggleBulletList().run();
+                break;
+            case 'table':
+                // @ts-ignore
+                editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
                 break;
         }
     };
@@ -170,6 +175,16 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                             }
                         }}
                     />
+                    {/* Export Button (Mobile) */}
+                    {onExport && (
+                        <button
+                            onClick={onExport}
+                            className="text-gray-400 hover:text-white p-2"
+                            title="Export"
+                        >
+                            <Download className="w-5 h-5" />
+                        </button>
+                    )}
                     <button onClick={handleDone} className="text-primary font-bold text-sm">
                         Done
                     </button>
@@ -238,6 +253,14 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                     title="Image"
                 >
                     <Image className="w-4 h-4" />
+                </button>
+                <button
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => toggleFormatting('table')}
+                    className="text-gray-400 hover:text-white transition-colors"
+                    title="Table"
+                >
+                    <TableIcon className="w-4 h-4" />
                 </button>
             </div>
 

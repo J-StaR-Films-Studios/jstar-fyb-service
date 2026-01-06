@@ -67,7 +67,7 @@ export const DocumentViewerModal = ({
 
     // Search State
     const [pdfDocument, setPdfDocument] = useState<any>(null); // PDFDocumentProxy
-    const [searchResults, setSearchResults] = useState<{ page: number; strIndex: number }[]>([]);
+    const [searchResults, setSearchResults] = useState<{ page: number; matchIndex: number; rects: { x: number; y: number; w: number; h: number }[] }[]>([]);
     const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(-1);
     const [isSearching, setIsSearching] = useState<boolean>(false);
 
@@ -204,24 +204,67 @@ export const DocumentViewerModal = ({
 
         const performSearch = async () => {
             setIsSearching(true);
-            const results: { page: number; strIndex: number }[] = [];
+            const results: { page: number; matchIndex: number; rects: { x: number; y: number; w: number; h: number }[] }[] = [];
             const query = searchQuery.toLowerCase();
 
-            // Iterate all pages (simple approach)
-            // Note: For very large docs, this should be chunked/debounced more carefully
             for (let i = 1; i <= pdfDocument.numPages; i++) {
                 try {
                     const page = await pdfDocument.getPage(i);
                     const textContent = await page.getTextContent();
-                    const strings = textContent.items.map((item: any) => item.str);
+                    const viewport = page.getViewport({ scale: 1 });
 
-                    // Simple string matching within items
-                    // Note: This doesn't handle matches crossing item boundaries (lines), but fits most keywords
-                    strings.forEach((str: string, index: number) => {
-                        if (str.toLowerCase().includes(query)) {
-                            results.push({ page: i, strIndex: index });
+                    const matchesOnPage: { x: number; y: number; w: number; h: number }[] = [];
+
+                    textContent.items.forEach((item: any) => {
+                        const itemStr = item.str.toLowerCase();
+                        if (!itemStr.trim()) return;
+
+                        let startIndex = 0;
+                        let index = itemStr.indexOf(query, startIndex);
+
+                        while (index !== -1) {
+                            // Calculate basic bounding box
+                            const tx = item.transform;
+                            const totalWidth = item.width;
+                            const totalLength = item.str.length; // Use original length for ratio
+
+                            // Approximate match position based on character count ratio
+                            // Note: This assumes roughly uniform character width (not perfect for variable fonts "i" vs "m", but better than full line)
+                            const startRatio = index / totalLength;
+                            const lengthRatio = query.length / totalLength;
+
+                            const matchXOffset = totalWidth * startRatio;
+                            const matchWidth = totalWidth * lengthRatio;
+
+                            // PDF coordinates
+                            let x = tx[4] + matchXOffset; // tx[4] is x
+                            let y = tx[5]; // tx[5] is y
+                            let w = matchWidth;
+                            let h = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]); // approximate height from scale
+
+                            // Adjust for PDF coordinate system (bottom-up) to Viewport (top-down)
+                            const rect = viewport.convertToViewportRectangle([x, y, x + w, y + h]);
+
+                            // Normalize to 0-1
+                            const normX = rect[0] / viewport.width;
+                            const normY = rect[1] / viewport.height;
+                            const normW = (rect[2] - rect[0]) / viewport.width;
+                            const normH = (rect[3] - rect[1]) / viewport.height;
+
+                            matchesOnPage.push({ x: normX, y: normY, w: normW, h: normH });
+
+                            // Continue search in same string
+                            startIndex = index + query.length;
+                            index = itemStr.indexOf(query, startIndex);
                         }
                     });
+
+                    if (matchesOnPage.length > 0) {
+                        matchesOnPage.forEach(rect => {
+                            results.push({ page: i, matchIndex: results.length, rects: [rect] });
+                        });
+                    }
+
                 } catch (e) {
                     console.error("Error searching page", i, e);
                 }
@@ -230,50 +273,50 @@ export const DocumentViewerModal = ({
             setSearchResults(results);
             setCurrentMatchIndex(results.length > 0 ? 0 : -1);
             setIsSearching(false);
-
-            // Allow auto-jump? Maybe only on Enter.
         };
 
         const timeoutId = setTimeout(performSearch, 500); // Debounce
         return () => clearTimeout(timeoutId);
     }, [searchQuery, pdfDocument]);
 
-    // Jump to match
+    // Jump to match with Smart Center Scroll
     const jumpToMatch = (index: number) => {
         if (index >= 0 && index < searchResults.length) {
             setCurrentMatchIndex(index);
             const match = searchResults[index];
-            scrollToPage(match.page);
+
+            // Calculate absolute position
+            // We need the page element to know its offset in the container
+            const pageEl = document.getElementById(`page_${match.page}`);
+            const container = document.getElementById("pdf-scroll-container");
+
+            if (pageEl && container) {
+                const rect = match.rects[0]; // Focus on first rect of match
+                // rect.y is relative to page top (0-1)
+
+                const pageTop = pageEl.offsetTop;
+                const pageHeight = pageEl.clientHeight;
+                const matchTop = pageTop + (rect.y * pageHeight);
+                const matchHeight = rect.h * pageHeight;
+
+                // Calculate centered scroll position
+                // Target Scroll = Match Center - Container Half Height
+                const containerHeight = container.clientHeight;
+                const scrollTo = matchTop + (matchHeight / 2) - (containerHeight / 2);
+
+                container.scrollTo({
+                    top: Math.max(0, scrollTo),
+                    behavior: "smooth"
+                });
+            } else {
+                // Fallback
+                scrollToPage(match.page);
+            }
         }
     };
 
     const handleNextMatch = () => jumpToMatch((currentMatchIndex + 1) % searchResults.length);
     const handlePrevMatch = () => jumpToMatch((currentMatchIndex - 1 + searchResults.length) % searchResults.length);
-
-    // Custom Text Renderer for Highlighting
-    const textRenderer = useCallback(
-        (textItem: any) => {
-            if (!searchQuery) return textItem.str;
-
-            const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-            const parts = textItem.str.split(regex);
-
-            return (
-                <>
-                    {parts.map((part: string, i: number) =>
-                        regex.test(part) ? (
-                            <span key={i} className="bg-yellow-400/50 text-transparent selection:bg-yellow-400/50">
-                                {part}
-                            </span>
-                        ) : (
-                            part
-                        )
-                    )}
-                </>
-            );
-        },
-        [searchQuery]
-    );
 
     // Scroll to specific page
     const scrollToPage = (page: number) => {
@@ -511,30 +554,58 @@ export const DocumentViewerModal = ({
                                         className="relative mb-4 last:mb-0 box-border bg-white"
                                         style={{
                                             // Dynamic height accounting for aspect ratio (A4 approx 1.414)
-                                            minHeight: isMobile && containerWidth ? `${containerWidth * 1.4}px` : '600px',
-                                            width: isMobile && containerWidth ? containerWidth : undefined
+                                            // If on mobile, width is containerWidth * zoom%. Height matches that aspect.
+                                            minHeight: isMobile && containerWidth ? `${containerWidth * (zoom / 100) * 1.4}px` : '600px',
+                                            width: isMobile && containerWidth ? containerWidth * (zoom / 100) : undefined
                                         }}
                                     >
                                         <Page
                                             pageNumber={index + 1}
-                                            width={isMobile && containerWidth ? containerWidth : undefined}
+                                            width={isMobile && containerWidth ? containerWidth * (zoom / 100) : undefined}
                                             scale={!isMobile ? zoom / 100 : undefined}
-                                            renderTextLayer={true} // Enable for search
+                                            renderTextLayer={true} // Enable for search text extraction
                                             renderAnnotationLayer={!isMobile}
-                                            customTextRenderer={textRenderer}
                                             className="shadow-xl"
                                             loading={
                                                 <div
                                                     className="bg-white flex items-center justify-center shadow-lg"
                                                     style={{
-                                                        width: isMobile && containerWidth ? `${containerWidth}px` : `${(595 * zoom) / 100}px`,
-                                                        height: isMobile && containerWidth ? `${containerWidth * 1.414}px` : `${(842 * zoom) / 100}px`
+                                                        width: isMobile && containerWidth ? `${containerWidth * (zoom / 100)}px` : `${(595 * zoom) / 100}px`,
+                                                        height: isMobile && containerWidth ? `${containerWidth * (zoom / 100) * 1.414}px` : `${(842 * zoom) / 100}px`
                                                     }}
                                                 >
                                                     <Loader2 className="w-8 h-8 animate-spin text-gray-200" />
                                                 </div>
                                             }
                                         />
+
+                                        {/* Search Highlights Overlay */}
+                                        {searchResults.some(r => r.page === index + 1) && (
+                                            <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                                                {searchResults
+                                                    .filter(r => r.page === index + 1)
+                                                    .flatMap((r) =>
+                                                        r.rects.map((rect, j) => (
+                                                            <div
+                                                                key={`hl-${r.matchIndex}-${j}`}
+                                                                className={`absolute transition-all duration-300 ${currentMatchIndex === r.matchIndex ? 'animate-pulse z-20' : 'z-10'}`}
+                                                                style={{
+                                                                    // "Normal" Highlighter Look (140% height, slightly shifted up)
+                                                                    left: `${rect.x * 100}%`,
+                                                                    top: `${(rect.y - (rect.h * 0.2)) * 100}%`,
+                                                                    width: `${rect.w * 100}%`,
+                                                                    height: `${rect.h * 1.4 * 100}%`, // 1.4x is standard highlighter width
+                                                                    backgroundColor: currentMatchIndex === r.matchIndex ? 'rgba(250, 204, 21, 0.7)' : 'rgba(253, 224, 71, 0.4)',
+                                                                    mixBlendMode: 'multiply',
+                                                                    boxShadow: currentMatchIndex === r.matchIndex ? '0 0 0 5px #eab308' : 'none',
+                                                                    borderRadius: '4px' // 4px radius as requested
+                                                                }}
+                                                            />
+                                                        ))
+                                                    )
+                                                }
+                                            </div>
+                                        )}
 
                                         {/* Desktop Page Number Indicator */}
                                         <div className="absolute -right-12 top-0 text-[10px] text-gray-500 font-mono hidden xl:block">

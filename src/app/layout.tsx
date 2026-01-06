@@ -19,8 +19,29 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "J Star FYB Service",
-  description: "Dominating Final Year Projects",
+  title: {
+    default: "J-Star FYB Service",
+    template: "%s | J-Star FYB",
+  },
+  description: "Dominating Final Year Projects. The ultimate tool for researching, outlining, and writing your final year project.",
+  keywords: ["Final Year Project", "Research Assistant", "Writing Tool", "Academic Writing", "Thesis Builder"],
+  authors: [{ name: "J-Star Films" }],
+  creator: "J-Star Films",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://fyb.jstarstudios.com",
+    title: "J-Star FYB Service - Dominate Your Project",
+    description: "The AI-powered platform to streamline your final year project workflow.",
+    siteName: "J-Star FYB",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "J-Star FYB Service",
+    description: "Dominating Final Year Projects with AI.",
+    creator: "@jstarfilms",
+  },
+  metadataBase: new URL("https://fyb.jstarstudios.com"),
 };
 
 export default function RootLayout({
@@ -38,6 +59,28 @@ export default function RootLayout({
         </ErrorBoundary>
         <OfflineIndicator />
         <Toaster position="top-center" richColors />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              "name": "J-Star FYB Service",
+              "applicationCategory": "EducationalApplication",
+              "operatingSystem": "Web",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "NGN"
+              },
+              "author": {
+                "@type": "Organization",
+                "name": "J-Star Films",
+                "url": "https://fyb.jstarstudios.com"
+              }
+            })
+          }}
+        />
       </body>
     </html>
   );

@@ -155,6 +155,34 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
     const handleDownloadConfirm = useCallback(async (format: 'markdown' | 'docx', options: ExportOptions) => {
         const { target, chapter } = downloadModal;
 
+        // Refresh chapters from DB to ensure we have the latest content (fixes sync issues with Workspace)
+        let currentChapters = chapters;
+        try {
+            if (target === 'all') {
+                const response = await fetch(`/api/projects/${projectId}/chapters`);
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.chapters && Array.isArray(result.chapters)) {
+                        const storedChapters: Record<number, GeneratedChapter> = {};
+                        result.chapters.forEach((c: { number: number; title?: string; content: string }) => {
+                            if (c.number >= 1 && c.number <= 5) {
+                                storedChapters[c.number] = {
+                                    number: c.number,
+                                    title: c.title || CHAPTER_INFO[c.number - 1].title,
+                                    content: c.content,
+                                    isGenerating: false
+                                };
+                            }
+                        });
+                        setChapters(storedChapters); // Update UI
+                        currentChapters = storedChapters; // Use for export
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Failed to sync chapters before export', err);
+        }
+
         try {
             if (target === 'single' && chapter) {
                 const filename = sanitizeFilename(`Chapter_${chapter.number}_${chapter.title}`);
@@ -166,15 +194,16 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
                     downloadFile(blob, `${filename}.docx`);
                 }
             } else if (target === 'all') {
-                const generatedChapters = Object.values(chapters).filter(c => c.content && !c.isGenerating);
+                // Use currentChapters to ensure we export the latest data
+                const generatedChapters = Object.values(currentChapters).filter(c => c.content && !c.isGenerating);
                 if (generatedChapters.length === 0) return;
 
                 const sortedChapters = generatedChapters.sort((a, b) => a.number - b.number);
                 const fullContent = sortedChapters
                     .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
-                    .join('\n\n---\n\n');
+                    .join('\n\n');
 
-                const filename = 'Full_Project_Documentation';
+                const filename = sanitizeFilename('Full_Project_Documentation');
                 if (format === 'markdown') {
                     const blob = generateMarkdownBlob(fullContent, 'Full Project Documentation');
                     downloadFile(blob, `${filename}.md`);
@@ -186,7 +215,8 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
         } catch (err) {
             console.error('Download failed', err);
         }
-    }, [downloadModal, chapters]);
+    }, [downloadModal, chapters, projectId]);
+
 
     const completedCount = Object.values(chapters).filter(c => c.content && !c.isGenerating).length;
 
