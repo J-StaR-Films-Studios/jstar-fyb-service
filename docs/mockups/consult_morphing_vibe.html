@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J Star - Meet the AI Crew (Morphing Vibe)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --accent: #06b6d4;
+            --dark: #0a0a0f;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 24px;
+        }
+
+        /* Hero Header */
+        .header {
+            text-align: center;
+            margin-bottom: 100px;
+        }
+
+        .tagline {
+            display: inline-block;
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -2px;
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Morphing Studio Section */
+        .studio-reveal {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+            min-height: 500px;
+        }
+
+        @media (max-width: 900px) {
+            .studio-reveal {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                text-align: center;
+            }
+        }
+
+        /* Left: Morphing Image */
+        .image-frame {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 40px;
+            overflow: hidden;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+
+        .personality-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            filter: grayscale(100%);
+            transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 1.5s cubic-bezier(0.4, 0, 0.2, 1),
+                filter 0.5s ease;
+            transform: scale(1.1);
+        }
+
+        .personality-img.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .image-frame:hover .personality-img.active {
+            filter: grayscale(0%);
+            transform: scale(1.02);
+        }
+
+        .status-pill {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 20px;
+            border: 1px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+        }
+
+        /* Right: Personality Details */
+        .content-frame {
+            position: relative;
+        }
+
+        .personality-content {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .personality-content.active {
+            opacity: 1;
+            transform: translateY(0);
+            position: relative;
+            pointer-events: auto;
+        }
+
+        .role-badge {
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .name {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 24px;
+            letter-spacing: -1px;
+        }
+
+        .bio {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #9ca3af;
+            margin-bottom: 32px;
+        }
+
+        .quote-box {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 24px;
+            border-radius: 24px;
+            font-style: italic;
+            color: #d1d5db;
+            position: relative;
+        }
+
+        .quote-box::before {
+            content: '"';
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            font-size: 60px;
+            color: var(--primary);
+            opacity: 0.2;
+            font-family: serif;
+        }
+
+        /* Progress Dots */
+        .progress-nav {
+            display: flex;
+            gap: 12px;
+            margin-top: 40px;
+        }
+
+        .progress-dot {
+            width: 40px;
+            height: 4px;
+            background: var(--glass-border);
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .progress-dot.active {
+            background: var(--primary);
+            width: 60px;
+        }
+
+        /* CTA Button */
+        .cta {
+            margin-top: 60px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 40px;
+            background: #fff;
+            color: #000;
+            border-radius: 100px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .cta:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.4);
+            background: var(--primary);
+            color: #fff;
+        }
+
+        /* Scroll Hint for Mobile */
+        .mobile-hint {
+            display: none;
+            text-align: center;
+            margin-top: 40px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        @media (max-width: 900px) {
+            .mobile-hint {
+                display: block;
+            }
+
+            .content-frame {
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header class="header">
+            <span class="tagline">The J Star Collective</span>
+            <h1>Meet the <span class="highlight">Intelligence</span> Behind Your Success.</h1>
+        </header>
+
+        <main class="studio-reveal">
+            <!-- Left: Image Section -->
+            <div class="image-frame" id="imageFrame">
+                <img src="../../public/images/jay-portrait.png" class="personality-img active" data-index="0" alt="Jay">
+                <img src="../../public/images/ai-crew/monji.png" class="personality-img" data-index="1" alt="Monji">
+                <img src="../../public/images/ai-crew/nengi.png" class="personality-img" data-index="2" alt="Nengi">
+
+                <div class="status-pill">
+                    <div class="dot"></div>
+                    <span id="statusText">Jay is Active</span>
+                </div>
+            </div>
+
+            <!-- Right: Content Section -->
+            <div class="content-frame">
+                <!-- Jay -->
+                <div class="personality-content active" data-index="0">
+                    <span class="role-badge">Phase 1: Discovery</span>
+                    <h2 class="name">Jay</h2>
+                    <p class="bio">
+                        The architect of your journey. Jay uses high-velocity intelligence to scout the landscape of
+                        your field and identify the "killer topic" that sets you apart. He's energetic, direct, and
+                        speaks the language of a winner.
+                    </p>
+                    <div class="quote-box">
+                        "Yo! I'm Jay, your FYP plug. Tell me what you're passionate about and let's find you a topic
+                        that'll make your supervisor smile. No dull stuff, I promise!"
+                    </div>
+                </div>
+
+                <!-- Monji -->
+                <div class="personality-content" data-index="1">
+                    <span class="role-badge">Phase 2: Deep Work</span>
+                    <h2 class="name">Monji</h2>
+                    <p class="bio">
+                        The brilliant mind overseeing your research. With a background in Mass Communications and a
+                        pedigree for academic excellence, Monji ensures your project isn't just generated—it's crafted
+                        with precision, style, and impeccable logic.
+                    </p>
+                    <div class="quote-box">
+                        "Hi love! I'm Monji, your research partner. I've read through all your uploaded papers and I'm
+                        here to help you write with precision and style. What section are we working on today?"
+                    </div>
+                </div>
+
+                <!-- Nengi -->
+                <div class="personality-content" data-index="2">
+                    <span class="role-badge">Universal: Brain Dump</span>
+                    <h2 class="name">Nengi</h2>
+                    <p class="bio">
+                        The creative eye. Nengi is your 24/7 thought partner, ready to capture random ideas, visualize
+                        complex data, or just listen when you need to vent about the process. Relaxed, observant, and
+                        always focused on the big picture.
+                    </p>
+                    <div class="quote-box">
+                        "What's good? I'm Nengi. Unlike Jay and Monji who have specific jobs, I'm just here to chat. Got
+                        a random question? Need to brain dump? I got you."
+                    </div>
+                </div>
+
+                <!-- Navigation Progress -->
+                <div class="progress-nav">
+                    <div class="progress-dot active" data-index="0"></div>
+                    <div class="progress-dot" data-index="1"></div>
+                    <div class="progress-dot" data-index="2"></div>
+                </div>
+
+                <a href="/chat" class="cta">Start Your Consult</a>
+                <p class="mobile-hint">Hover or Slide to switch</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const images = document.querySelectorAll('.personality-img');
+        const contents = document.querySelectorAll('.personality-content');
+        const dots = document.querySelectorAll('.progress-dot');
+        const statusText = document.getElementById('statusText');
+        const imageFrame = document.getElementById('imageFrame');
+
+        let currentIndex = 0;
+        let isTransitioning = false;
+        let timer = null;
+        let isPaused = false;
+
+        function showPersonality(index) {
+            if (isTransitioning) return;
+            isTransitioning = true;
+
+            images.forEach(img => img.classList.remove('active'));
+            contents.forEach(cnt => cnt.classList.remove('active'));
+            dots.forEach(dot => dot.classList.remove('active'));
+
+            images[index].classList.add('active');
+            contents[index].classList.add('active');
+            dots[index].classList.add('active');
+
+            const names = ["Jay", "Monji", "Nengi"];
+            statusText.innerText = `${names[index]} is Active`;
+
+            currentIndex = index;
+
+            setTimeout(() => {
+                isTransitioning = false;
+            }, 1000);
+        }
+
+        function autoCycle() {
+            if (isPaused) return;
+            let next = (currentIndex + 1) % images.length;
+            showPersonality(next);
+        }
+
+        // Start Auto Cycle
+        timer = setInterval(autoCycle, 4000);
+
+        // Pause on Hover
+        imageFrame.addEventListener('mouseenter', () => {
+            isPaused = true;
+        });
+
+        imageFrame.addEventListener('mouseleave', () => {
+            isPaused = false;
+        });
+
+        // Manual Selection
+        dots.forEach((dot, idx) => {
+            dot.addEventListener('click', () => {
+                showPersonality(idx);
+            });
+        });
+
+        // Mobile "Slide" Logic (Simplified)
+        let startX = 0;
+        imageFrame.addEventListener('touchstart', e => {
+            startX = e.touches[0].clientX;
+            isPaused = true;
+        }, { passive: true });
+
+        imageFrame.addEventListener('touchend', e => {
+            const endX = e.changedTouches[0].clientX;
+            if (startX - endX > 50) {
+                showPersonality((currentIndex + 1) % images.length);
+            } else if (endX - startX > 50) {
+                showPersonality((currentIndex - 1 + images.length) % images.length);
+            }
+            setTimeout(() => isPaused = false, 2000);
+        }, { passive: true });
+
+    </script>
+
+</body>
+
+</html>

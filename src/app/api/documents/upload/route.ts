@@ -1,12 +1,22 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { GeminiFileSearchService } from "@/lib/gemini-file-search";
+import { extractPdfText } from "@/lib/pdf-parser";
+import mammoth from "mammoth";
 
 // Security constants
-const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB limit
-const ACCEPTED_TYPES = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
+const ACCEPTED_TYPES = [
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif"
+];
 const MAX_FILE_NAME_LENGTH = 255;
-const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.docx'];
+const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.docx', '.jpg', '.jpeg', '.png', '.webp', '.gif'];
 
 /**
  * CRITICAL SECURITY FIX: Enhanced sanitize file name to prevent directory traversal and other attacks
@@ -49,12 +59,12 @@ function validateFileSecurity(file: File): { isValid: boolean; error?: string } 
     try {
         // CRITICAL SECURITY FIX: Check file size
         if (!file.size || file.size > MAX_FILE_SIZE) {
-            return { isValid: false, error: "File exceeds 4MB limit or is empty" };
+            return { isValid: false, error: "File exceeds 5MB limit or is empty" };
         }
 
         // CRITICAL SECURITY FIX: Check file type with strict validation
         if (!file.type || !ACCEPTED_TYPES.includes(file.type)) {
-            return { isValid: false, error: "Only PDF and DOCX files are allowed" };
+            return { isValid: false, error: "Only PDF, DOCX, and Image files are allowed" };
         }
 
         // CRITICAL SECURITY FIX: Check file extension with sanitization
@@ -160,7 +170,15 @@ export async function POST(req: Request) {
             const isPdf = fileSignature.equals(Buffer.from([0x25, 0x50, 0x44, 0x46])); // %PDF
             const isDocx = fileSignature.equals(Buffer.from([0x50, 0x4B, 0x03, 0x04])); // ZIP (DOCX is ZIP-based)
 
-            if (!isPdf && !isDocx) {
+            // Image magic numbers
+            const isJpeg = fileSignature.slice(0, 3).equals(Buffer.from([0xFF, 0xD8, 0xFF]));
+            const isPng = fileSignature.equals(Buffer.from([0x89, 0x50, 0x4E, 0x47]));
+            const isGif = fileSignature.slice(0, 3).equals(Buffer.from([0x47, 0x49, 0x46])); // GIF
+            const isWebp = buffer.slice(8, 12).equals(Buffer.from([0x57, 0x45, 0x42, 0x50])); // RIFF...WEBP
+
+            const isImage = isJpeg || isPng || isGif || isWebp;
+
+            if (!isPdf && !isDocx && !isImage) {
                 // CRITICAL SECURITY FIX: Log security event for file type mismatch
                 console.warn(`[Security] File type mismatch detected: ${file.name} (${file.type})`);
                 return NextResponse.json({ error: "File content does not match the declared type" }, { status: 400 });
@@ -178,6 +196,27 @@ export async function POST(req: Request) {
                 }
             }
 
+            // =====================================================
+            // TEXT EXTRACTION (Phase 1) - Critical for AI processing
+            // =====================================================
+            let extractedContent = '';
+
+            try {
+                if (isPdf) {
+                    console.log(`[DocumentUpload] Extracting text from PDF: ${sanitizedFileName}`);
+                    extractedContent = await extractPdfText(buffer);
+                    console.log(`[DocumentUpload] PDF extraction complete: ${extractedContent.length} chars`);
+                } else if (isDocx) {
+                    console.log(`[DocumentUpload] Extracting text from DOCX: ${sanitizedFileName}`);
+                    const result = await mammoth.extractRawText({ buffer });
+                    extractedContent = result.value || '';
+                    console.log(`[DocumentUpload] DOCX extraction complete: ${extractedContent.length} chars`);
+                }
+            } catch (extractError) {
+                console.error('[DocumentUpload] Text extraction failed:', extractError);
+                // Continue with upload even if extraction fails - can retry later
+            }
+
             const doc = await prisma.researchDocument.create({
                 data: {
                     projectId,
@@ -185,9 +224,86 @@ export async function POST(req: Request) {
                     fileType: file.type.split('/')[1],
                     mimeType: file.type,
                     fileData: buffer,
-                    status: "PENDING"
+                    extractedContent, // Now populated with actual text!
+                    status: extractedContent ? "PENDING" : "EXTRACTION_FAILED"
                 }
             });
+
+            // If it's an image, we might not need to run Gemini File Search or text extraction
+            // But we should probably mark it as complete
+            if (isImage) {
+                await prisma.researchDocument.update({
+                    where: { id: doc.id },
+                    data: {
+                        status: "COMPLETED", // Images are ready to serve immediately
+                        importedToFileSearch: false // Skip vector search for images
+                    }
+                });
+                return NextResponse.json({ success: true, doc: { ...doc, status: "COMPLETED" } });
+            }
+
+            // -----------------------------------------------------
+            // PHASE 2: Gemini File Search Integration (Async)
+            // -----------------------------------------------------
+            (async () => {
+                try {
+                    // 1. Get or Create FileSearchStore for this project
+                    let project = await prisma.project.findUnique({
+                        where: { id: projectId },
+                        select: { fileSearchStoreId: true }
+                    });
+
+                    let storeId = project?.fileSearchStoreId;
+
+                    if (!storeId) {
+                        console.log('[DocumentUpload] Creating new FileSearchStore for project:', projectId);
+                        storeId = await GeminiFileSearchService.createStore(projectId);
+
+                        await prisma.project.update({
+                            where: { id: projectId },
+                            data: {
+                                fileSearchStoreId: storeId,
+                                fileSearchStoreCreatedAt: new Date()
+                            }
+                        });
+                    }
+
+                    // 2. Upload file to FileSearchStore
+                    if (storeId) {
+                        const result = await GeminiFileSearchService.uploadDocument(
+                            storeId,
+                            buffer,
+                            sanitizedFileName,
+                            file.type
+                        );
+
+                        // 3. Update ResearchDocument status
+                        if (result.success) {
+                            await prisma.researchDocument.update({
+                                where: { id: doc.id },
+                                data: {
+                                    importedToFileSearch: true,
+                                    fileSearchFileId: result.fileId
+                                }
+                            });
+                        } else {
+                            console.error('[DocumentUpload] File Search upload failed:', result.error);
+                            await prisma.researchDocument.update({
+                                where: { id: doc.id },
+                                data: { importError: result.error || 'Upload failed' }
+                            });
+                        }
+                    }
+                } catch (error: any) {
+                    console.error('[DocumentUpload] Async File Search sync error:', error);
+                    // Update document with error
+                    await prisma.researchDocument.update({
+                        where: { id: doc.id },
+                        data: { importError: error.message || 'Async sync failed' }
+                    });
+                }
+            })();
+            // -----------------------------------------------------
 
             return NextResponse.json({ success: true, doc });
         }

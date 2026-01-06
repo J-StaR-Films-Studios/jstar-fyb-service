@@ -1,6 +1,11 @@
-import { ArrowRight, Bot, BookOpen, FileText, CheckCircle2, Download } from "lucide-react";
+import { ArrowRight, Bot, BookOpen, FileText, CheckCircle2, Layout } from "lucide-react";
+import Link from "next/link";
 
-export function ProjectActionCenter() {
+interface ProjectActionCenterProps {
+    projectId: string;
+}
+
+export function ProjectActionCenter({ projectId }: ProjectActionCenterProps) {
     return (
         <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-4 sm:p-8 relative overflow-hidden">
             {/* Background Glow */}
@@ -48,15 +53,21 @@ export function ProjectActionCenter() {
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
-                    <button className="flex-1 py-4 bg-primary hover:bg-primary/90 rounded-xl font-bold text-white uppercase tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
-                        <Bot className="w-4 h-4" />
-                        Start Deep Research
-                    </button>
+                    <Link
+                        href={`/project/${projectId}/workspace`}
+                        className="flex-1 py-4 bg-primary hover:bg-primary/90 rounded-xl font-bold text-white uppercase tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
+                    >
+                        <Layout className="w-4 h-4" />
+                        Open in Workspace
+                    </Link>
 
-                    <button className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold text-gray-300 flex items-center justify-center gap-2 transition-all">
-                        <Download className="w-4 h-4" />
-                        Download Outline
-                    </button>
+                    <Link
+                        href={`/project/${projectId}/workspace?tab=chat`}
+                        className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold text-gray-300 flex items-center justify-center gap-2 transition-all hover:border-purple-500/30 hover:text-purple-400"
+                    >
+                        <Bot className="w-4 h-4" />
+                        Chat with Monji
+                    </Link>
                 </div>
             </div>
         </div>

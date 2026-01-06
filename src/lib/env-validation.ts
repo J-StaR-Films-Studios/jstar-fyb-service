@@ -16,7 +16,9 @@ const envSchema = z.object({
     PAYSTACK_SECRET_KEY: z.string().min(1, "PAYSTACK_SECRET_KEY is required"),
 
     // AI services
+    OPENROUTER_API_KEY: z.string().optional(), // Kept for DeepSeek R1 (Future)
     GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
+    GEMINI_API_KEY: z.string().optional(), // For RAG/File Search features
 
     // Application configuration
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
@@ -46,7 +48,6 @@ export function validateEnvironment() {
         return false;
     }
 
-    // CRITICAL SECURITY FIX: Additional runtime validation for API keys
     const securityChecks = [
         {
             key: 'GROQ_API_KEY',

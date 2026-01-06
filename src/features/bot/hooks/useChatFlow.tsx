@@ -271,6 +271,18 @@ export function useChatFlow(userId?: string) {
         else router.push('/auth/register?callbackUrl=/project/builder');
     };
 
+    /**
+     * Reset all local chat state. Called after server-side clear.
+     */
+    const clearChat = () => {
+        setMessages([]);
+        setState("INITIAL");
+        setComplexity(1);
+        setConfirmedTopic(null);
+        setHasProvidedPhone(false);
+        setConversationId(undefined);
+    };
+
     return {
         messages,
         state,
@@ -283,6 +295,8 @@ export function useChatFlow(userId?: string) {
         handleUserMessage,
         handleAction,
         handleSelectTopic,
-        proceedToBuilder
+        proceedToBuilder,
+        clearChat,
+        anonymousId
     };
 }

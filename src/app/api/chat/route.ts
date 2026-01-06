@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         console.log(`[Chat API] Processing ${modelMessages.length} messages. Last: "${modelMessages[modelMessages.length - 1]?.content?.slice(0, 50)}..."`);
 
         const result = await streamTextWithRetry({
-            model: groq('moonshotai/kimi-k2-instruct-0905'), // Llama 3.3 70B equivalent
+            model: groq('moonshotai/kimi-k2-instruct'), // Reliable agentic model
             stopWhen: stepCountIs(5),
             system: SYSTEM_PROMPT,
             messages: modelMessages,
@@ -125,5 +125,18 @@ export async function POST(req: Request) {
         }
 
         return new Response(JSON.stringify({ error: 'Jay is currently offline (System Overload). Please try again.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+}
+
+// DELETE: Clear Jay's conversation history for the user
+export async function DELETE() {
+    try {
+        // For Jay, we just need to return success - the client will reset state
+        // Jay's messages are stored via anonymous tokens, not user-linked DB records
+        // The client handles clearing localStorage/state on its own
+        return Response.json({ success: true });
+    } catch (error: any) {
+        console.error('[Chat DELETE] Error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to clear conversation' }), { status: 500 });
     }
 }

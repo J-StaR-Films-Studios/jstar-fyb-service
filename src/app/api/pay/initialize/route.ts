@@ -14,7 +14,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { projectId } = await req.json();
+        const { projectId, callbackUrl } = await req.json();
 
         if (!projectId) {
             return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
         // Check if already unlocked
         if (project.isUnlocked) {
-            return NextResponse.json({ error: "Project already unlocked" }, { status: 400 });
+            return NextResponse.json({ url: callbackUrl || `/project/${project.id}/workspace` });
         }
 
         // Generate a unique reference
@@ -57,10 +57,11 @@ export async function POST(req: Request) {
             email: user.email,
             amount: PROJECT_UNLOCK_AMOUNT,
             reference: reference,
-            callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/project/builder?payment=verifying`,
+            callbackUrl: callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL}/project/builder?payment=verifying`,
             metadata: {
                 projectId: project.id,
-                userId: user.id
+                userId: user.id,
+                customCallback: !!callbackUrl
             }
         });
 

@@ -2,6 +2,23 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Chapter } from '../schemas/outlineSchema';
 
+/**
+ * IMPORTANT: State Hydration Priority
+ * 
+ * This store uses Zustand's persist middleware with localStorage.
+ * The hydration order is CRITICAL to prevent race conditions:
+ * 
+ * 1. Zustand instantly hydrates `data` from localStorage (SYNC)
+ * 2. Server component fetches fresh data from DB (ASYNC)
+ * 3. BuilderClient.tsx calls loadProject() with server data
+ * 
+ * The `hasServerHydrated` flag prevents localStorage from overwriting
+ * server data AFTER loadProject() is called. It is reset on each
+ * navigation in BuilderClient.tsx to allow fresh data.
+ * 
+ * NEVER persist `isPaid` to localStorage - server is ALWAYS source of truth.
+ */
+
 export type BuilderStep = 'TOPIC' | 'ABSTRACT' | 'OUTLINE' | 'PAYWALL';
 export type ProjectMode = 'DIY' | 'CONCIERGE' | null;
 export type ProjectStatus = 'OUTLINE_GENERATED' | 'RESEARCH_IN_PROGRESS' | 'RESEARCH_COMPLETE' | 'WRITING_IN_PROGRESS' | 'PROJECT_COMPLETE';
@@ -18,6 +35,8 @@ export interface ProjectData {
     outline: Chapter[];
     mode: ProjectMode;
     status: ProjectStatus;
+    isLocked?: boolean;
+    topicSwitchCount?: number;
 }
 
 interface BuilderState {
@@ -53,7 +72,8 @@ export const useBuilderStore = create<BuilderState>()(
                 abstract: '',
                 outline: [],
                 mode: null,
-                status: 'OUTLINE_GENERATED'
+                status: 'OUTLINE_GENERATED',
+                isLocked: false
             },
             isGenerating: false,
             isPaid: false,
@@ -103,17 +123,16 @@ export const useBuilderStore = create<BuilderState>()(
                     }
 
                     // CRITICAL FIX: Prevent downgrading a Paid Project
-                    // If the server project matches the handoff topic and is PAID, ignore the handoff
-                    if (existingProject && existingIsPaid) {
-                        // Normalize strings for comparison
-                        const serverTopic = existingProject.topic?.trim().toLowerCase();
-                        const handoffTopic = topic?.trim().toLowerCase();
-
-                        if (serverTopic === handoffTopic) {
-                            console.log('[Builder] Server project is PAID and matches handoff. Ignoring handoff to prevent downgrade.');
-                            localStorage.removeItem(CHAT_HANDOFF_KEY); // Safe to remove as it's now represented by the server
-                            return false;
-                        }
+                    // If the server project is PAID, NEVER let a chat handoff overwrite it automatically.
+                    // Prior logic checked for topic match, but string mismatches caused accidental resets.
+                    if (existingIsPaid) {
+                        console.log('[Builder] Server project is PAID. Ignoring chat handoff to prevent downgrade.', {
+                            serverTopic: existingProject?.topic,
+                            handoffTopic: topic
+                        });
+                        // We safely remove the handoff key because the user is clearly engaged with a paid project
+                        localStorage.removeItem(CHAT_HANDOFF_KEY);
+                        return false;
                     }
 
                     // LOGIC CHANGE: If handoff is VERY fresh (< 5 mins), valid user intent overrides server state
@@ -242,19 +261,37 @@ export const useBuilderStore = create<BuilderState>()(
             loadProject: (projectData, isPaid = false) => {
                 console.log('[Builder] Hydrating from server project', { id: projectData.projectId, isPaid, outlineLen: projectData.outline?.length });
 
-                // Clear any stale chat handoff data - BUT wait for effective consumption
-                // if (typeof window !== 'undefined') {
-                //    localStorage.removeItem(CHAT_HANDOFF_KEY);
-                // }
+                // CRITICAL: Clear stale chat handoff to prevent it from overwriting on next render
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem(CHAT_HANDOFF_KEY);
+                }
+
+                // IMPORTANT: Use server data as the complete source of truth for critical fields
+                // We merge but ensure server projectId, topic, outline ALWAYS win
+
+                // Special case: Project was unlocked for topic switch (isPaid, !isLocked, no abstract)
+                // Should start at TOPIC step to allow user to pick a new topic
+                const isUnlockedForTopicSwitch = isPaid && !projectData.isLocked && !projectData.abstract && projectData.topic;
 
                 set((state) => ({
                     // Determine step based on data presence
-                    step: (projectData.outline && projectData.outline.length > 0) ? 'OUTLINE'
-                        : projectData.abstract ? 'ABSTRACT'
-                            : projectData.topic ? 'ABSTRACT' // If topic exists, go to Abstract
-                                : 'TOPIC',
+                    step: isUnlockedForTopicSwitch ? 'TOPIC' // Force TOPIC step for unlocked topic-switch projects
+                        : (projectData.outline && projectData.outline.length > 0) ? 'OUTLINE'
+                            : projectData.abstract ? 'ABSTRACT'
+                                : projectData.topic ? 'ABSTRACT' // If topic exists, go to Abstract
+                                    : 'TOPIC',
                     data: {
-                        ...state.data,
+                        // Start with defaults to ensure type safety
+                        userId: null,
+                        projectId: null,
+                        topic: '',
+                        twist: '',
+                        abstract: '',
+                        outline: [],
+                        mode: null,
+                        status: 'OUTLINE_GENERATED' as const,
+                        isLocked: false,
+                        // Then spread server data to override
                         ...projectData
                     },
                     isPaid: isPaid ?? false, // Hydrate payment status from server

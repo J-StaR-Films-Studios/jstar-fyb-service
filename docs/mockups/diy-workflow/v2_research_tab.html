@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J Star - Research V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>tailwind.config = { theme: { extend: { colors: { dark: '#030014', primary: '#8b5cf6', accent: '#06b6d4' } } } }</script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-[#030014] text-white font-[Outfit] pb-28">
+
+    <!-- Header & Search -->
+    <header class="fixed top-0 w-full z-40 bg-dark/95 backdrop-blur border-b border-white/5 pb-4 pt-12 px-4 shadow-2xl">
+        <div class="flex items-center gap-4 mb-4">
+            <h1 class="font-bold text-xl font-display">Library</h1>
+            <div class="ml-auto flex gap-2">
+                <button class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"><i data-lucide="filter"
+                        class="w-4 h-4"></i></button>
+                <button class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><i data-lucide="plus"
+                        class="w-4 h-4 text-white"></i></button>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4"></i>
+            <input type="text" placeholder="Search papers, findings..."
+                class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm outline-none focus:border-primary/50 transition-colors">
+        </div>
+
+        <!-- Tags -->
+        <div class="flex gap-2 mt-4 overflow-x-auto no-scrollbar">
+            <button class="px-3 py-1 bg-white/10 rounded-full text-xs font-medium whitespace-nowrap text-white">All
+                Files</button>
+            <button
+                class="px-3 py-1 bg-transparent border border-white/10 rounded-full text-xs font-medium whitespace-nowrap text-gray-400">PDFs</button>
+            <button
+                class="px-3 py-1 bg-transparent border border-white/10 rounded-full text-xs font-medium whitespace-nowrap text-gray-400">Web
+                Sources</button>
+            <button
+                class="px-3 py-1 bg-transparent border border-white/10 rounded-full text-xs font-medium whitespace-nowrap text-gray-400">Notes</button>
+        </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="pt-48 px-4 grid grid-cols-2 gap-4">
+
+        <!-- Deep Research Promoted Card (Full Width) -->
+        <div
+            class="col-span-2 bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 rounded-2xl p-5 flex items-center justify-between relative overflow-hidden group mb-2">
+            <div class="relative z-10">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-accent mb-1 block">AI Agent</span>
+                <h3 class="font-bold">Deep Research</h3>
+                <button
+                    class="mt-3 px-3 py-1.5 bg-white text-black text-xs font-bold rounded-lg shadow-lg group-hover:scale-105 transition-transform">Run
+                    New Job</button>
+            </div>
+            <i data-lucide="brain-circuit"
+                class="w-16 h-16 text-primary/40 absolute -right-2 -bottom-2 group-hover:rotate-12 transition-transform duration-500"></i>
+        </div>
+
+        <!-- File Card 1 -->
+        <div class="glass-panel p-3 rounded-2xl aspect-[4/5] flex flex-col relative group overflow-hidden">
+            <!-- Thumbnail Placeholder -->
+            <div class="flex-1 bg-white/5 rounded-xl mb-3 flex items-center justify-center relative overflow-hidden">
+                <i data-lucide="file-text" class="w-8 h-8 text-gray-600 group-hover:scale-110 transition-transform"></i>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
+                <span class="absolute bottom-2 left-2 text-[10px] text-white font-mono">PDF</span>
+            </div>
+
+            <h4 class="text-xs font-bold leading-tight mb-1 text-gray-200">Lagos_Urban_Planning_2024.pdf</h4>
+            <div class="flex justify-between items-center mt-auto">
+                <span class="text-[10px] text-gray-500">2.4 MB</span>
+                <button class="p-1 hover:text-white text-gray-500"><i data-lucide="more-horizontal"
+                        class="w-4 h-4"></i></button>
+            </div>
+        </div>
+
+        <!-- File Card 2 -->
+        <div class="glass-panel p-3 rounded-2xl aspect-[4/5] flex flex-col relative group overflow-hidden">
+            <div class="flex-1 bg-white/5 rounded-xl mb-3 flex items-center justify-center relative">
+                <i data-lucide="globe" class="w-8 h-8 text-accent/50 group-hover:scale-110 transition-transform"></i>
+                <span class="absolute bottom-2 left-2 text-[10px] text-accent font-mono">WEB</span>
+            </div>
+
+            <h4 class="text-xs font-bold leading-tight mb-1 text-gray-200">Smart City Frameworks (IEEE)</h4>
+            <div class="flex justify-between items-center mt-auto">
+                <span class="text-[10px] text-gray-500">Link</span>
+                <button class="p-1 hover:text-white text-gray-500"><i data-lucide="more-horizontal"
+                        class="w-4 h-4"></i></button>
+            </div>
+        </div>
+
+        <!-- File Card 3 -->
+        <div class="glass-panel p-3 rounded-2xl aspect-[4/5] flex flex-col relative group overflow-hidden opacity-70">
+            <div class="flex-1 bg-white/5 rounded-xl mb-3 flex items-center justify-center relative">
+                <i data-lucide="file-text" class="w-8 h-8 text-gray-600"></i>
+            </div>
+
+            <h4 class="text-xs font-bold leading-tight mb-1 text-gray-200">Waste_Data_Q3.xlsx</h4>
+            <div class="flex justify-between items-center mt-auto">
+                <span class="text-[10px] text-gray-500">14KB</span>
+                <button class="p-1 hover:text-white text-gray-500"><i data-lucide="more-horizontal"
+                        class="w-4 h-4"></i></button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Navigation: Floating Pill -->
+    <nav
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface/90 backdrop-blur-xl border border-white/10 rounded-full p-1.5 shadow-2xl flex items-center gap-1 z-50">
+        <button
+            class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 transition-colors">
+            <i data-lucide="pen-tool" class="w-5 h-5"></i>
+        </button>
+
+        <button
+            class="px-5 py-3 bg-white text-black rounded-full font-bold text-xs uppercase flex items-center gap-2 shadow-lg">
+            <i data-lucide="library" class="w-4 h-4"></i> Research
+        </button>
+
+        <button
+            class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 transition-colors">
+            <i data-lucide="network" class="w-5 h-5"></i>
+        </button>
+
+        <button
+            class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 transition-colors">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
+    </nav>
+
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

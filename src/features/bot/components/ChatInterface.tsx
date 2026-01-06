@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mic, SendHorizontal, Plus, ArrowLeft, LogOut, User, AlertTriangle, RefreshCw } from "lucide-react";
+import { Mic, SendHorizontal, Plus, ArrowLeft, LogOut, User, AlertTriangle, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { MessageBubble } from "./MessageBubble";
 import { ThinkingIndicator } from "./ThinkingIndicator";
@@ -12,22 +12,26 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useChatFlow } from "../hooks/useChatFlow";
 import { ProposalCard } from "./ProposalCard";
+import { BotSwitcher } from "./BotSwitcher";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "@/lib/auth-client";
-import { mergeAnonymousData } from "../actions/chat";
+import { mergeAnonymousData, clearAllConversations } from "../actions/chat";
 import { signInAction, signOutAction } from "@/features/auth/actions";
+import { generateUUID } from "@/lib/uuid";
 
 interface ChatInterfaceProps {
     initialUser?: any; // Replace 'any' with proper User type if available, e.g. from better-auth
+    hideHeader?: boolean;
 }
 
-export function ChatInterface({ initialUser }: ChatInterfaceProps) {
+export function ChatInterface({ initialUser, hideHeader = false }: ChatInterfaceProps) {
     const router = useRouter();
     const { data: session } = useSession();
     // Prioritize session user if available (client update), otherwise fallback to server passed user
     const user = session?.user || initialUser;
-    const { messages, state, complexity, isLoading, confirmedTopic, hasProvidedPhone, error, regenerate, handleUserMessage, handleAction, handleSelectTopic, proceedToBuilder } = useChatFlow(user?.id);
+    const { messages, state, complexity, isLoading, confirmedTopic, hasProvidedPhone, error, regenerate, handleUserMessage, handleAction, handleSelectTopic, proceedToBuilder, clearChat, anonymousId } = useChatFlow(user?.id);
     const [inputValue, setInputValue] = useState("");
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -61,52 +65,125 @@ export function ChatInterface({ initialUser }: ChatInterfaceProps) {
         setInputValue("");
     };
 
+    const handleClearChat = async () => {
+        try {
+            // 1. Clear from database
+            await clearAllConversations({
+                userId: user?.id,
+                anonymousId: anonymousId
+            });
+
+            // 2. Clear localStorage
+            localStorage.removeItem('jstar_confirmed_topic');
+            // Generate fresh anonymous ID
+            const newId = generateUUID();
+            localStorage.setItem('jstar_anonymous_id', newId);
+
+            // 3. Clear local state
+            clearChat();
+
+            setShowClearConfirm(false);
+        } catch (err) {
+            console.error('Failed to clear chat:', err);
+        }
+    };
+
     return (
-        <div className="flex flex-col h-[100dvh] bg-dark text-white overflow-hidden font-sans">
+        <div className={`flex flex-col bg-dark text-white overflow-hidden font-sans ${hideHeader ? 'h-[calc(100vh-80px)]' : 'h-[100dvh]'}`}>
             {/* Header */}
-            <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-dark/80 backdrop-blur-md z-20 shrink-0">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-white/5 text-gray-400">
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <h1 className="font-display font-bold text-lg tracking-wide hidden md:block">Project Consultant</h1>
-                        <h1 className="font-display font-bold text-lg tracking-wide md:hidden">Jay</h1>
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-xs text-gray-400 font-mono">Active</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    {/* Complexity Widget - Desktop */}
-                    <div className="hidden md:block">
-                        <ComplexityMeter score={complexity} />
-                    </div>
-
-                    {/* Auth Button */}
-                    {user ? (
-                        <div className="flex items-center gap-3 pl-3 border-l border-white/10">
-                            <UserAvatar name={user.name} image={user.image} size="sm" />
-                            <button
-                                onClick={() => signOutAction()}
-                                className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
-                            >
-                                <LogOut className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => router.push('/auth/login?callbackUrl=' + encodeURIComponent('/chat'))}
-                            className="px-4 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/20 text-xs font-bold text-primary transition-all flex items-center gap-2"
-                        >
-                            <User className="w-3 h-3" />
-                            Sign In to Save
+            {!hideHeader && (
+                <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 bg-dark/80 backdrop-blur-md z-20 shrink-0">
+                    {/* Header content... */}
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-white/5 text-gray-400">
+                            <ArrowLeft className="w-5 h-5" />
                         </button>
-                    )}
-                </div>
-            </header>
+                        <BotSwitcher currentBot="jay" />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {/* Complexity Widget - Desktop */}
+                        <div className="hidden md:block">
+                            <ComplexityMeter score={complexity} />
+                        </div>
+
+                        {/* Clear Chat Button */}
+                        <button
+                            onClick={() => setShowClearConfirm(true)}
+                            className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
+                            title="Clear Chat"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+
+                        {/* Auth Button */}
+                        {user ? (
+                            <div className="flex items-center gap-3 pl-3 border-l border-white/10">
+                                <UserAvatar name={user.name} image={user.image} size="sm" />
+                                <button
+                                    onClick={() => signOutAction()}
+                                    className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => router.push('/auth/login?callbackUrl=' + encodeURIComponent('/chat'))}
+                                className="px-4 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/20 text-xs font-bold text-primary transition-all flex items-center gap-2"
+                            >
+                                <User className="w-3 h-3" />
+                                Sign In to Save
+                            </button>
+                        )}
+                    </div>
+                </header>
+            )}
+
+            {/* Clear Chat Confirmation Modal */}
+            <AnimatePresence>
+                {showClearConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                        onClick={() => setShowClearConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-dark border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                    <Trash2 className="w-5 h-5 text-red-400" />
+                                </div>
+                                <h3 className="font-display font-bold text-lg">Clear Chat?</h3>
+                            </div>
+                            <p className="text-sm text-gray-400 mb-6">
+                                This will delete all messages and start fresh. This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowClearConfirm(false)}
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleClearChat}
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-bold transition-colors"
+                                >
+                                    Clear All
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Sticky Error Banner */}
             <AnimatePresence>
@@ -270,35 +347,39 @@ export function ChatInterface({ initialUser }: ChatInterfaceProps) {
                 </ErrorBoundary>
             </main>
 
-            {/* Mobile Complexity Meter */}
-            <div className="md:hidden absolute bottom-[88px] left-0 right-0 px-4 pointer-events-none">
-                <div className="bg-dark/90 backdrop-blur-md border border-white/10 rounded-lg p-2 flex justify-between items-center pointer-events-auto">
-                    <span className="text-xs text-gray-400 font-mono uppercase">Complexity</span>
-                    <div className="scale-75 origin-right">
-                        <ComplexityMeter score={complexity} />
-                    </div>
-                </div>
-            </div>
-
             {/* Input Area */}
             <footer className="p-4 bg-dark/80 backdrop-blur-xl border-t border-white/5 shrink-0 z-30">
-                <form onSubmit={onSubmit} className="flex gap-3 relative max-w-4xl mx-auto">
+                {/* Mobile Complexity Meter - Inside footer for correct positioning */}
+                <div className="md:hidden mb-3">
+                    <div className="bg-dark/90 backdrop-blur-md border border-white/10 rounded-lg p-2 flex justify-between items-center">
+                        <span className="text-xs text-gray-400 font-mono uppercase">Complexity</span>
+                        <div className="scale-75 origin-right">
+                            <ComplexityMeter score={complexity} />
+                        </div>
+                    </div>
+                </div>
+
+                <form onSubmit={onSubmit} className="flex gap-3 relative max-w-4xl mx-auto items-end">
                     <button type="button" className="p-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-colors md:hidden">
                         <Plus className="w-6 h-6" />
                     </button>
 
                     <div className="flex-1 relative">
-                        <input
-                            type="text"
+                        <textarea
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    onSubmit(e);
+                                }
+                            }}
                             placeholder={state === "CLOSING" ? "Enter your WhatsApp number..." : "Type your reply..."}
                             disabled={state === "ANALYZING"}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-12 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all font-light disabled:opacity-50"
+                            rows={1}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-4 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all font-light disabled:opacity-50 resize-none max-h-40 overflow-y-auto"
+                            style={{ minHeight: '56px' }}
                         />
-                        <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors">
-                            <Mic className="w-5 h-5" />
-                        </button>
                     </div>
 
                     <button

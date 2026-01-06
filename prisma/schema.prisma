@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,31 +5,23 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // directUrl = env("DATABASE_URL_UNPOOLED") // Optional for production with Neon
 }
 
-// ============================================
-// Better Auth Tables
-// ============================================
-
 model User {
-  id            String    @id
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  sessions      Session[]
-  accounts      Account[]
-  
-  projects      Project[]
-  payments      Payment[]
-  
-  // Notification relations
-  notifications              InAppNotification[]
-  notificationPreference     UserNotificationPreference?
+  id                     String                      @id
+  name                   String
+  email                  String                      @unique
+  emailVerified          Boolean                     @default(false)
+  image                  String?
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+  role                   String                      @default("USER")
+  accounts               Account[]
+  notifications          InAppNotification[]
+  payments               Payment[]
+  projects               Project[]
+  sessions               Session[]
+  notificationPreference UserNotificationPreference?
 }
 
 model Session {
@@ -52,7 +41,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -62,6 +50,7 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Verification {
@@ -73,224 +62,252 @@ model Verification {
   updatedAt  DateTime @updatedAt
 }
 
-// ============================================
-// Application Tables
-// ============================================
-
 model Lead {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
   whatsapp    String   @unique
   department  String
-  topic       String   // The original idea
-  twist       String   // The AI generated twist
+  topic       String
+  twist       String
   complexity  Int
-  
-  status      String   @default("NEW") // NEW, CONTACTED, SOLD
-  userId      String?  // WorkOS User ID
-  anonymousId String?  // Local Storage ID
+  status      String   @default("NEW")
+  userId      String?
+  anonymousId String?
 }
 
 model Conversation {
-  id          String   @id @default(cuid())
-  userId      String?  // WorkOS User ID (optional initially)
-  anonymousId String?  // Local Storage ID for pre-auth tracking
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id          String    @id @default(cuid())
+  userId      String?
+  anonymousId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  title       String?
   messages    Message[]
-  title       String? // Auto-generated summary
 }
 
-
 model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role           String       // 'user' | 'assistant'
-  content        String
-  toolInvocations Json?   // Store AI tool calls/results
-  createdAt      DateTime     @default(now())
+  id              String       @id @default(cuid())
+  conversationId  String
+  role            String
+  content         String
+  toolInvocations Json?
+  createdAt       DateTime     @default(now())
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }
 
 model Project {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  userId      String?
-  anonymousId String?
-
-  topic       String
-  twist       String?
-  abstract    String?
-
-  // Workflow fields
-  mode             String  @default("DIY") // DIY, CONCIERGE
-  status           String  @default("OUTLINE_GENERATED") // OUTLINE_GENERATED, RESEARCH_IN_PROGRESS, RESEARCH_COMPLETE, WRITING_IN_PROGRESS, PROJECT_COMPLETE
-  assignedTo       String? // Admin user ID (for Concierge mode)
-  
-  // Legacy status flags (kept for backwards compat)
-  isUnlocked       Boolean @default(false) // Has paid for full project
-  outlineGenerated Boolean @default(false)
-
-  // Enhanced Progress Tracking
-  progressPercentage Int     @default(0) // 0-100
-  contentProgress    Json?   // JSON object tracking content generation progress
-  documentProgress   Json?   // JSON object tracking document processing
-  aiGenerationStatus Json?   // JSON object tracking AI generation status
-  timeTracking       Json?   // JSON object tracking time spent on each phase
-  milestones         Json?   // JSON array of milestone completions
-  estimatedCompletion DateTime? // Estimated completion date
-  actualCompletion   DateTime? // Actual completion date
-
-  // Relations
-  documents   ResearchDocument[]
-  outline     ChapterOutline?
-  messages    ProjectMessage[]
-  conversations ProjectConversation[]
-  user        User?   @relation(fields: [userId], references: [id])
-  payments    Payment[]
+  id                       String                @id @default(cuid())
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  userId                   String?
+  anonymousId              String?
+  topic                    String
+  twist                    String?
+  abstract                 String?
+  mode                     String                @default("DIY")
+  status                   String                @default("OUTLINE_GENERATED")
+  assignedTo               String?
+  isUnlocked               Boolean               @default(false)
+  outlineGenerated         Boolean               @default(false)
+  isLocked                 Boolean               @default(false)
+  lockedAt                 DateTime?
+  topicSwitchCount         Int                   @default(0)
+  progressPercentage       Int                   @default(0)
+  contentProgress          Json?
+  documentProgress         Json?
+  aiGenerationStatus       Json?
+  timeTracking             Json?
+  milestones               Json?
+  estimatedCompletion      DateTime?
+  actualCompletion         DateTime?
+  fileSearchStoreId        String?
+  fileSearchStoreCreatedAt DateTime?
+  department               String?
+  course                   String?
+  institution              String?
+  complexity               Int?                  @default(3)
+  jayContextSummary        String?
+  contextComplete          Boolean               @default(false)
+  chapters                 Chapter[]
+  outline                  ChapterOutline?
+  payments                 Payment[]
+  user                     User?                 @relation(fields: [userId], references: [id])
+  conversations            ProjectConversation[]
+  messages                 ProjectMessage[]
+  documents                ResearchDocument[]
 }
 
 model Payment {
   id              String   @id @default(cuid())
   amount          Float
   currency        String   @default("NGN")
-  status          String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  status          String   @default("PENDING")
   reference       String   @unique
-  gatewayResponse String? // JSON string
-  
+  gatewayResponse String?
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  
   projectId       String
-  project         Project  @relation(fields: [projectId], references: [id])
-  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  project         Project  @relation(fields: [projectId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
 }
 
 model ResearchDocument {
-  id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  // File Info
-  fileUrl     String?  // Optional: URL if linked externally
-  fileData    Bytes?   // Optional: Binary data if uploaded directly
-  mimeType    String?  // Required if fileData is present
-  fileName    String
-  fileType    String // e.g. "pdf"
-
-  // Extraction Status
-  status      String   @default("PENDING") // PENDING, PROCESSED, FAILED
-  processedAt DateTime?
-
-  // Extracted Metadata (for "Human-in-the-Loop" / NotebookLM)
-  title        String?
-  author       String?
-  year         String?
-  documentType String?
-  category     String?
-  objective    String?
-  motivation   String?
-  methodology  String?
-  contribution String?
-  limitations  String?
-
-  // Enhanced Content Fields
-  keywords     String? // JSON array of keywords
-  themes       String? // JSON array of themes
-  summary      String?
-  insights     String? // JSON array of insights
-  extractedContent String?
-  aiInsights   String?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  projectId            String
+  fileUrl              String?
+  fileData             Bytes?
+  mimeType             String?
+  fileName             String
+  fileType             String
+  status               String    @default("PENDING")
+  processedAt          DateTime?
+  title                String?
+  author               String?
+  year                 String?
+  documentType         String?
+  category             String?
+  objective            String?
+  motivation           String?
+  methodology          String?
+  contribution         String?
+  limitations          String?
+  keywords             String?
+  themes               String?
+  summary              String?
+  insights             String?
+  extractedContent     String?
+  aiInsights           String?
+  importedToFileSearch Boolean   @default(false)
+  fileSearchFileId     String?
+  importError          String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  project              Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model ChapterOutline {
   id        String   @id @default(cuid())
   projectId String   @unique
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  content   String   // JSON or Markdown of the outline
+  content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Chapter {
+  id               String    @id @default(cuid())
+  projectId        String
+  number           Int
+  title            String
+  content          String
+  sections         Json?
+  version          Int       @default(1)
+  previousVersions Json?
+  status           String    @default("DRAFT")
+  wordCount        Int       @default(0)
+  generatedAt      DateTime?
+  lastEditedAt     DateTime?
+  generationPrompt String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, number])
+  @@index([projectId])
 }
 
 model ProjectMessage {
   id        String   @id @default(cuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  role      String   // "customer" | "admin"
+  role      String
   content   String
-  
   createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model ProjectConversation {
-  id        String   @id @default(cuid())
+  id        String               @id @default(cuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
   messages  ProjectChatMessage[]
+  project   Project              @relation(fields: [projectId], references: [id])
 }
 
 model ProjectChatMessage {
-  id             String   @id @default(cuid())
-  conversationId String
-  conversation   ProjectConversation @relation(fields: [conversationId], references: [id])
-  role           String   // 'user' | 'assistant'
-  content        String
-  toolInvocations Json?   // Store AI tool calls/results
-  createdAt      DateTime @default(now())
+  id              String              @id @default(cuid())
+  conversationId  String
+  role            String
+  content         String
+  toolInvocations Json?
+  createdAt       DateTime            @default(now())
+  conversation    ProjectConversation @relation(fields: [conversationId], references: [id])
 }
 
-// ============================================
-// Notification System Tables
-// ============================================
+model TopicSwitchRequest {
+  id          String    @id @default(cuid())
+  userId      String
+  projectId   String
+  reason      String
+  proofUrl    String?
+  status      String    @default("pending")
+  fee         Int?
+  paymentRef  String?
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  explanation String?
+}
+
+model TopicSwitchArchive {
+  id          String   @id @default(cuid())
+  requestId   String
+  projectId   String
+  oldTopic    String
+  oldTwist    String?
+  oldAbstract String?
+  oldOutline  Json?
+  oldChapters Json?
+  archivedAt  DateTime @default(now())
+
+  @@index([projectId])
+}
 
 model InAppNotification {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type      String   // "payment", "project", "system", "reminder", "chapter"
-  title     String
-  message   String
-  data      Json?    // Additional notification-specific data
-  priority  String   @default("medium") // "low", "medium", "high", "urgent"
-  
+  id          String    @id @default(cuid())
+  userId      String
+  type        String
+  title       String
+  message     String
+  data        Json?
+  priority    String    @default("medium")
   readAt      DateTime?
   dismissedAt DateTime?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, readAt])
   @@index([userId, createdAt])
 }
 
 model UserNotificationPreference {
-  id           String  @id @default(cuid())
-  userId       String  @unique
-  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  emailEnabled Boolean @default(true)
-  inAppEnabled Boolean @default(true)
-  
-  // Category-specific preferences (JSON object)
-  categories   Json?   // { "payment": true, "project": true, "system": true }
-  
-  // Frequency setting
-  frequency    String  @default("immediate") // "immediate", "daily", "weekly", "never"
-  
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  emailEnabled Boolean  @default(true)
+  inAppEnabled Boolean  @default(true)
+  categories   Json?
+  frequency    String   @default("immediate")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model SystemSetting {
+  key         String   @id
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}

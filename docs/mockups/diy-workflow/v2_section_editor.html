@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J Star - Editor V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #8b5cf6;
+            --color-accent: #06b6d4;
+            --color-bg: #030014;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #030014;
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col">
+
+    <!-- Top Bar -->
+    <header class="px-6 py-4 flex justify-between items-center border-b border-white/5 bg-black/20">
+        <button class="text-gray-400"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <div class="text-center">
+            <h2 class="font-bold text-sm">1.1 Background</h2>
+            <span class="text-[10px] text-green-400 flex items-center justify-center gap-1">
+                <div class="w-1.5 h-1.5 bg-green-400 rounded-full"></div> Saved
+            </span>
+        </div>
+        <button class="text-primary font-bold text-sm">Done</button>
+    </header>
+
+    <!-- Editor Canvas -->
+    <main class="flex-1 p-6 overflow-y-auto">
+        <textarea
+            class="w-full h-full bg-transparent outline-none text-lg leading-loose resize-none text-gray-200 placeholder-gray-700 font-light"
+            placeholder="Structure your thoughts here...">The rapid urbanization of Lagos State has led to an unprecedented increase in solid waste generation.
+
+Current waste management practices are largely manual and inefficient, leading to environmental degradation and public health risks.
+
+This study aims to explore how Artificial Intelligence can be leveraged to optimize waste collection routes...</textarea>
+    </main>
+
+    <!-- Floating Formatting Pill -->
+    <div
+        class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur border border-white/10 rounded-full px-4 py-2 flex items-center gap-4 shadow-xl">
+        <button class="text-white hover:text-primary"><i data-lucide="bold" class="w-4 h-4"></i></button>
+        <button class="text-gray-400 hover:text-white"><i data-lucide="heading" class="w-4 h-4"></i></button>
+        <button class="text-gray-400 hover:text-white"><i data-lucide="list" class="w-4 h-4"></i></button>
+        <div class="w-px h-4 bg-white/20"></div>
+        <button class="text-gray-400 hover:text-white"><i data-lucide="image" class="w-4 h-4"></i></button>
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <footer class="h-16 border-t border-white/10 bg-black/40 px-6 flex items-center justify-between">
+        <span class="text-xs text-gray-500 font-mono">342 words</span>
+
+        <!-- Smart Action Button -->
+        <button
+            class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent rounded-lg text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+            <i data-lucide="sparkles" class="w-4 h-4 fill-white"></i> Enhance
+        </button>
+
+        <button class="p-2 bg-white/5 rounded-full"><i data-lucide="mic" class="w-4 h-4"></i></button>
+    </footer>
+
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

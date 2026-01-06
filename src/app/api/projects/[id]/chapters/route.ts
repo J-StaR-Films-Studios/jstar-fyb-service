@@ -4,7 +4,8 @@ import { getCurrentUser } from '@/lib/auth-server';
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
-        // Authenticate user
+
+        // 1. Authenticate user
         const user = await getCurrentUser();
         if (!user) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -13,10 +14,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             });
         }
 
-        // Fetch project and verify ownership
+        // 2. Fetch project and verify ownership
         const project = await prisma.project.findUnique({
             where: { id },
-            include: { outline: true }
+            include: {
+                chapters: {
+                    orderBy: { number: 'asc' },
+                    select: {
+                        id: true,
+                        number: true,
+                        title: true,
+                        content: true,
+                        status: true,
+                        wordCount: true,
+                        version: true,
+                        lastEditedAt: true
+                    }
+                }
+            }
         });
 
         if (!project) {
@@ -33,12 +48,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             });
         }
 
-        // Return stored chapters from contentProgress
-        const chapters = project.contentProgress || {};
+        // 3. Return chapters (legacy support handled by migration, assuming empty if none)
+        // If we still need to support contentProgress migration on read, we could do it here
+        // but it's cleaner to assume migration runs on DB level or separate script.
 
         return new Response(JSON.stringify({
             success: true,
-            chapters: chapters
+            chapters: project.chapters,
+            topic: project.topic,
+            twist: project.twist
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }

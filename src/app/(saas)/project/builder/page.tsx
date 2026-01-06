@@ -15,6 +15,7 @@ export default async function BuilderPage({ searchParams }: PageProps) {
     const targetProjectId = params?.projectId; // From upgrade callback URL
 
     let serverProject: Partial<ProjectData> | null = null;
+    let isUnlocked = false; // Track payment status from the fetched project
 
     if (user) {
         let recentProject = null;
@@ -33,21 +34,46 @@ export default async function BuilderPage({ searchParams }: PageProps) {
             }
         }
 
-        // Priority 2: Otherwise, load the user's most recent project
+        // Priority 2: Try to load the user's UNLOCKED (paid) project first
+        // This prevents accidentally loading a stale unpaid draft if multiple projects exist
+        if (!recentProject) {
+            recentProject = await prisma.project.findFirst({
+                where: { userId: user.id, isUnlocked: true },
+                orderBy: { updatedAt: 'desc' },
+                include: { outline: true }
+            });
+            if (recentProject) {
+                console.log(`[BuilderPage] Loaded user's UNLOCKED project: ${recentProject.id}`);
+            }
+        }
+
+        // Priority 3: Fall back to most recent project (even if not paid)
         if (!recentProject) {
             recentProject = await prisma.project.findFirst({
                 where: { userId: user.id },
                 orderBy: { updatedAt: 'desc' },
                 include: { outline: true }
             });
+            if (recentProject) {
+                console.log(`[BuilderPage] Loaded user's most recent project: ${recentProject.id}`);
+            }
         }
 
         if (recentProject) {
+            // OPTIMIZATION: Capture isUnlocked from the already-fetched project
+            // No separate DB query needed - Prisma includes all scalar fields by default
+            isUnlocked = recentProject.isUnlocked || false;
+
             // Map to ProjectData
             let parsedOutline: Chapter[] = [];
             if (recentProject.outline && recentProject.outline.content) {
                 try {
-                    parsedOutline = JSON.parse(recentProject.outline.content);
+                    const rawOutline = JSON.parse(recentProject.outline.content);
+                    // DEFENSIVE FIX: Normalize object format to array
+                    // (streaming can save {0: {...}} instead of [{...}])
+                    parsedOutline = Array.isArray(rawOutline)
+                        ? rawOutline
+                        : Object.values(rawOutline);
                 } catch (e) {
                     console.error("Failed to parse outline content", e);
                 }
@@ -64,16 +90,14 @@ export default async function BuilderPage({ searchParams }: PageProps) {
                 mode: recentProject.mode as any,
                 // @ts-ignore - casting string to literal type
                 status: recentProject.status as any,
+                isLocked: recentProject.isLocked || false,
             };
         }
     }
 
-    // @ts-ignore
-    const isUnlocked = serverProject ? (await prisma.project.findUnique({ where: { id: serverProject.projectId! }, select: { isUnlocked: true } }))?.isUnlocked : false;
-
     return (
         <Suspense fallback={<div className="min-h-screen bg-dark flex items-center justify-center text-white/50">Loading Builder...</div>}>
-            <BuilderClient serverProject={serverProject} serverIsPaid={isUnlocked || false} />
+            <BuilderClient serverProject={serverProject} serverIsPaid={isUnlocked} />
         </Suspense>
     );
 }

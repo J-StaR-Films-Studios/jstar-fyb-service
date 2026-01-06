@@ -33,11 +33,15 @@ Integration with external webhooks (Discord/Telegram) to notify admins of:
 - Payment Links Generated
 - Successful Payments
 
-### Enhanced Lead Card
-The `AdminLeadCard` now includes:
-- "Send Payment Link" action
-- WhatsApp deep linking
-- Quick status toggles
+### Enhanced Lead & Request Cards
+The admin cards for leads and requests have been optimized for mobile:
+- **Send Payment Link**: Direct action from the card with context-aware dropdown positioning.
+- **WhatsApp Deep Linking**: Quick contact for leads.
+- **Improved Proof Viewing**: Integrated `ProofModal` to view uploaded rejection evidence without leaving the app.
+
+### UI Refinements
+- **Responsive Header**: The `AdminProjectDetail` header now stacks on mobile to allow all controls (status, payment links, badges) to remain accessible without overlapping. 
+- **Dropdown Bounds**: Payment tier dropdowns now detect screen edges to prevent overflowing off the page on narrow devices.
 
 ## Configuration
 | Environment Variable | Description |

@@ -163,4 +163,7 @@ Uses existing Prisma schema from FR-003:
 - Profile picture now uses shared `UserAvatar` component.
 - `proceedToBuilder()` is now auth-aware - goes directly to builder if logged in.
 
-
+### 2026-01-05: BotSwitcher & SaasShell Integration
+- **Feature:** Jay's chat (`/chat`) is now wrapped in `SaasShell` for logged-in users, providing a consistent header with the `BotSwitcher`.
+- **Code Change:** `ChatInterface.tsx` now accepts a `hideHeader` prop. When `true`, the internal header is hidden, and the parent (`SaasShell`) provides the header with `BotSwitcher`.
+- **Routing:** Removed forced redirect from `/chat` to `/hub`. Users with projects can still access Jay via the switcher.

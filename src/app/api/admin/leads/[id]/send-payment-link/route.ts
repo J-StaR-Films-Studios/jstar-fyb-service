@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { PaystackService } from "@/services/paystack.service";
 import { NotificationService } from "@/services/notification.service";
 import { z } from "zod";
+import { requireAdmin } from "@/lib/auth-server";
 
 const sendPaymentBodySchema = z.object({
     amount: z.number().positive(),
@@ -14,6 +15,10 @@ export async function POST(
     props: { params: Promise<{ id: string }> }
 ) {
     try {
+        const admin = await requireAdmin();
+        if (!admin) {
+            return NextResponse.json({ error: "Unauthorized. Admin role required." }, { status: 403 });
+        }
         const params = await props.params;
         const leadId = params.id;
         const body = await req.json();

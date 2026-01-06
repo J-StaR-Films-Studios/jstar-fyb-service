@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J Star - Workspace Desktop V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #8b5cf6;
+            --color-accent: #06b6d4;
+            --color-bg: #030014;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--color-bg);
+            color: white;
+            overflow: hidden;
+        }
+
+        .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .editor-canvas {
+            background: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 100px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { dark: '#030014', primary: '#8b5cf6', accent: '#06b6d4' } } } }
+    </script>
+</head>
+
+<body class="h-screen flex text-gray-300">
+
+    <!-- LEFT SIDEBAR: Navigation & Timeline -->
+    <aside class="w-80 flex flex-col glass-panel z-20">
+        <!-- Brand Header -->
+        <div class="h-16 flex items-center px-6 border-b border-white/5">
+            <div
+                class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-display font-bold text-white mr-3">
+                J</div>
+            <span class="font-display font-bold text-lg text-white tracking-wide">J Star</span>
+        </div>
+
+        <!-- Project Info -->
+        <div class="p-6 border-b border-white/5">
+            <span class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block">Current Project</span>
+            <h2 class="text-white font-bold leading-tight mb-2">AI-Driven Waste Management System</h2>
+            <div class="flex items-center gap-2 text-xs">
+                <span class="bg-green-500/10 text-green-400 px-2 py-0.5 rounded">Online</span>
+                <span class="text-gray-500">Last edited 2m ago</span>
+            </div>
+        </div>
+
+        <!-- Timeline / Chapters -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-2">
+
+            <!-- Active Chapter -->
+            <div class="bg-primary/10 border border-primary/20 rounded-xl p-3 cursor-pointer group transition-all">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-primary">Chapter 1</span>
+                    <i data-lucide="more-horizontal" class="w-4 h-4 text-primary/50 group-hover:text-primary"></i>
+                </div>
+                <h3 class="text-white font-bold text-sm mb-1">Introduction</h3>
+                <div class="space-y-1 pl-2 border-l border-primary/20 mt-2">
+                    <p class="text-xs text-white">1.1 Background</p>
+                    <p class="text-xs text-gray-400 hover:text-white transition-colors">1.2 Problem Statement</p>
+                    <p class="text-xs text-gray-400 hover:text-white transition-colors">1.3 Objectives</p>
+                </div>
+            </div>
+
+            <!-- Inactive Chapter -->
+            <div
+                class="hover:bg-white/5 border border-transparent hover:border-white/5 rounded-xl p-3 cursor-pointer group transition-all opacity-70 hover:opacity-100">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-500">Chapter 2</span>
+                </div>
+                <h3 class="text-gray-300 font-bold text-sm">Literature Review</h3>
+                <div class="w-full h-1 bg-white/5 rounded-full mt-2">
+                    <div class="w-1/3 h-full bg-gray-600 rounded-full"></div>
+                </div>
+            </div>
+
+            <!-- Inactive Chapter -->
+            <div
+                class="hover:bg-white/5 border border-transparent hover:border-white/5 rounded-xl p-3 cursor-pointer group transition-all opacity-50 hover:opacity-100">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-500">Chapter 3</span>
+                </div>
+                <h3 class="text-gray-300 font-bold text-sm">Methodology</h3>
+            </div>
+        </div>
+
+        <!-- Bottom Actions -->
+        <div class="p-4 border-t border-white/5">
+            <button
+                class="w-full py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i> Export Project
+            </button>
+        </div>
+    </aside>
+
+    <!-- CENTER: Main Editor -->
+    <main class="flex-1 flex flex-col relative bg-[#050508]">
+
+        <!-- Editor Toolbar -->
+        <div class="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-dark/50 backdrop-blur z-10">
+            <div class="flex items-center gap-4">
+                <span class="text-gray-500 text-sm">Chapter 1 / 1.1 Background</span>
+            </div>
+            <div class="flex items-center gap-2 bg-black/20 rounded-lg p-1">
+                <button class="p-2 hover:bg-white/10 rounded text-gray-400 hover:text-white"><i data-lucide="bold"
+                        class="w-4 h-4"></i></button>
+                <button class="p-2 hover:bg-white/10 rounded text-gray-400 hover:text-white"><i data-lucide="italic"
+                        class="w-4 h-4"></i></button>
+                <button class="p-2 hover:bg-white/10 rounded text-gray-400 hover:text-white"><i data-lucide="list"
+                        class="w-4 h-4"></i></button>
+                <div class="w-px h-4 bg-white/10 mx-1"></div>
+                <button
+                    class="px-3 py-1.5 bg-primary/20 text-primary text-xs font-bold rounded hover:bg-primary/30 transition-colors flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-3 h-3"></i> Enhance
+                </button>
+            </div>
+            <div class="w-24"></div> <!-- Spacer -->
+        </div>
+
+        <!-- Scrollable Canvas -->
+        <div class="flex-1 overflow-y-auto w-full flex justify-center p-8 bg-grid-pattern">
+            <div class="w-full max-w-[800px] pb-32">
+                <textarea
+                    class="w-full h-[1500px] bg-transparent outline-none text-lg leading-relaxed text-gray-200 resize-none font-serif placeholder-gray-700"
+                    spellcheck="false">The rapid urbanization of Lagos State has led to an unprecedented increase in solid waste generation.
+
+Current waste management practices are largely manual and inefficient, leading to environmental degradation and public health risks. According to recent studies (Lawma, 2023), over 13,000 metric tonnes of waste are generated daily, with only 40% effectively collected.
+
+This study aims to explore how Artificial Intelligence can be leveraged to optimize waste collection routes and predict generation patterns...</textarea>
+            </div>
+        </div>
+
+        <!-- FAB: Focus Mode -->
+        <button
+            class="absolute bottom-8 right-8 w-12 h-12 bg-black/50 hover:bg-primary border border-white/10 hover:border-primary rounded-full flex items-center justify-center transition-all group"
+            title="Focus Mode">
+            <i data-lucide="maximize-2" class="w-5 h-5 text-gray-400 group-hover:text-white"></i>
+        </button>
+    </main>
+
+    <!-- RIGHT SIDEBAR: Context Panel -->
+    <aside class="w-96 flex flex-col glass-panel border-l border-white/5 border-r-0 z-20 bg-dark/95">
+
+        <!-- Context Tabs -->
+        <div class="flex border-b border-white/5">
+            <button class="flex-1 py-4 text-sm font-bold border-b-2 border-primary text-white">Research</button>
+            <button
+                class="flex-1 py-4 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-300">AI
+                Chat</button>
+            <button
+                class="flex-1 py-4 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-300">Diagrams</button>
+        </div>
+
+        <!-- Smart Search -->
+        <div class="p-4 border-b border-white/5">
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4"></i>
+                <input type="text" placeholder="Search references..."
+                    class="w-full bg-black/20 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm outline-none focus:border-primary/50">
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+
+            <!-- Deep Research Promo -->
+            <div
+                class="bg-gradient-to-br from-primary/10 to-accent/10 border border-white/5 rounded-xl p-4 relative overflow-hidden group hover:border-primary/30 transition-colors cursor-pointer">
+                <div class="absolute right-0 top-0 w-20 h-20 bg-primary/20 blur-2xl rounded-full -mr-10 -mt-10"></div>
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="brain-circuit" class="w-4 h-4 text-primary"></i>
+                    <span class="text-xs font-bold text-primary uppercase tracking-wider">Research Agent</span>
+                </div>
+                <h3 class="font-bold text-sm mb-1">Deep Dive Needed?</h3>
+                <p class="text-xs text-gray-400 leading-relaxed mb-3">Let AI scan web sources and academic papers to
+                    find facts for this chapter.</p>
+                <div
+                    class="flex items-center gap-2 text-[10px] font-bold text-white bg-primary px-2 py-1 rounded w-fit">
+                    Start Job <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                </div>
+            </div>
+
+            <!-- Reference List -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Saved Sources</h3>
+
+                <!-- Source Item -->
+                <div class="bg-white/5 p-3 rounded-lg flex gap-3 hover:bg-white/10 transition-colors cursor-pointer">
+                    <div class="w-8 h-8 rounded bg-red-500/20 flex items-center justify-center shrink-0">
+                        <i data-lucide="file-text" class="w-4 h-4 text-red-400"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-200 line-clamp-1">Lagos_Urban_Planning.pdf</h4>
+                        <p class="text-[10px] text-gray-500 mt-1">Page 4 • "Waste generation stats"</p>
+                    </div>
+                </div>
+
+                <!-- Source Item -->
+                <div class="bg-white/5 p-3 rounded-lg flex gap-3 hover:bg-white/10 transition-colors cursor-pointer">
+                    <div class="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center shrink-0">
+                        <i data-lucide="globe" class="w-4 h-4 text-blue-400"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-200 line-clamp-1">IEEE Smart Cities Survey</h4>
+                        <p class="text-[10px] text-gray-500 mt-1">Web Link • Cited 12 times</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </aside>
+
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

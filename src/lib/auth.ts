@@ -58,6 +58,14 @@ export const auth = betterAuth({
             clientSecret: envValidation.data.GOOGLE_CLIENT_SECRET,
         },
     },
+    user: {
+        additionalFields: {
+            role: {
+                type: "string",
+                defaultValue: "USER",
+            },
+        },
+    },
     // CSRF protection
     csrf: {
         enabled: true,

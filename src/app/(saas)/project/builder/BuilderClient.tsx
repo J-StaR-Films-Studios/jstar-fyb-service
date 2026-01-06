@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { useBuilderStore, ProjectData } from "@/features/builder/store/useBuilderStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { TopicSelector } from "@/features/builder/components/TopicSelector";
@@ -26,6 +26,9 @@ export function BuilderClient({ serverProject, serverIsPaid = false }: BuilderCl
     const { step, updateData, syncWithUser, hydrateFromChat, loadProject, isPaid, unlockPaywall } = useBuilderStore();
     const searchParams = useSearchParams();
 
+    // CRITICAL: Track local hydration state to prevent rendering with stale data
+    const [isHydrated, setIsHydrated] = useState(false);
+
     // CRITICAL: Run payment verification at the TOP LEVEL so it runs on ALL steps, not just OUTLINE
     const { isVerifying, verificationResult } = usePaymentVerification(isPaid, unlockPaywall);
 
@@ -41,6 +44,10 @@ export function BuilderClient({ serverProject, serverIsPaid = false }: BuilderCl
         // Wait for auth to resolve before doing anything
         if (isPending) return;
 
+        // 🔧 FIX: Reset hasServerHydrated to allow fresh data on each navigation/tab
+        // This ensures that server data (especially isPaid) can always override stale localStorage
+        useBuilderStore.setState({ hasServerHydrated: false });
+
         // STEP 1: Check for Fresh Chat Handoff (Top Priority)
         // If a new handoff exists (e.g. user just clicked "Build"), it overrides any existing server draft
         // UNLESS the server draft is PAID and matches the handoff (Prevent Downgrade)
@@ -48,7 +55,8 @@ export function BuilderClient({ serverProject, serverIsPaid = false }: BuilderCl
 
         if (hasFreshHandoff) {
             console.log('[BuilderClient] Fresh chat handoff applied. Skipping server load.');
-            // We intentionally DO NOT load server project if handoff claimed priority
+            // Mark as hydrated even for handoff case
+            setIsHydrated(true);
             return;
         }
 
@@ -61,6 +69,9 @@ export function BuilderClient({ serverProject, serverIsPaid = false }: BuilderCl
 
         // STEP 3: Sync with current user (only runs destructive reset on actual logout/account-switch)
         syncWithUser(session?.user?.id || null);
+
+        // CRITICAL: Mark hydration complete AFTER all state updates
+        setIsHydrated(true);
 
     }, [isPending, serverProject, serverIsPaid, session?.user?.id, loadProject, syncWithUser, hydrateFromChat]);
 
@@ -92,6 +103,20 @@ export function BuilderClient({ serverProject, serverIsPaid = false }: BuilderCl
 
     // Helper to determine step index
     const getStepIndex = () => ['TOPIC', 'ABSTRACT', 'OUTLINE'].indexOf(step);
+
+    // ========== HYDRATION LOADING STATE ==========
+    // Block rendering of main content until hydration is complete to prevent stale data issues
+    if (!isHydrated || isPending) {
+        return (
+            <div className="w-full flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
+                    <p className="text-gray-400 text-sm">Loading your project...</p>
+                </div>
+            </div>
+        );
+    }
+
 
     return (
         <div className="w-full">

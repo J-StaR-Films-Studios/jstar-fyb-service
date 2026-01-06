@@ -2,22 +2,26 @@
 
 import { useBuilderStore } from "@/features/builder/store/useBuilderStore";
 import { useEffect, useRef } from "react";
-import { Check, Loader2, RefreshCw } from "lucide-react";
+import { Check, Loader2, RefreshCw, FileText, Pencil } from "lucide-react";
 import { toast } from 'sonner';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
-import { outlineSchema } from '../schemas/outlineSchema';
+import { outlineSchema, Chapter } from '../schemas/outlineSchema';
 import { PricingOverlay } from "@/features/builder/components/PricingOverlay";
 import { ProjectActionCenter } from "./ProjectActionCenter";
 import { ModeSelection } from "./ModeSelection";
 import { ConciergeWaiting } from "./ConciergeWaiting";
 import { ChapterGenerator } from "./ChapterGenerator";
 import { UpsellBridge } from "./UpsellBridge";
-import { ProjectAssistant } from "./ProjectAssistant";
 import { DocumentUpload } from "./DocumentUpload";
 import { OutlinePreview } from "./OutlinePreview";
 import { usePaymentVerification } from "../hooks/usePaymentVerification";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { TopicLockModal } from "@/features/billing/components/TopicLockModal";
+import { TopicChangeWarningModal } from "./TopicChangeWarningModal";
+import { AbstractEditorModal } from "./AbstractEditorModal";
+import { TopicResetWarningModal } from "./TopicResetWarningModal";
 
 export function ChapterOutliner() {
     const { data, isPaid, unlockPaywall, updateData, setMode } = useBuilderStore();
@@ -28,8 +32,40 @@ export function ChapterOutliner() {
     // Payment verification hook (handles ?reference= URL param)
     const { isVerifying } = usePaymentVerification(isPaid, unlockPaywall);
 
-    // Handle unlock - Initialize Paystack
-    const handleUnlock = async () => {
+    // Lock Warning Logic
+    const [isLockModalOpen, setIsLockModalOpen] = useState(false);
+
+    // Topic Change Warning Logic (for recently unlocked projects)
+    // Detect: project is unlocked (isLocked=false) AND isPaid AND has no abstract
+    // This combination means admin approved a topic switch and content was cleared
+    const wasRecentlyUnlocked = isPaid && !data.isLocked && !data.abstract && data.topic;
+    const [showTopicChangeWarning, setShowTopicChangeWarning] = useState(false);
+    const hasShownWarningRef = useRef(false);
+
+    // New modal state for user-initiated topic/abstract changes
+    const [showAbstractEditor, setShowAbstractEditor] = useState(false);
+    const [showTopicResetWarning, setShowTopicResetWarning] = useState(false);
+
+    // Determine which button to show based on project state
+    const isProjectLocked = isPaid && data.isLocked;
+
+    // Show warning modal on mount if project is in "recently unlocked" state
+    useEffect(() => {
+        if (wasRecentlyUnlocked && !hasShownWarningRef.current) {
+            hasShownWarningRef.current = true;
+            setShowTopicChangeWarning(true);
+        }
+    }, [wasRecentlyUnlocked]);
+
+    // Initial Trigger (opens modal)
+    const handleUnlock = () => {
+        setIsLockModalOpen(true);
+    };
+
+    // Actual Payment (after confirmation)
+    const proceedToPayment = async () => {
+        setIsLockModalOpen(false); // Close modal
+
         if (!data.projectId) {
             console.error('[ChapterOutliner] No projectId for unlock');
             return;
@@ -66,9 +102,14 @@ export function ChapterOutliner() {
         schema: outlineSchema,
         onFinish: ({ object }) => {
             if (object?.chapters) {
-                // Map AI response format to store format
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const newOutline = object.chapters as any;
+                // CRITICAL FIX: Convert to proper array format
+                // useObject can return {0: {...}, 1: {...}} instead of [{...}, {...}]
+                // This happens during streaming - we need to normalize it
+                const rawChapters = object.chapters;
+                const newOutline = (Array.isArray(rawChapters)
+                    ? rawChapters
+                    : Object.values(rawChapters)) as Chapter[];
+
                 updateData({ outline: newOutline });
 
                 // Auto-save to DB
@@ -121,7 +162,7 @@ export function ChapterOutliner() {
         if (data.abstract && data.topic && !hasSubmittedRef.current && !data.outline?.length && !isLoading) {
             hasSubmittedRef.current = true;
             console.log('[ChapterOutliner] Generating free outline...');
-            submit({ topic: data.topic, abstract: data.abstract });
+            submit({ topic: data.topic, abstract: data.abstract, projectId: data.projectId });
         }
     }, [data.abstract, data.topic, data.outline?.length, submit, isLoading]);
 
@@ -144,7 +185,7 @@ export function ChapterOutliner() {
 
     const handleRetry = () => {
         hasSubmittedRef.current = false;
-        submit({ topic: data.topic, abstract: data.abstract });
+        submit({ topic: data.topic, abstract: data.abstract, projectId: data.projectId });
     };
 
     // Verify Loading State
@@ -196,10 +237,30 @@ export function ChapterOutliner() {
                         ? 'AI is crafting your distinction-grade outline...'
                         : "We've crafted a distinction-grade abstract and outline for your project."}
                 </p>
-            </div>
+
+                {/* Navigation Recovery: Conditional button based on lock state */}
+                {!isLoading && (
+                    isProjectLocked ? (
+                        <button
+                            onClick={() => setShowAbstractEditor(true)}
+                            className="mt-4 text-xs text-primary hover:text-white flex items-center gap-1 transition-colors"
+                        >
+                            <FileText className="w-3 h-3" />
+                            Edit Abstract
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => isPaid ? setShowTopicResetWarning(true) : setShowTopicResetWarning(true)}
+                            className="mt-4 text-xs text-gray-500 hover:text-white underline transition-colors"
+                        >
+                            Change Topic
+                        </button>
+                    )
+                )}
+            </div >
 
             {/* The Content */}
-            <div className="relative">
+            < div className="relative" >
                 <OutlinePreview
                     displayTitle={displayTitle}
                     abstractPreview={abstractPreview}
@@ -208,51 +269,90 @@ export function ChapterOutliner() {
                 />
 
                 {/* Pricing Overlay - Show if not paid */}
-                {!isPaid ? (
-                    <div className="mt-8">
-                        <PricingOverlay onUnlock={handleUnlock} />
-                    </div>
-                ) : data.mode === null ? (
-                    <div className="mt-16">
-                        <ModeSelection
-                            projectId={data.projectId!}
-                            onModeSelected={(mode) => setMode(mode)}
-                        />
-                    </div>
-                ) : data.mode === "CONCIERGE" ? (
-                    <div className="mt-16">
-                        <ConciergeWaiting projectId={data.projectId!} status={data.status} />
-                    </div>
-                ) : (
-                    <>
+                {
+                    !isPaid ? (
+                        <div className="mt-8">
+                            <PricingOverlay onUnlock={handleUnlock} />
+                        </div>
+                    ) : data.mode === null ? (
                         <div className="mt-16">
-                            <ProjectActionCenter />
+                            <ModeSelection
+                                projectId={data.projectId!}
+                                onModeSelected={(mode) => setMode(mode)}
+                            />
                         </div>
-
-                        {data.projectId && (
-                            <div className="mt-16">
-                                <ProjectAssistant projectId={data.projectId} />
-                            </div>
-                        )}
-
-                        {data.projectId && (
-                            <div className="mt-16">
-                                <ChapterGenerator projectId={data.projectId} />
-                            </div>
-                        )}
-
-                        <div className="mt-20 mb-10">
-                            <UpsellBridge projectId={data.projectId} />
+                    ) : data.mode === "CONCIERGE" ? (
+                        <div className="mt-16">
+                            <ConciergeWaiting projectId={data.projectId!} status={data.status} />
                         </div>
-
-                        {data.projectId && (
+                    ) : (
+                        <>
                             <div className="mt-16">
-                                <DocumentUpload projectId={data.projectId} />
+                                <ProjectActionCenter projectId={data.projectId!} />
                             </div>
-                        )}
-                    </>
-                )}
-            </div>
+
+                            {data.projectId && (
+                                <div className="mt-16">
+                                    <ChapterGenerator projectId={data.projectId} />
+                                </div>
+                            )}
+
+                            <div className="mt-20 mb-10">
+                                <UpsellBridge projectId={data.projectId} />
+                            </div>
+
+                            {data.projectId && (
+                                <div className="mt-16">
+                                    <DocumentUpload projectId={data.projectId} />
+                                </div>
+                            )}
+                        </>
+                    )
+                }
+            </div >
+
+
+            <TopicLockModal
+                isOpen={isLockModalOpen}
+                onClose={() => setIsLockModalOpen(false)}
+                onConfirm={proceedToPayment}
+                topic={data.topic || "Your Project"}
+            />
+
+            {/* Topic Change Warning Modal - shown when project was unlocked for topic switch */}
+            <TopicChangeWarningModal
+                isOpen={showTopicChangeWarning}
+                projectTopic={data.topic || "Your Project"}
+                onProceed={() => {
+                    setShowTopicChangeWarning(false);
+                    // Go to TOPIC step to let user pick a new topic
+                    useBuilderStore.setState({ step: 'TOPIC' });
+                }}
+                onCancel={() => {
+                    setShowTopicChangeWarning(false);
+                    router.push('/dashboard');
+                }}
+            />
+
+            {/* Abstract Editor Modal - for locked projects */}
+            {data.projectId && (
+                <AbstractEditorModal
+                    isOpen={showAbstractEditor}
+                    onClose={() => setShowAbstractEditor(false)}
+                    projectId={data.projectId}
+                    initialAbstract={data.abstract || ""}
+                />
+            )}
+
+            {/* Topic Reset Warning Modal - for unpaid/unlocked projects changing topic */}
+            <TopicResetWarningModal
+                isOpen={showTopicResetWarning}
+                onClose={() => setShowTopicResetWarning(false)}
+                currentTopic={data.topic || "Your Project"}
+                projectId={data.projectId}
+                topicSwitchCount={data.topicSwitchCount || 0}
+            />
         </>
     );
 }
+

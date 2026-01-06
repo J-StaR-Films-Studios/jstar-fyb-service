@@ -15,8 +15,12 @@ tags:
 - '#template'
 - '#tutorial'
 - '#workflow'
+---
 ai_processed: true
 ---
+
+> [!NOTE]
+> **Implementation Status**: This prompt is integrated into the `POST /api/documents/[id]/extract` endpoint using `openai/gpt-oss-120b` for automatic research synthesis.
 
 **Option 1 (Concise & Effective):**
 

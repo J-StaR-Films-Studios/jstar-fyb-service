@@ -98,7 +98,7 @@ sequenceDiagram
     W->>B: recordPayment(event.data)
     B->>DB: Check for existing reference
     B->>DB: Create Payment record
-    B->>DB: Update Project (isUnlocked = true)
+    B->>DB: Update Project (isUnlocked = true, isLocked = true)
     B-->>W: success
     W-->>P: 200 OK
 ```

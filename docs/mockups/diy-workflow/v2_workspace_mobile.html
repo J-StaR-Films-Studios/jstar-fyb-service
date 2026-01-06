@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J Star - Workspace Mobile V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #8b5cf6;
+            --color-accent: #06b6d4;
+            --color-bg: #030014;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--color-bg);
+            color: white;
+        }
+
+        .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timeline-line {
+            position: absolute;
+            left: 24px;
+            top: 40px;
+            bottom: -20px;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 0;
+        }
+
+        /* Custom scrollbar hide */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { dark: '#030014', primary: '#8b5cf6', accent: '#06b6d4' } } } }
+    </script>
+</head>
+
+<body class="pb-28">
+
+    <!-- Header: Minimal & Transparent -->
+    <header
+        class="fixed top-0 w-full z-50 px-6 py-4 flex justify-between items-center bg-gradient-to-b from-dark to-transparent">
+        <div class="flex flex-col">
+            <span class="text-xs text-gray-400 font-medium">B.Sc Project</span>
+            <h1 class="font-display font-bold text-lg leading-tight">Waste Mgmt. AI</h1>
+        </div>
+        <div class="glass-panel rounded-full px-3 py-1 flex items-center gap-2">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-[10px] font-bold uppercase tracking-wider">Online</span>
+        </div>
+    </header>
+
+    <!-- Hero Status Board -->
+    <div class="pt-24 px-6 pb-8">
+        <div class="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+            <!-- Stat 1 -->
+            <div
+                class="min-w-[120px] glass-panel rounded-2xl p-4 flex flex-col justify-between h-28 relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-16 h-16 bg-primary/10 rounded-full -mr-8 -mt-8"></div>
+                <i data-lucide="type" class="w-5 h-5 text-gray-400"></i>
+                <div>
+                    <span class="text-2xl font-display font-bold">2.4k</span>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wider font-bold mt-1">Words</p>
+                </div>
+            </div>
+            <!-- Stat 2 -->
+            <div
+                class="min-w-[120px] glass-panel rounded-2xl p-4 flex flex-col justify-between h-28 relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-16 h-16 bg-accent/10 rounded-full -mr-8 -mt-8"></div>
+                <i data-lucide="clock" class="w-5 h-5 text-gray-400"></i>
+                <div>
+                    <span class="text-2xl font-display font-bold">15%</span>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-wider font-bold mt-1">Complete</p>
+                </div>
+            </div>
+            <!-- Stat 3 (Action) -->
+            <div
+                class="min-w-[120px] bg-white/5 border border-dashed border-white/20 rounded-2xl p-4 flex flex-col justify-center items-center h-28 gap-2 text-gray-400">
+                <i data-lucide="target" class="w-6 h-6"></i>
+                <span class="text-xs font-bold text-center">Set Goal</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Content -->
+    <main class="px-6 relative space-y-8">
+
+        <!-- Chapter 1 (Active) -->
+        <div class="relative pl-12 z-10">
+            <!-- Connector Line -->
+            <div class="timeline-line"></div>
+            <!-- Node -->
+            <div class="absolute left-0 top-0 w-12 h-12 flex items-center justify-center">
+                <div
+                    class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.5)]">
+                    <span class="font-bold text-xs text-white">1</span>
+                </div>
+            </div>
+
+            <!-- Content Card -->
+            <div class="glass-panel p-5 rounded-2xl border-primary/30 relative">
+                <div class="flex justify-between items-start mb-3">
+                    <h2 class="font-bold text-lg">Introduction</h2>
+                    <span class="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded text-center font-bold">IN
+                        PROGRESS</span>
+                </div>
+
+                <div class="space-y-3">
+                    <!-- Subsection Items -->
+                    <div
+                        class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg -mx-2 transition-colors cursor-pointer group">
+                        <div class="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                        <span class="text-sm text-gray-200 group-hover:text-white">1.1 Background</span>
+                        <i data-lucide="chevron-right"
+                            class="w-4 h-4 ml-auto text-gray-600 group-hover:text-primary"></i>
+                    </div>
+                    <div
+                        class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg -mx-2 transition-colors cursor-pointer group">
+                        <div class="w-1.5 h-1.5 rounded-full bg-gray-600"></div>
+                        <span class="text-sm text-gray-400 group-hover:text-white">1.2 Problem Statement</span>
+                        <i data-lucide="plus" class="w-4 h-4 ml-auto text-gray-600 group-hover:text-primary"></i>
+                    </div>
+                </div>
+
+                <!-- Primary Action -->
+                <button
+                    class="w-full mt-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold flex items-center justify-center gap-2 border border-white/5 transition-all">
+                    <i data-lucide="play" class="w-4 h-4 fill-current"></i> Continue Writing
+                </button>
+            </div>
+        </div>
+
+        <!-- Chapter 2 (Locked/Pending) -->
+        <div class="relative pl-12 z-10 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+            <div class="timeline-line"></div>
+            <div class="absolute left-0 top-0 w-12 h-12 flex items-center justify-center">
+                <div class="w-8 h-8 rounded-full bg-[#1a1a2e] border border-white/20 flex items-center justify-center">
+                    <span class="font-bold text-xs text-gray-500">2</span>
+                </div>
+            </div>
+
+            <div class="glass-panel p-5 rounded-2xl">
+                <h2 class="font-bold text-lg text-gray-400">Literature Review</h2>
+                <div class="h-1 w-full bg-white/5 rounded-full mt-4 overflow-hidden">
+                    <div class="h-full bg-primary w-0"></div>
+                </div>
+                <p class="text-xs text-gray-600 mt-2">0/5 Sections • Est. 15 mins</p>
+            </div>
+        </div>
+
+        <!-- Chapter 3 -->
+        <div class="relative pl-12 z-10 opacity-40">
+            <div class="absolute left-0 top-0 w-12 h-12 flex items-center justify-center">
+                <div class="w-8 h-8 rounded-full bg-[#1a1a2e] border border-white/10 flex items-center justify-center">
+                    <span class="font-bold text-xs text-gray-600">3</span>
+                </div>
+            </div>
+            <div class="p-4 border border-white/5 rounded-2xl">
+                <h2 class="font-bold text-lg text-gray-500">Methodology</h2>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Navigation: Floating Pill -->
+    <nav
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface/90 backdrop-blur-xl border border-white/10 rounded-full p-1.5 shadow-2xl flex items-center gap-1 z-50">
+
+        <button
+            class="px-5 py-3 bg-primary rounded-full text-white font-bold text-xs uppercase flex items-center gap-2 shadow-lg shadow-primary/30">
+            <i data-lucide="pen-tool" class="w-4 h-4"></i> Write
+        </button>
+
+        <button
+            class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 transition-colors">
+            <i data-lucide="library" class="w-5 h-5"></i>
+        </button>
+
+        <button
+            class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 transition-colors">
+            <i data-lucide="network" class="w-5 h-5"></i>
+        </button>
+
+        <button
+            class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 transition-colors">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
+
+    </nav>
+
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

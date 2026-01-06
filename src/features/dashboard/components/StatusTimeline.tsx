@@ -34,7 +34,7 @@ const TimelineStep = ({ label, subLabel, status, stepNumber }: TimelineStepProps
     );
 };
 
-export const StatusTimeline = ({ status, progress }: { status: string; progress: number }) => {
+export const StatusTimeline = ({ status, progress, customLabel }: { status: string; progress: number; customLabel?: string }) => {
     /**
      * Prisma Project Status values:
      * - OUTLINE_GENERATED (default)
@@ -65,6 +65,8 @@ export const StatusTimeline = ({ status, progress }: { status: string; progress:
     };
 
     const getGenerationLabel = (): string => {
+        if (customLabel) return customLabel; // Override with dynamic status like "Writing Chapter 3"
+
         switch (status) {
             case "RESEARCH_IN_PROGRESS": return "Researching...";
             case "WRITING_IN_PROGRESS": return "Writing Content...";

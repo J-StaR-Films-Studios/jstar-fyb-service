@@ -21,4 +21,9 @@ then also making sure that the chat persists and maybe do like a chat history st
 
 ---
 
-Remove-Item -Path prisma\migrations -Recurse -Force; pnpm prisma migrate dev --name fresh_reset
+Concernig race conditions this is the chat name "Fixing Payment Race Condition"
+Basically if I notice any issues in the coming days I should come back and implement the more complex stuffs
+
+---
+
+I should be able to configure the models and their prompts from my admin pannel but they will still have the hard coded prompts in teh code in case hehe

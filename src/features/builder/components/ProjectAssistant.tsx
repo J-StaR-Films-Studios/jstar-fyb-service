@@ -2,14 +2,18 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { Send, Bot, User, Loader2, BarChart3 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { ProgressIndicator } from './ProgressIndicator';
 
 export function ProjectAssistant({ projectId }: { projectId: string }) {
+    // AI SDK 5.0 requires DefaultChatTransport for custom API endpoints
     const chatHelpers: any = useChat({
-        api: `/api/projects/${projectId}/chat`,
+        transport: new DefaultChatTransport({
+            api: `/api/projects/${projectId}/chat`,
+        }),
         onError: (e) => {
             console.error('[ProjectAssistant] Chat error:', e);
             alert('Failed to send message: ' + e.message);
@@ -53,9 +57,10 @@ export function ProjectAssistant({ projectId }: { projectId: string }) {
         setInput(''); // Clear input immediately
 
         try {
+            // AI SDK 5.0 uses parts array instead of content
             await sendFunc({
                 role: 'user',
-                content: userMessage,
+                parts: [{ type: 'text', text: userMessage }],
             });
             // Message sent
         } catch (err) {

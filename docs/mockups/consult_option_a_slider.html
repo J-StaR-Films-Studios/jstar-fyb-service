@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consult Page - Option A: Slider Carousel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+
+        /* Header */
+        .section-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 9999px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #8b5cf6;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Carousel */
+        .carousel-container {
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 48px;
+        }
+
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s ease;
+        }
+
+        .carousel-slide {
+            min-width: 100%;
+            padding: 0 20px;
+        }
+
+        .team-card {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 48px;
+        }
+
+        @media (max-width: 768px) {
+            .team-card {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+        }
+
+        .avatar-container {
+            position: relative;
+        }
+
+        .avatar {
+            width: 100%;
+            max-width: 350px;
+            aspect-ratio: 1;
+            border-radius: 24px;
+            object-fit: cover;
+            filter: grayscale(100%);
+            transition: filter 0.5s ease;
+        }
+
+        .team-card:hover .avatar {
+            filter: grayscale(0%);
+        }
+
+        .status-badge {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: rgba(15, 15, 25, 0.9);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .team-info h2 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .role {
+            color: #8b5cf6;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+
+        .quote {
+            font-size: 1.1rem;
+            color: #9ca3af;
+            font-style: italic;
+            border-left: 3px solid #8b5cf6;
+            padding-left: 16px;
+            margin-bottom: 24px;
+        }
+
+        .vibe-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        /* Carousel Controls */
+        .carousel-controls {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .carousel-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .carousel-dot.active {
+            background: #8b5cf6;
+            transform: scale(1.2);
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+
+        .carousel-btn:hover {
+            background: rgba(139, 92, 246, 0.4);
+        }
+
+        .carousel-btn.prev {
+            left: 10px;
+        }
+
+        .carousel-btn.next {
+            right: 10px;
+        }
+
+        /* CTA */
+        .cta-section {
+            text-align: center;
+            margin-top: 48px;
+        }
+
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 32px;
+            background: #8b5cf6;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="section-header">
+            <div class="badge">
+                <span>👥</span>
+                <span>Meet Your AI Team</span>
+            </div>
+            <h1>Three Experts. <span class="gradient-text">One Mission.</span></h1>
+            <p class="subtitle">From topic discovery to final defense, our AI crew has you covered at every stage.</p>
+        </div>
+
+        <div class="carousel-container">
+            <button class="carousel-btn prev" onclick="moveSlide(-1)">←</button>
+            <button class="carousel-btn next" onclick="moveSlide(1)">→</button>
+
+            <div class="carousel-track" id="track">
+                <!-- Jay -->
+                <div class="carousel-slide">
+                    <div class="team-card">
+                        <div class="avatar-container">
+                            <img src="../../public/images/jay-portrait.png" alt="Jay" class="avatar"
+                                onerror="this.src='https://via.placeholder.com/350?text=Jay'">
+                            <div class="status-badge">
+                                <div class="status-dot"></div>
+                                <span>Online Now</span>
+                            </div>
+                        </div>
+                        <div class="team-info">
+                            <h2>Jay</h2>
+                            <p class="role">Onboarding & Topic Discovery</p>
+                            <p class="quote">"Yo! I'm Jay, your FYP plug. Tell me what you're passionate about and let's
+                                find you a topic that'll make your supervisor smile."</p>
+                            <div class="vibe-tags">
+                                <span class="tag">Energetic</span>
+                                <span class="tag">Nigerian Slang</span>
+                                <span class="tag">Hype Man</span>
+                                <span class="tag">Tech-Savvy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monji -->
+                <div class="carousel-slide">
+                    <div class="team-card">
+                        <div class="avatar-container">
+                            <img src="../../public/images/ai-crew/monji.png" alt="Monji" class="avatar"
+                                onerror="this.src='https://via.placeholder.com/350?text=Monji'">
+                            <div class="status-badge">
+                                <div class="status-dot"></div>
+                                <span>Research Mode</span>
+                            </div>
+                        </div>
+                        <div class="team-info">
+                            <h2>Monji</h2>
+                            <p class="role">Research & Academic Writing</p>
+                            <p class="quote">"Hi love! I'm Monji, your research partner. I've read through all your
+                                uploaded papers and I'm here to help you write with precision and style."</p>
+                            <div class="vibe-tags">
+                                <span class="tag">Sweet</span>
+                                <span class="tag">Articulate</span>
+                                <span class="tag">Detail-Oriented</span>
+                                <span class="tag">Mass Comm Energy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nengi -->
+                <div class="carousel-slide">
+                    <div class="team-card">
+                        <div class="avatar-container">
+                            <img src="../../public/images/ai-crew/nengi.png" alt="Nengi" class="avatar"
+                                onerror="this.src='https://via.placeholder.com/350?text=Nengi'">
+                            <div class="status-badge">
+                                <div class="status-dot"></div>
+                                <span>Always Listening</span>
+                            </div>
+                        </div>
+                        <div class="team-info">
+                            <h2>Nengi</h2>
+                            <p class="role">General Help & Brain Dump</p>
+                            <p class="quote">"What's good? I'm Nengi. Unlike Jay and Monji who have specific jobs, I'm
+                                just here to chat. Got a random question? Need to brain dump? I got you."</p>
+                            <div class="vibe-tags">
+                                <span class="tag">Chill</span>
+                                <span class="tag">Observant</span>
+                                <span class="tag">Big Picture Thinker</span>
+                                <span class="tag">Creative Eye</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="carousel-controls">
+                <button class="carousel-dot active" onclick="goToSlide(0)"></button>
+                <button class="carousel-dot" onclick="goToSlide(1)"></button>
+                <button class="carousel-dot" onclick="goToSlide(2)"></button>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <button class="cta-btn">
+                Start Your Journey
+                <span>→</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const track = document.getElementById('track');
+        const dots = document.querySelectorAll('.carousel-dot');
+
+        function updateCarousel() {
+            track.style.transform = `translateX(-${currentSlide * 100}%)`;
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === currentSlide));
+        }
+
+        function moveSlide(dir) {
+            currentSlide = (currentSlide + dir + 3) % 3;
+            updateCarousel();
+        }
+
+        function goToSlide(index) {
+            currentSlide = index;
+            updateCarousel();
+        }
+
+        // Auto-advance every 5 seconds
+        setInterval(() => moveSlide(1), 5000);
+    </script>
+</body>
+
+</html>

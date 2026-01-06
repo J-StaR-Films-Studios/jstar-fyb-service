@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J Star - Research Tab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>tailwind.config = { theme: { extend: { colors: { dark: '#030014', primary: '#8b5cf6', accent: '#06b6d4' } } } }</script>
+</head>
+
+<body class="bg-[#030014] text-white font-[Outfit] pb-24">
+
+    <!-- Header -->
+    <header
+        class="fixed top-0 w-full bg-dark/80 backdrop-blur-md border-b border-white/10 z-40 px-4 h-16 flex items-center justify-between">
+        <button class="p-2 -ml-2"><i data-lucide="arrow-left"></i></button>
+        <h1 class="font-bold">Project Research</h1>
+        <div class="w-8"></div>
+    </header>
+
+    <main class="pt-20 px-4 space-y-6">
+
+        <!-- Deep Research Upsell Card -->
+        <div class="border border-primary/30 bg-primary/5 rounded-2xl p-5 relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/20 blur-3xl rounded-full"></div>
+            <div class="flex items-start gap-4 relaltive z-10">
+                <div
+                    class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                    <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg leading-tight mb-1">Deep Research Agent</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed mb-3">Let AI browse the web, read papers, and write
+                        a comprehensive report for you.</p>
+                    <button
+                        class="px-4 py-2 bg-primary text-white text-xs font-bold uppercase rounded-lg shadow-lg hover:scale-105 transition-transform">
+                        Start for ₦5,000
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Files Section -->
+        <div>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-gray-500">Your Documents</h2>
+                <span class="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-full">3 Synced</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <!-- File Card 1 -->
+                <div class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2 relative group">
+                    <div class="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <i data-lucide="file-text" class="w-8 h-8 text-gray-400"></i>
+                    <p class="text-xs font-medium text-gray-200 line-clamp-2">Waste_Management_Lagos_2024.pdf</p>
+                    <div class="mt-auto pt-2 flex gap-2">
+                        <span class="text-[10px] text-gray-500">2.4 MB</span>
+                    </div>
+                </div>
+
+                <!-- File Card 2 -->
+                <div class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2 relative">
+                    <div class="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full"></div>
+                    <i data-lucide="file-text" class="w-8 h-8 text-gray-400"></i>
+                    <p class="text-xs font-medium text-gray-200 line-clamp-2">IEEE_Smart_Cities_Survey.pdf</p>
+                    <div class="mt-auto pt-2 flex gap-2">
+                        <span class="text-[10px] text-gray-500">1.1 MB</span>
+                    </div>
+                </div>
+
+                <!-- Add New Card -->
+                <button
+                    class="bg-white/5 border border-white/10 border-dashed rounded-xl p-3 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-colors h-full min-h-[100px]">
+                    <i data-lucide="upload-cloud" class="w-6 h-6 text-gray-500"></i>
+                    <span class="text-xs font-medium text-gray-400">Upload PDF</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Context Bottom Nav -->
+    <nav class="fixed bottom-0 w-full bg-[#030014]/90 backdrop-blur-xl border-t border-white/10 z-50">
+        <div class="grid grid-cols-4 items-end h-20 pb-4 px-2">
+            <button class="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
+                <i data-lucide="pen-tool" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Write</span>
+            </button>
+
+            <button class="flex flex-col items-center gap-1 text-white">
+                <i data-lucide="library" class="w-5 h-5 fill-current"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Research</span>
+                <div class="w-1 h-1 rounded-full bg-primary mt-1"></div>
+            </button>
+
+            <button class="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
+                <i data-lucide="network" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Diagrams</span>
+            </button>
+
+            <button class="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
+                <i data-lucide="download" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Export</span>
+            </button>
+        </div>
+    </nav>
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

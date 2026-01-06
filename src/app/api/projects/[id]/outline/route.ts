@@ -97,10 +97,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }
 
         // Touch project updatedAt to keep it at top of dashboard
+        // Also RE-LOCK the project if this is a paid project that was unlocked for topic switch
+        // This ensures once the new topic is confirmed, it's locked again
+        const shouldRelock = project.isUnlocked && !project.isLocked;
+
         await prisma.project.update({
             where: { id },
-            data: { updatedAt: new Date() }
+            data: {
+                updatedAt: new Date(),
+                // Re-lock paid projects after topic switch is complete
+                ...(shouldRelock && {
+                    isLocked: true,
+                    lockedAt: new Date()
+                })
+            }
         });
+
+        if (shouldRelock) {
+            console.log(`[SaveOutline] Re-locked project ${id} after topic switch completion`);
+        }
 
         return new Response(JSON.stringify({ success: true }), { status: 200 });
 

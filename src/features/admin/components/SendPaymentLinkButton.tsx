@@ -39,9 +39,22 @@ export function SendPaymentLinkButton({ leadId, projectId, totalPaid = 0 }: Send
     useEffect(() => {
         if (isOpen && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect();
+            const DROP_WIDTH = 256; // w-64
+            const PADDING = 16;
+
+            // Default: Align right edges
+            let left = rect.right - DROP_WIDTH;
+
+            // Screen boundary check
+            const maxLeft = window.innerWidth - DROP_WIDTH - PADDING;
+
+            // specific adjustment for very small screens or weird positioning
+            if (left > maxLeft) left = maxLeft;
+            if (left < PADDING) left = PADDING;
+
             setDropdownPosition({
-                top: rect.bottom + 8, // 8px gap
-                left: rect.right - 224, // 224px = w-56 dropdown width, align right
+                top: rect.bottom + 8,
+                left: left,
             });
         }
     }, [isOpen]);

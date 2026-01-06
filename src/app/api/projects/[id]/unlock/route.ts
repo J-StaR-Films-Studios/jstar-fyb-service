@@ -99,10 +99,13 @@ export async function POST(
             }
 
             // CRITICAL SECURITY FIX: Update project status with audit trail
+            // ATOMICITY FIX: Set both isUnlocked AND isLocked in same call
             const updatedProject = await tx.project.update({
                 where: { id: existing.id },
                 data: {
                     isUnlocked: true,
+                    isLocked: true,  // Topic Lock: Enforced atomically with unlock
+                    lockedAt: new Date(),
                     status: "UNLOCKED"
                 }
             });

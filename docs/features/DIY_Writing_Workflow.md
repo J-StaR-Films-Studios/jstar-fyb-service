@@ -107,7 +107,7 @@ This document outlines the implementation of the **core writing workflow** for D
 
 ---
 
-## PHASE 1 [PLANNED]: Core Writing Loop
+## PHASE 1 [COMPLETE ✅]: Core Writing Loop
 
 > **Goal**: Enable users to generate, view, edit, and save chapter content with full context awareness.
 
@@ -260,42 +260,113 @@ Key sections to inject from the prompt:
 
 Before moving to Phase 2, verify:
 
-- [ ] `Chapter` model created and migrated
-- [ ] User can generate Chapter 1 and it saves to DB
-- [ ] User can view previously generated chapters on page refresh
-- [ ] User can edit a section and changes persist
-- [ ] Version is incremented on significant edits
-- [ ] Word count updates automatically
+- [x] `Chapter` model created and migrated
+- [x] User can generate Chapter 1 and it saves to DB ✅ *(onFinish callback in /api/generate/chapter)*
+- [x] User can view previously generated chapters on page refresh ✅ *(GET /chapters endpoint + ChapterEditor fetch)*
+- [x] User can edit a section and changes persist ✅ *(SectionEditor w/ controlled state + PATCH endpoint)*
+- [x] Version is incremented on significant edits ✅ *(Auto-versioning in PATCH endpoint)*
+- [x] Word count updates automatically ✅ *(Live useMemo in SectionEditor + server-side in PATCH)*
+
+### 1.6 Implementation Notes (2026-01-02)
+
+#### Files Modified/Created
+
+| File | Change |
+|------|--------|
+| `prisma/schema.prisma` | Added `Chapter` model with versioning fields |
+| `src/app/api/projects/[id]/chapters/route.ts` | GET all chapters |
+| `src/app/api/projects/[id]/chapters/[chapterNumber]/route.ts` | GET/PATCH single chapter with auto-versioning |
+| `src/app/api/projects/[id]/chapters/[chapterNumber]/versions/route.ts` | GET/POST version snapshots |
+| `src/app/api/generate/chapter/route.ts` | Modified to save to `Chapter` model on `onFinish` |
+| `src/features/builder/components/v2/ChapterEditor.tsx` | Full workspace UI with save status indicator |
+| `src/features/builder/components/v2/WritingCanvas.tsx` | Controlled textarea with prop sync on chapter switch |
+| `src/features/builder/components/v2/SectionEditor.tsx` | Mobile editor with controlled state + live word count |
+| `src/features/builder/components/v2/SaveStatusIndicator.tsx` | Reusable save status context (placeholder for later) |
+
+#### Key Decisions
+
+1. **Controlled vs Uncontrolled Textareas**: Used `useState` + `useEffect` sync pattern to ensure content updates when switching chapters
+2. **Auto-Versioning**: Snapshots created automatically in PATCH when content length differs by >100 chars, stored in `previousVersions` JSON (max 10 kept)
+3. **Inline SaveStatusBadge**: Component defined inside ChapterEditor to avoid prop drilling, shows idle/saving/saved/error states
+4. **Mobile vs Desktop**: Different layouts - mobile uses full-screen `SectionEditor` overlay, desktop uses inline `WritingCanvas`
+
+#### Known Gaps (Deferred to Future)
+
+- [ ] Version history UI (dropdown to view/restore previous versions)
+- [ ] Debounced auto-save (currently saves on every keystroke via `onValidChange`)
+- [ ] "Enhance with AI" button functionality (placeholder)
+- [ ] "Enhance with AI" button functionality (placeholder)
+- [ ] Rich text formatting buttons (placeholder icons only)
+
+### 1.7 Workspace UX Refinements (2026-01-03)
+> **Goal**: Seamless navigation and mobile-first experience.
+
+#### Navigation Updates
+- **Dashboard**: `ProjectCard` now has a direct "Enter Workspace" button.
+- **Builder**: `ChapterOutliner` (Action Center) now guides users to "Open in Workspace" after unlock.
+- **Back Navigation**: Added "Back to Dashboard" links in:
+  - Desktop Sidebar (`TimelineSidebar`)
+  - Mobile Header (`ChapterEditor`)
+
+#### Mobile & AI Features
+- **Mobile Chat**: Integrated "AI Chat" tab in `MobileFloatingNav` and "Enhance" button in `SectionEditor` (saves content -> opens chat).
+- **Dynamic Stats**: Replaced hardcoded word count/progress with live data calculations.
+
+#### Hotfix 2026-01-04: Progress Percentage Calculation
+- **Problem**: The "Complete" percentage was stuck at 0% because the code filtered for `status === 'complete'`, but chapter statuses in the database are `'GENERATED'`, `'EDITING'`, or `'DRAFT'` — never `'complete'`.
+- **Solution**: Updated `MobileTimelineView.tsx` and `TimelineSidebar.tsx` to use the formula:
+  ```typescript
+  Math.round((chapters.filter(c => (c.wordCount || 0) > 50).length / 5) * 100)
+  ```
+  This calculates: **(chapters with >50 words) / 5 total chapters × 100**
 
 ---
 
-## PHASE 2 [PLANNED]: Research Integration
+## PHASE 2 [COMPLETE ✅]: Research Integration
 
 > **Goal**: Ground chapter generation in user's uploaded research documents using Gemini File Search (managed RAG).
 
-### 2.1 Overview: Gemini File Search
+### 2.1 Overview: Hybrid Context Implementation
 
-Gemini File Search is a **fully managed RAG system** that handles:
-- Document chunking
-- Embedding generation
-- Vector storage
-- Semantic search retrieval
-- Citation generation
+We implemented a robust **Hybrid Context** strategy to maximize generation quality while ensuring accurate grounding:
 
-**Pricing Reminder**:
-- Storage: **FREE**
-- Query embeddings: **FREE**
-- Initial indexing: **$0.15 per 1M tokens**
-- Retrieved tokens: Normal Gemini pricing
+1.  **Phase 2a: Structured Extraction (`openai/gpt-oss-120b`)**
+    - Triggered immediately upon document upload.
+    - Uses the **Paper Summary Prompt** to extract objectives, methodology, and limitations.
+    - Stored in `ResearchDocument.summary`.
+2.  **Phase 2b: Grounded Generation (`gemini-2.5-flash`)**
+    - Uses **Gemini File Search** as a managed tool for citation retrieval.
+    - Injects structured summaries into the system prompt for high-level synthesis (Synthesis Mode).
+3.  **Fallback Path (`moonshotai/kimi-k2-instruct-0905`)**
+    - Used for projects without research documents.
 
-### 2.2 Architecture Decision
+### 2.2 Implementation Notes (2026-01-03)
 
-We will use the **@google/genai** SDK directly (not Vercel AI SDK) for File Search operations because:
-1. Vercel AI SDK doesn't natively support FileSearchStore operations
-2. We need to manage per-project stores
-3. We can still use AI SDK for streaming responses
+#### Files Created/Modified
 
-```
+| File | Context |
+|------|---------|
+| `src/lib/gemini-file-search.ts` | Added `generateWithGroundingStream` |
+| `src/app/api/documents/[id]/extract/route.ts` | [NEW] Summary extraction endpoint |
+| `src/app/api/generate/chapter/route.ts` | Overhauled with model-switching logic |
+| `src/features/builder/services/dataExtractors.ts` | Updated to include summaries in context |
+
+#### Key Technical Decisions
+
+1.  **Dual-Model RAG**: Using `gpt-oss-120b` for summaries ensures we have a "birds-eye view" of the papers without hitting token limits on every generation, while `gemini-2.5-flash` handles the details.
+2.  **Manual Stream Adaptation**: Since we used the raw `@google/genai` stream, we implemented a `ReadableStream` wrapper in the API route to ensure compatibility with the frontend's text streaming expected format.
+3.  **Synthesis vs retrieval**: Injected summaries handle the "big picture" (Synthesis), while File Search handles the "fine details" (Retrieval).
+
+### 2.8 Verification Checklist
+
+- [x] `GeminiFileSearchService` updated for streaming
+- [x] Project gets `fileSearchStoreId` and syncs correctly
+- [x] Documents processed via `api/documents/[id]/extract` successfully
+- [x] Chapter generation switches to Gemini when docs are present
+- [x] Citations (Author, Year) integrated into generated text
+- [x] References section appended via grounding metadata
+- [x] Standard fallback uses `kimi-k2` correctly
+
 ┌─────────────────────────────────────────────────────────────────────┐
 │ User uploads PDF                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -504,13 +575,13 @@ When generating chapters with grounding, Gemini returns:
 
 Before moving to Phase 3, verify:
 
-- [ ] `GeminiFileSearchService` created and tested in isolation
-- [ ] Project gets `fileSearchStoreId` on first document upload
-- [ ] Documents show "Synced to AI" indicator after upload
-- [ ] Chapter generation with documents returns grounded content
-- [ ] Citations appear in generated chapter text
-- [ ] References section is auto-generated
-- [ ] Cleanup: FileSearchStore deleted when project is deleted
+- [x] `GeminiFileSearchService` created and tested in isolation
+- [x] Project gets `fileSearchStoreId` on first document upload
+- [x] Documents show "Synced to AI" indicator after upload
+- [x] Chapter generation with documents returns grounded content
+- [x] Citations appear in generated chapter text
+- [x] References section is auto-generated
+- [x] Cleanup: FileSearchStore deleted when project is deleted
 
 
 ---
@@ -1399,6 +1470,39 @@ Before marking implementation complete:
 - [ ] User receives notification when complete
 - [ ] Report displays correctly with sources
 - [ ] Error handling for failed jobs works
+
+---
+
+## Phase 0: UI Design & Navigation Architecture
+
+> **Goal**: Establish a "Timeline & Studio" architecture to guide users through the writing journey.
+
+### 0.1 Navigation Architecture (Version B: Timeline)
+
+We are adopting a **Timeline-based** approach rather than simple tabs. This emphasizes progress and completion.
+
+**Mobile (Timeline View):**
+- **Structure**: Vertical line connecting chapters (Nodes).
+- **Navigation**: Minimized entry points (Floating Pill) instead of a heavy bottom bar.
+- **Writing**: Full-screen immersive editor.
+
+**Desktop (Productive Studio):**
+- **Left Panel**: Navigation & Timeline (Chapters).
+- **Center**: Immersive Writing Canvas (Paper-like).
+- **Right Panel**: Context (Research, AI Chat, Diagrams).
+
+### 0.2 Visual Mockups
+
+High-fidelity HTML mockups have been generated to guide implementation:
+
+| View | File Path | Purpose |
+|------|-----------|---------|
+| **Mobile Workspace** | `docs/mockups/diy-workflow/v2_workspace_mobile.html` | Timeline layout, floating nav, progress tracking. |
+| **Mobile Editor** | `docs/mockups/diy-workflow/v2_section_editor.html` | Immersive writing mode, smart action button. |
+| **Mobile Research** | `docs/mockups/diy-workflow/v2_research_tab.html` | Grid view with thumbnails, unified search. |
+| **Desktop Studio** | `docs/mockups/diy-workflow/v2_workspace_desktop.html` | 3-Column layout (Nav/Write/Context). |
+
+> **Instruction to Agent**: When implementing Phase 1-5, **strictly follow these V2 mockups**. Open the HTML files in a browser to extract design tokens (glassmorphism classes, spacing, colors).
 
 ---
 

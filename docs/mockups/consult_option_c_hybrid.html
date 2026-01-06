@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consult Page - Option C: Hybrid (Agency + AI Team)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+
+        /* Hero - Keep existing Jay intro */
+        .hero-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 64px;
+            align-items: center;
+            margin-bottom: 100px;
+        }
+
+        @media (max-width: 900px) {
+            .hero-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hero-image {
+            position: relative;
+        }
+
+        .hero-avatar {
+            width: 100%;
+            max-width: 450px;
+            aspect-ratio: 1;
+            border-radius: 32px;
+            object-fit: cover;
+            filter: grayscale(100%);
+            transition: filter 0.7s;
+        }
+
+        .hero-image:hover .hero-avatar {
+            filter: grayscale(0%);
+        }
+
+        .hero-badge {
+            position: absolute;
+            top: -16px;
+            right: -16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 24px;
+            background: rgba(15, 15, 25, 0.9);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .hero-content h1 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 24px;
+            line-height: 1.2;
+        }
+
+        .hero-content p {
+            color: #9ca3af;
+            font-size: 1.1rem;
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 36px;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Divider */
+        .section-divider {
+            text-align: center;
+            margin: 80px 0;
+            position: relative;
+        }
+
+        .section-divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        }
+
+        .divider-text {
+            display: inline-block;
+            background: #0a0a0f;
+            padding: 0 24px;
+            color: #6b7280;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            position: relative;
+        }
+
+        /* AI Team Pills - Compact inline display */
+        .team-section h2 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 16px;
+        }
+
+        .team-subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 40px;
+        }
+
+        .team-pills {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .team-pill {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 24px 12px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 100px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .team-pill:hover {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .pill-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .pill-info h4 {
+            font-size: 0.95rem;
+            margin-bottom: 2px;
+        }
+
+        .pill-info p {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        /* Trust Section */
+        .trust-section {
+            margin-top: 80px;
+            padding: 48px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            text-align: center;
+        }
+
+        .stars {
+            color: #06b6d4;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .trust-quote {
+            font-size: 1.3rem;
+            font-style: italic;
+            color: #d1d5db;
+            margin-bottom: 16px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .trust-author {
+            color: #6b7280;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Hero: Jay as Lead (keep existing vibe) -->
+        <section class="hero-section">
+            <div class="hero-image">
+                <img src="../../public/images/jay-portrait.png" alt="Jay" class="hero-avatar"
+                    onerror="this.src='https://via.placeholder.com/450?text=Jay'">
+                <div class="hero-badge">
+                    <div class="pulse-dot"></div>
+                    <span>Consultant Online</span>
+                </div>
+            </div>
+            <div class="hero-content">
+                <h1>Expertise is Non-Negotiable.</h1>
+                <p>
+                    Every J Star project is overseen by Jay, our AI-Integrated architect.
+                    We don't just "do projects"—we engineer solutions that withstand the most rigorous defense
+                    committees.
+                </p>
+                <button class="cta-btn">
+                    Start Free Consultation
+                    <span>→</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Divider -->
+        <div class="section-divider">
+            <span class="divider-text">But wait, there's more</span>
+        </div>
+
+        <!-- AI Team Section - Added below -->
+        <section class="team-section">
+            <h2>Meet the Full AI Crew</h2>
+            <p class="team-subtitle">Jay leads the team, but you'll also meet Monji and Nengi along the way.</p>
+
+            <div class="team-pills">
+                <div class="team-pill">
+                    <img src="../../public/images/jay-portrait.png" alt="Jay" class="pill-avatar"
+                        onerror="this.src='https://via.placeholder.com/48?text=J'">
+                    <div class="pill-info">
+                        <h4>Jay</h4>
+                        <p>Topic Discovery</p>
+                    </div>
+                </div>
+                <div class="team-pill">
+                    <img src="../../public/images/ai-crew/monji.png" alt="Monji" class="pill-avatar"
+                        onerror="this.src='https://via.placeholder.com/48?text=M'">
+                    <div class="pill-info">
+                        <h4>Monji</h4>
+                        <p>Research & Writing</p>
+                    </div>
+                </div>
+                <div class="team-pill">
+                    <img src="../../public/images/ai-crew/nengi.png" alt="Nengi" class="pill-avatar"
+                        onerror="this.src='https://via.placeholder.com/48?text=N'">
+                    <div class="pill-info">
+                        <h4>Nengi</h4>
+                        <p>General Support</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Trust Section -->
+        <section class="trust-section">
+            <div class="stars">★★★★★</div>
+            <p class="trust-quote">
+                "The J Star team didn't just build my software; they taught me how it works.
+                I walked into my defense with 100% confidence. Got an A."
+            </p>
+            <p class="trust-author">— Daniel A., UNILAG Computer Science '24</p>
+        </section>
+    </div>
+</body>
+
+</html>

@@ -50,6 +50,13 @@ export interface ChapterContext {
 }
 
 export interface ResearchContext {
+    documents: {
+        id: string;
+        title: string;
+        content: string;
+        summary: string | null;
+    }[];
+    summaries: string[];
     summary: string;
     insights: string[];
     keywords: string[];
@@ -104,6 +111,7 @@ export interface SimilarProject {
 
 export interface ProcessedDocument {
     id: string;
+    fileName?: string;
     summary?: string | null;
     insights?: string | null;
     keywords?: string | null;

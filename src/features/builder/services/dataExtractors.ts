@@ -250,6 +250,8 @@ export function extractProjectObjectives(_project: { topic: string }): string[] 
 export function extractResearchContext(documents: ProcessedDocument[]): ResearchContext {
     if (!documents || documents.length === 0) {
         return {
+            documents: [],
+            summaries: [],
             summary: '',
             insights: [],
             keywords: [],
@@ -284,7 +286,14 @@ export function extractResearchContext(documents: ProcessedDocument[]): Research
     const extractedContent = documents.map(doc => doc.extractedContent || '').join('\n\n');
 
     return {
-        summary: summaries.join('\n\n'),
+        documents: documents.map(doc => ({
+            id: doc.id || '',
+            title: doc.fileName || 'Untitled',
+            content: doc.extractedContent || '',
+            summary: doc.summary || null
+        })),
+        summary: summaries.join('\n\n'), // Legacy field, kept for compatibility if needed
+        summaries, // New field for structured injection
         insights: [...new Set(allInsights)],
         keywords: [...new Set(allKeywords)],
         themes: [...new Set(allThemes)],

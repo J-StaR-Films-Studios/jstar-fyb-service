@@ -208,3 +208,46 @@ const PLACEHOLDER_CHAPTERS = [
 - **Solution**: Implemented "Freshness Override" in `BuilderClient`. If chat data is < 5 mins old, it takes priority over server data.
 - **Logic**: `hydrateFromChat` now accepts a user ID and performs a time-check before wiping/setting state.
 
+### 2026-01-02: Critical Step Reversion & Chapter Display Fixes
+
+> [!IMPORTANT]
+> This was a multi-bug investigation that took significant debugging. The root cause was **not** a race condition as initially suspected, but a **data format mismatch** between AI SDK streaming and our storage layer.
+
+#### Bug 1: Outline was saved as Object instead of Array
+- **Problem**: AI SDK's `useObject` hook can return `{0: {...}, 1: {...}}` during streaming instead of `[{...}, {...}]`.
+- **Impact**: `outline.length > 0` check failed (objects have no `.length`), causing step to revert to `ABSTRACT`.
+- **Fix**: Added `Object.values()` normalization in 3 locations:
+  - `ChapterOutliner.tsx` (before saving via POST)
+  - `/api/generate/outline/route.ts` (in `onFinish`)
+  - `page.tsx` (defensive fallback when loading)
+
+#### Bug 2: BuilderAiService was corrupting ChapterOutline
+- **Problem**: `generateChapterContent()` was incorrectly merging chapter content INTO `ChapterOutline.content`:
+  ```typescript
+  // BAD: This was adding chapter_1, chapter_2 keys to the outline
+  content: JSON.stringify({
+      ...JSON.parse(project.outline?.content || '{}'),
+      [`chapter_${chapterNumber}`]: content  // ← This corrupted the outline
+  })
+  ```
+- **Impact**: After generating a chapter, the outline was overwritten with corrupted object format + chapter content.
+- **Fix**: Removed the DB upsert from `builderAiService.ts`. Chapter content is correctly saved to `Chapter` table by `/api/generate/chapter`.
+
+#### Bug 3: ChapterGenerator couldn't parse API response
+- **Problem**: Client expected object format `{chapter_1: "..."}` but API returns array `[{number: 1, content: "..."}]`.
+- **Impact**: Generated chapters didn't display after page refresh despite being saved in DB.
+- **Fix**: Updated `ChapterGenerator.tsx` to iterate over array using `chapter.number` as key.
+
+#### Files Modified
+| File | Change |
+|------|--------|
+| [ChapterOutliner.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/builder/components/ChapterOutliner.tsx) | Import `Chapter` type, normalize `object.chapters` to array |
+| [/api/generate/outline/route.ts](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/app/api/generate/outline/route.ts) | Normalize chapters in `onFinish` before DB save |
+| [page.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/app/(saas)/project/builder/page.tsx) | Defensive normalization when parsing outline from DB |
+| [builderAiService.ts](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/builder/services/builderAiService.ts) | Removed faulty DB upsert in `generateChapterContent()` |
+| [ChapterGenerator.tsx](file:///c:/CreativeOS/01_Projects/Code/Personal_Stuff/Final%20Year%20Project%20service/2025-12-15_jstar-fyb-service/src/features/builder/components/ChapterGenerator.tsx) | Parse chapters array format instead of object format |
+
+### 2026-01-03: Workspace Transition
+- **ProjectActionCenter**: Added "Open in Workspace" button as primary action after project unlock.
+- **Completion Flow**: Users are guided to the Workspace immediately after outline generation.
+

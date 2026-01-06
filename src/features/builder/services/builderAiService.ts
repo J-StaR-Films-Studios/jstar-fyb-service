@@ -169,28 +169,9 @@ export class BuilderAiService {
             // Generate chapter content with research-backed insights
             const content = await generateResearchEnhancedContent(chapterNumber, chapterTitle, context);
 
-            // Store the generated content in the database
-            try {
-                await prisma.chapterOutline.upsert({
-                    where: { projectId: projectId },
-                    update: {
-                        content: JSON.stringify({
-                            ...JSON.parse(project.outline?.content || '{}'),
-                            [`chapter_${chapterNumber}`]: content
-                        }),
-                        updatedAt: new Date()
-                    },
-                    create: {
-                        projectId: projectId,
-                        content: JSON.stringify({
-                            [`chapter_${chapterNumber}`]: content
-                        })
-                    }
-                });
-            } catch (dbError) {
-                console.error('[BuilderAiService] Failed to store chapter content:', dbError);
-                // Continue even if database storage fails
-            }
+            // NOTE: We intentionally do NOT save to ChapterOutline here.
+            // ChapterOutline stores the 5-chapter STRUCTURE (titles + summaries).
+            // The actual chapter CONTENT is saved to the Chapter table by /api/generate/chapter.
 
             return content;
         } catch (error) {

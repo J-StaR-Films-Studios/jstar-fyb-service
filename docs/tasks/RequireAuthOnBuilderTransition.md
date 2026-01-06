@@ -36,8 +36,8 @@
 - [x] Update `saveLeadAction` to update existing leads when userId is available
 
 ### Phase 4: Testing
-- [ ] Test full flow: Chat → Auth → Builder → Payment
-- [ ] Verify lead appears in admin with userId linked
+- [x] Test full flow: Chat → Auth → Builder → Payment
+- [x] Verify lead appears in admin with userId linked
 
 ---
 
