@@ -31,10 +31,10 @@ export function Navbar() {
                 </Link>
 
                 <div className="hidden md:flex gap-8 text-sm font-medium tracking-wide">
-                    <Link href="#experience" className="hover:text-primary transition-colors text-white/80">Experience</Link>
-                    <Link href="#pricing" className="hover:text-primary transition-colors text-white/80">Pricing</Link>
+                    <Link href="/#experience" className="hover:text-primary transition-colors text-white/80">Experience</Link>
+                    <Link href="/#pricing" className="hover:text-primary transition-colors text-white/80">Pricing</Link>
                     <Link href="/project/consult" className="hover:text-primary transition-colors text-white/80">Agency</Link>
-                    <Link href="#showcase" className="hover:text-primary transition-colors text-white/80">Showcase</Link>
+                    <Link href="/#showcase" className="hover:text-primary transition-colors text-white/80">Showcase</Link>
                 </div>
 
                 <div className="flex items-center gap-4">
