@@ -7,7 +7,7 @@ import { MobileTimelineView } from './MobileTimelineView';
 import { SectionEditor } from './SectionEditor';
 import { MobileFloatingNav } from './MobileFloatingNav';
 import { useMediaQuery } from '../../../../hooks/use-media-query';
-import { Search, BrainCircuit, ArrowRight, FileText, Globe, Cloud, Loader2, Check, CloudOff, MessageSquare, Layout, ChevronLeft } from 'lucide-react';
+import { Search, BrainCircuit, ArrowRight, FileText, Globe, Cloud, Loader2, Check, CloudOff, MessageSquare, Layout, ChevronLeft, BookOpen, Save, Undo, Redo, Sparkles, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { DocumentUpload } from '../DocumentUpload';
@@ -15,6 +15,8 @@ import { ResearchStatus } from '../ResearchStatus';
 import { AcademicCopilot } from './AcademicCopilot';
 import { VersionHistoryDropdown } from './VersionHistoryDropdown';
 import { EnhanceOptionsPopover } from './EnhanceOptionsPopover';
+import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
+import { generateMarkdownBlob, generateDocxBlob, downloadFile, sanitizeFilename, ExportOptions } from '@/lib/export-service';
 
 interface Chapter {
     id: string;
@@ -59,6 +61,9 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
     // Enhance State
     const [showEnhancePopover, setShowEnhancePopover] = useState(false);
     const [contentToEnhance, setContentToEnhance] = useState('');
+
+    // Export State
+    const [showExportModal, setShowExportModal] = useState(false);
 
     // Auto-clear saved status after 2s
     useEffect(() => {
@@ -355,6 +360,13 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                         }}
                                     />
                                 )}
+                                <button
+                                    onClick={() => setShowExportModal(true)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    <span>Export</span>
+                                </button>
                                 <SaveStatusBadge />
                             </div>
                         }
@@ -567,6 +579,29 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     onClose={() => setShowEnhancePopover(false)}
                 />
             )}
+
+            {/* Export Modal */}
+            <DownloadOptionsModal
+                isOpen={showExportModal}
+                onClose={() => setShowExportModal(false)}
+                onConfirm={async (format, options) => {
+                    const fullContent = chapters
+                        .sort((a, b) => a.number - b.number)
+                        .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
+                        .join('\n\n---\n\n');
+                    const title = projectTitle || 'Project Export';
+                    const filename = sanitizeFilename(title);
+
+                    if (format === 'markdown') {
+                        const blob = generateMarkdownBlob(fullContent, title);
+                        downloadFile(blob, `${filename}.md`);
+                    } else {
+                        const blob = await generateDocxBlob(fullContent, title, options);
+                        downloadFile(blob, `${filename}.docx`);
+                    }
+                }}
+                title="Export Project"
+            />
         </div>
     );
 }

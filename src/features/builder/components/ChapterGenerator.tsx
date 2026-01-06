@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { BookOpen, Loader2, Download, ChevronDown, ChevronRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Loader2, Download, ChevronDown, ChevronRight, Sparkles, CheckCircle2, FileText, FileType } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { generateMarkdownBlob, generateDocxBlob, downloadFile, sanitizeFilename } from '@/lib/export-service';
 
 interface ChapterGeneratorProps {
     projectId: string;
@@ -14,6 +15,9 @@ interface GeneratedChapter {
     content: string;
     isGenerating: boolean;
 }
+
+import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
+import { ExportOptions } from '@/lib/export-service';
 
 const CHAPTER_INFO = [
     { number: 1, title: 'Introduction', description: 'Background, problem statement, objectives, scope' },
@@ -28,6 +32,13 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
     const [expandedChapter, setExpandedChapter] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Download options state
+    const [downloadModal, setDownloadModal] = useState<{
+        isOpen: boolean;
+        target: 'single' | 'all';
+        chapter?: GeneratedChapter;
+    }>({ isOpen: false, target: 'all' });
 
     // Fetch stored chapters on component mount
     useEffect(() => {
@@ -141,37 +152,41 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
         }
     }, [projectId]);
 
-    const downloadChapter = useCallback((chapter: GeneratedChapter) => {
-        const blob = new Blob([chapter.content], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Chapter_${chapter.number}_${chapter.title.replace(/\s+/g, '_')}.md`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }, []);
+    const handleDownloadConfirm = useCallback(async (format: 'markdown' | 'docx', options: ExportOptions) => {
+        const { target, chapter } = downloadModal;
 
-    const downloadAllChapters = useCallback(() => {
-        const generatedChapters = Object.values(chapters).filter(c => c.content && !c.isGenerating);
-        if (generatedChapters.length === 0) return;
+        try {
+            if (target === 'single' && chapter) {
+                const filename = sanitizeFilename(`Chapter_${chapter.number}_${chapter.title}`);
+                if (format === 'markdown') {
+                    const blob = generateMarkdownBlob(chapter.content, chapter.title);
+                    downloadFile(blob, `${filename}.md`);
+                } else {
+                    const blob = await generateDocxBlob(chapter.content, chapter.title, options);
+                    downloadFile(blob, `${filename}.docx`);
+                }
+            } else if (target === 'all') {
+                const generatedChapters = Object.values(chapters).filter(c => c.content && !c.isGenerating);
+                if (generatedChapters.length === 0) return;
 
-        const fullContent = generatedChapters
-            .sort((a, b) => a.number - b.number)
-            .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
-            .join('\n\n---\n\n');
+                const sortedChapters = generatedChapters.sort((a, b) => a.number - b.number);
+                const fullContent = sortedChapters
+                    .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
+                    .join('\n\n---\n\n');
 
-        const blob = new Blob([fullContent], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Full_Project_Documentation.md';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }, [chapters]);
+                const filename = 'Full_Project_Documentation';
+                if (format === 'markdown') {
+                    const blob = generateMarkdownBlob(fullContent, 'Full Project Documentation');
+                    downloadFile(blob, `${filename}.md`);
+                } else {
+                    const blob = await generateDocxBlob(fullContent, 'Full Project Documentation', options);
+                    downloadFile(blob, `${filename}.docx`);
+                }
+            }
+        } catch (err) {
+            console.error('Download failed', err);
+        }
+    }, [downloadModal, chapters]);
 
     const completedCount = Object.values(chapters).filter(c => c.content && !c.isGenerating).length;
 
@@ -191,11 +206,11 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
 
                 {completedCount > 0 && (
                     <button
-                        onClick={downloadAllChapters}
+                        onClick={() => setDownloadModal({ isOpen: true, target: 'all' })}
                         className="flex items-center gap-2 px-4 py-2 bg-accent/20 border border-accent/30 rounded-xl text-accent hover:bg-accent/30 transition-colors"
                     >
                         <Download className="w-4 h-4" />
-                        Download All ({completedCount})
+                        <span className="hidden sm:inline">Download All ({completedCount})</span>
                     </button>
                 )}
             </div>
@@ -259,9 +274,9 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
                                 <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto md:ml-4 border-t border-white/5 pt-2.5 md:pt-0 md:border-t-0">
                                     {isGenerated && (
                                         <button
-                                            onClick={() => downloadChapter(chapter)}
+                                            onClick={() => setDownloadModal({ isOpen: true, target: 'single', chapter })}
                                             className="p-2 text-gray-400 hover:text-accent transition-colors"
-                                            title="Download chapter"
+                                            title="Download options"
                                         >
                                             <Download className="w-5 h-5" />
                                         </button>
@@ -294,6 +309,14 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
                     );
                 })}
             </div>
+
+
+            <DownloadOptionsModal
+                isOpen={downloadModal.isOpen}
+                onClose={() => setDownloadModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={handleDownloadConfirm}
+                title={downloadModal.target === 'all' ? 'Download Full Project' : 'Download Chapter'}
+            />
         </div>
     );
 }
