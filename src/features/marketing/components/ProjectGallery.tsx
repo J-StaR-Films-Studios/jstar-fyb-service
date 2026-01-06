@@ -25,7 +25,7 @@ export function ProjectGallery() {
 
 
     return (
-        <section className="py-20 relative overflow-hidden">
+        <section id="showcase" className="py-20 relative overflow-hidden">
             {/* Background Decor */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
 
