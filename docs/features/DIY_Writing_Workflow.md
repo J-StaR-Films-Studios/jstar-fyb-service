@@ -291,12 +291,19 @@ Before moving to Phase 2, verify:
 4. **Mobile vs Desktop**: Different layouts - mobile uses full-screen `SectionEditor` overlay, desktop uses inline `WritingCanvas`
 
 #### Known Gaps (Deferred to Future)
+- [x] Version history UI (dropdown to view/restore previous versions)
+- [x] Debounced auto-save (implemented via `useDebouncedCallback`)
+- [x] "Enhance with AI" button functionality (Implemented via `EnhanceOptionsPopover`)
+- [x] Rich text formatting buttons (Implemented via TipTap/Novel)
 
-- [ ] Version history UI (dropdown to view/restore previous versions)
-- [ ] Debounced auto-save (currently saves on every keystroke via `onValidChange`)
-- [ ] "Enhance with AI" button functionality (placeholder)
-- [ ] "Enhance with AI" button functionality (placeholder)
-- [ ] Rich text formatting buttons (placeholder icons only)
+### 1.7 Implementation Update (2026-01-07)
+> **Status**: Phase 1 Gaps Closed ✅
+
+We have successfully implemented the remaining Phase 1 features:
+1.  **Version History**: Added `VersionHistoryDropdown` and `VersionPreviewModal` (read-only diff).
+2.  **Debounced Auto-Save**: Implemented in `WritingCanvas` and `SectionEditor` to prevent API spam.
+3.  **Rich Text**: Fully functional Bold, Italic, Heading, List, and Image insertions.
+4.  **AI Enhance**: "Enhance" button now opens a popover to Request edits (Formalize, Expand, Shorten) which streams results back.
 
 ### 1.7 Workspace UX Refinements (2026-01-03)
 > **Goal**: Seamless navigation and mobile-first experience.
@@ -581,7 +588,7 @@ Before moving to Phase 3, verify:
 - [x] Chapter generation with documents returns grounded content
 - [x] Citations appear in generated chapter text
 - [x] References section is auto-generated
-- [x] Cleanup: FileSearchStore deleted when project is deleted
+- [ ] Cleanup: FileSearchStore deleted when project is deleted (Pending "Project Delete" feature)
 
 
 ---
