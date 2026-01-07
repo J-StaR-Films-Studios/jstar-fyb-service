@@ -39,6 +39,7 @@ interface AcademicCopilotProps {
 export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose }: AcademicCopilotProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [localInput, setLocalInput] = useState('');
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
 
     // URL param handling for thread persistence
@@ -191,8 +192,20 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         await sendMessage({ text: userMessage });
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInput(e.target.value);
+        // Auto-resize
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
     };
 
     useEffect(() => {
@@ -311,7 +324,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             {/* Chat Body */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar"
+                className="flex-1 overflow-y-auto p-4 pb-48 space-y-6 custom-scrollbar"
             >
                 <AnimatePresence mode="popLayout">
                     {messages.length === 0 && (
@@ -387,10 +400,10 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                             )}
                         >
                             <div className={cn(
-                                "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
+                                "max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm backdrop-blur-sm transition-all duration-300",
                                 m.role === 'user'
-                                    ? "bg-primary text-white rounded-br-none"
-                                    : "bg-white/10 text-gray-100 rounded-bl-none border border-white/5"
+                                    ? "bg-gradient-to-br from-primary to-purple-600 text-white rounded-br-sm shadow-purple-500/10"
+                                    : "bg-white/10 text-gray-100 rounded-bl-sm border border-white/5 shadow-black/20"
                             )}>
                                 {m.role === 'assistant' ? (
                                     <div className="prose prose-invert prose-sm max-w-none">
@@ -398,12 +411,12 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                         {(() => {
                                             const textContent = m.content || m.parts?.find((p: any) => p.type === 'text')?.text || '';
                                             return (textContent as string).split('\n').map((line: string, i: number) => (
-                                                <p key={i} className="mb-1 last:mb-0 min-h-[1em]">{line}</p>
+                                                <p key={i} className="mb-2 last:mb-0 min-h-[1em]">{line}</p>
                                             ));
                                         })()}
                                     </div>
                                 ) : (
-                                    <span>{m.content || m.parts?.find((p: any) => p.type === 'text')?.text || ''}</span>
+                                    <span className="font-medium tracking-wide">{m.content || m.parts?.find((p: any) => p.type === 'text')?.text || ''}</span>
                                 )}
                             </div>
                         </motion.div>
@@ -439,57 +452,65 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                 </AnimatePresence>
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 border-t border-white/5 bg-black/20 backdrop-blur-sm">
+            {/* Floating Command Center Input */}
+            <div className="p-4 pb-2 md:pb-6 absolute bottom-0 left-0 right-0 bg-gradient-to-t from-dark via-dark/80 to-transparent pt-12">
                 {/* Quick Actions (Contextual) */}
-                {messages.length === 0 && (
-                    <div className="flex gap-2 overflow-x-auto pb-3 no-scrollbar mask-fade-right">
-                        {[
-                            "Summarize my research so far",
-                            "Draft the introduction for this chapter",
-                            "Find quotes about... ",
-                            "Critique my argument"
-                        ].map(action => (
-                            <button
-                                key={action}
-                                onClick={() => handleQuickAction(action)}
-                                className="shrink-0 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap"
-                            >
-                                {action}
-                            </button>
-                        ))}
-                    </div>
-                )}
+                <AnimatePresence>
+                    {messages.length === 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="flex gap-2 overflow-x-auto pb-4 no-scrollbar mask-fade-right px-1"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        >
+                            {[
+                                "Summarize my research so far",
+                                "Draft the introduction for this chapter",
+                                "Find quotes about... ",
+                                "Critique my argument flow"
+                            ].map((action, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => handleQuickAction(action)}
+                                    className="whitespace-nowrap px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-gray-400 hover:text-white hover:bg-white/10 hover:border-primary/30 transition-all flex items-center gap-2 hover:-translate-y-0.5 shadow-sm"
+                                >
+                                    <Sparkles className="w-3 h-3 text-primary/70" />
+                                    {action}
+                                </button>
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                <form onSubmit={handleSend} className="relative flex items-center gap-2">
-                    <div className="relative flex-1">
-                        <input
+                <form onSubmit={handleSend} className="relative group">
+                    <div className={cn(
+                        "absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-600/20 rounded-3xl blur-xl transition-opacity duration-500",
+                        input ? "opacity-100" : "opacity-0"
+                    )} />
+
+                    <div className="relative flex items-end p-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl shadow-black/50 transition-all duration-300 group-focus-within:border-primary/50 group-focus-within:bg-black/40 group-focus-within:shadow-primary/10">
+                        <textarea
+                            ref={textareaRef}
                             value={input}
                             onChange={handleInputChange}
-                            placeholder={activeChapterNumber ? `Ask about Chapter ${activeChapterNumber}...` : "Ask monji..."}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-10 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/10 text-white placeholder-gray-500 transition-all shadow-inner"
+                            onKeyDown={handleKeyDown}
+                            placeholder={activeChapterNumber ? `Ask about Chapter ${activeChapterNumber}...` : "How can I help you write?"}
+                            className="flex-1 bg-transparent border-none text-sm text-white placeholder-gray-500 px-4 py-3 focus:ring-0 outline-none min-h-[44px] max-h-[200px] resize-none overflow-y-auto w-full custom-scrollbar"
+                            rows={1}
                         />
                         <button
-                            type="button"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-white transition-colors"
+                            type="submit"
+                            disabled={!input.trim() || isLoading}
+                            className="mb-1 mr-1 p-2 rounded-xl bg-primary text-white disabled:opacity-50 disabled:bg-gray-700 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 shrink-0"
                         >
-                            <Sparkles className="w-4 h-4" />
+                            {isLoading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Send className="w-5 h-5" />
+                            )}
                         </button>
                     </div>
-                    <button
-                        type="submit"
-                        disabled={!input.trim() || isLoading}
-                        className={cn(
-                            "w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 shadow-lg shadow-primary/20",
-                            input.trim() ? "bg-primary hover:bg-primary/90 scale-100" : "bg-white/10 text-gray-500 scale-95"
-                        )}
-                    >
-                        {isLoading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <Send className="w-4 h-4" />
-                        )}
-                    </button>
                 </form>
                 <div className="text-[10px] text-center text-gray-600 mt-2 font-medium">
                     Monji can make mistakes. Verify important info.

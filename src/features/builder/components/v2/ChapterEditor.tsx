@@ -406,19 +406,21 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                         </button>
                     </div>
 
-                    {/* Smart Search */}
-                    <div className="p-4 border-b border-white/5 shrink-0">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
-                            <input
-                                type="text"
-                                placeholder="Search references..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm outline-none focus:border-primary/50 text-gray-300 placeholder-gray-600"
-                            />
+                    {/* Smart Search - Only for Research Tab */}
+                    {activeTab === 'research' && (
+                        <div className="p-4 border-b border-white/5 shrink-0">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+                                <input
+                                    type="text"
+                                    placeholder="Search references..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-black/20 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm outline-none focus:border-primary/50 text-gray-300 placeholder-gray-600"
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Content Area */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -538,10 +540,12 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                 />
             </main>
 
-            <MobileFloatingNav
-                activeTab={mobileView === 'context' ? (activeTab === 'research' ? 'research' : activeTab === 'chat' ? 'chat' : 'diagrams') : 'write'}
-                onTabChange={handleMobileTabChange}
-            />
+            <div className="relative z-[60]">
+                <MobileFloatingNav
+                    activeTab={mobileView === 'context' ? (activeTab === 'research' ? 'research' : activeTab === 'chat' ? 'chat' : 'diagrams') : 'write'}
+                    onTabChange={handleMobileTabChange}
+                />
+            </div>
 
             {/* Editor Overlay */}
             {mobileView === 'editor' && activeChapter && (
