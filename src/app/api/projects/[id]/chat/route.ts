@@ -1,4 +1,4 @@
-import { streamText, tool, stepCountIs, type CoreMessage } from 'ai';
+import { streamText, tool, stepCountIs } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
@@ -23,7 +23,9 @@ const google = createGoogleGenerativeAI({
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id: projectId } = await params;
     const body = await req.json();
-    const { messages, threadId, contextScope, targetChapter, targetSection } = body;
+    const { messages, threadId, contextScope } = body;
+
+    console.log(`[Chat API] Request for project ${projectId}. ThreadId: ${threadId || 'NEW'}`);
 
     // 1. Resolve Thread
     let activeConversationId = threadId;
@@ -103,7 +105,7 @@ ${researchText}
 `;
 
     // 4. Stream Response
-    const coreMessages: CoreMessage[] = messages.map((m: any) => ({
+    const coreMessages = messages.map((m: any) => ({
         role: m.role as 'user' | 'assistant' | 'system',
         content: typeof m.content === 'string' ? m.content : (m.parts?.find((p: any) => p.type === 'text')?.text || '')
     }));
@@ -111,13 +113,13 @@ ${researchText}
     const result = streamText({
         model: google('gemini-2.5-flash'),
         system: systemPrompt,
-        messages: coreMessages,
+        messages: coreMessages as any,
         // @ts-ignore
         maxSteps: 5, // Allow multiple tool steps
         tools: {
             searchProjectDocuments: tool({
                 description: `Search the full text of uploaded research documents.`,
-                inputSchema: z.object({
+                parameters: z.object({
                     query: z.string(),
                 }),
                 execute: async ({ query }: { query: string }) => {
@@ -134,16 +136,16 @@ ${researchText}
                     );
                     return `Found in documents:\n${result.text}\nSOURCES: ${JSON.stringify(result.groundingChunks)}`;
                 }
-            }),
+            } as any),
             suggestEdit: tool({
                 description: `Suggest a specific content revision for a chapter or section. Use this when the user asks to "rewrite", "improve", "fix", or "change" specific text.`,
-                inputSchema: z.object({
+                parameters: z.object({
                     chapterNumber: z.number().describe('The chapter number to edit'),
                     currentContentToReplace: z.string().describe('The EXACT text snippet to be replaced (must match existing text)'),
                     newContent: z.string().describe('The proposed new content'),
                     explanation: z.string().describe('Brief reason for the change'),
                 }),
-                execute: async ({ chapterNumber, currentContentToReplace, newContent, explanation }) => {
+                execute: async ({ chapterNumber, currentContentToReplace, newContent, explanation }: { chapterNumber: number; currentContentToReplace: string; newContent: string; explanation: string }) => {
                     // We don't apply it here, just return the structured suggestion for the UI to render
                     return {
                         tool: 'suggestEdit',
@@ -153,24 +155,24 @@ ${researchText}
                         explanation
                     };
                 }
-            }),
+            } as any),
             saveUserContext: tool({
                 description: `Save user details like department, course, or institution.`,
-                inputSchema: z.object({
+                parameters: z.object({
                     department: z.string().optional(),
                     course: z.string().optional(),
                     institution: z.string().optional(),
                 }),
-                execute: async (data) => {
+                execute: async (data: { department?: string; course?: string; institution?: string }) => {
                     await prisma.project.update({
                         where: { id: projectId },
                         data: { ...data, contextComplete: true }
                     });
                     return "Context saved.";
                 }
-            })
-        },
-        onFinish: async ({ text }) => {
+            } as any)
+        } as any,
+        onFinish: async ({ text }: { text: string }) => {
             // Save messages to the resolved thread ID
             if (activeConversationId) {
                 const userMsg = messages[messages.length - 1];
@@ -198,7 +200,7 @@ ${researchText}
                 });
             }
         }
-    });
+    } as any);
 
     return result.toUIMessageStreamResponse({
         headers: {

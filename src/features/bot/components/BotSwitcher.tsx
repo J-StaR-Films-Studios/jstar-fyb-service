@@ -7,6 +7,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Briefcase, Sparkles, MessageSquare, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PERSONALITIES } from '@/features/bot/prompts/system';
+import { clearAllConversations } from '@/features/bot/actions/chat';
+import { generateUUID } from '@/lib/uuid';
+import { useSession } from '@/lib/auth-client';
 
 type BotType = 'jay' | 'nengi' | 'monji';
 
@@ -20,6 +23,7 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const { data: session } = useSession();
 
     // Close on clicking outside
     useEffect(() => {
@@ -66,11 +70,27 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
     const handleClearChat = async () => {
         setIsClearing(true);
         try {
+            // Get identifiers
+            const anonymousId = localStorage.getItem('jstar_anonymous_id') || undefined;
+            // Note: For authenticated users, the server action will handle userId if provided
+            // For now, we rely on the session if available, or anonymousId
+
             if (currentBot === 'nengi') {
                 await fetch('/api/hub/chat', { method: 'DELETE' });
             } else if (currentBot === 'jay') {
-                await fetch('/api/chat', { method: 'DELETE' });
+                // Use server action for proper deletion from DB
+                await clearAllConversations({
+                    anonymousId,
+                    userId: session?.user?.id,
+                    botType: currentBot
+                });
+
+                // Also clear localStorage
+                localStorage.removeItem('jstar_confirmed_topic');
+                const newId = generateUUID();
+                localStorage.setItem('jstar_anonymous_id', newId);
             }
+
             // Reload page to reset chat state
             window.location.reload();
         } catch (err) {

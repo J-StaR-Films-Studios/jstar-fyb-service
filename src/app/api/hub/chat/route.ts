@@ -110,14 +110,14 @@ ${projectContext}
         }
 
         // 6. Stream Response
-        const result = await streamText({
+        const result = streamText({
             model: groq('llama-3.3-70b-versatile'), // Good balance of creative/smart
             system: systemPrompt,
             messages: messages.map((m: any) => ({
                 role: m.role as 'user' | 'assistant' | 'system',
                 content: getMessageContent(m)
-            })),
-            onFinish: async ({ text }) => {
+            })) as any,
+            onFinish: async ({ text }: { text: string }) => {
                 // Save messages to DB
                 if (activeConvId) {
                     const lastUserContent = getMessageContent(messages[messages.length - 1]);
@@ -139,7 +139,7 @@ ${projectContext}
                     ]);
                 }
             }
-        });
+        } as any);
 
         return result.toUIMessageStreamResponse();
 

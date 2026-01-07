@@ -23,9 +23,7 @@ export function HubChatInterface({ userName, immersiveMode = false }: { userName
     const [isInitialized, setIsInitialized] = useState(false);
 
     const { messages, sendMessage, status, setMessages } = useChat({
-        transport: new DefaultChatTransport({
-            api: '/api/hub/chat',
-        }),
+        transport: new DefaultChatTransport({ api: '/api/hub/chat' }),
         id: 'hub-chat-nengi',
     });
 

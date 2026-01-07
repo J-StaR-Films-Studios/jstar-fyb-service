@@ -61,40 +61,37 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     useEffect(() => { activeThreadIdRef.current = activeThreadId; }, [activeThreadId]);
 
     // Chat Hook
-    // @ts-ignore - Types for transport match HubChatInterface, but we alias sendMessage to avoid conflict
-    const { messages, status, setMessages, sendMessage: sendChatRequest } = useChat({
-        transport: new DefaultChatTransport({
-            api: `/api/projects/${projectId}/chat`
-        }),
+    const { messages, sendMessage: chatSendMessage, status, setMessages } = useChat({
+        transport: new DefaultChatTransport({ api: `/api/projects/${projectId}/chat` }),
         id: `academic-copilot-${projectId}`, // Unique ID per project to avoid collision
-        onResponse: (response: any) => {
-            const threadId = response.headers.get('x-thread-id');
-            // Check against REF content to be safe, but state update is what matters
-            if (threadId && threadId !== activeThreadIdRef.current) {
-                setActiveThreadId(threadId);
-            }
-        },
-        onFinish: (message: any) => {
-            scrollToBottom();
-            // Check for edit suggestions in the tool invocations
-            const toolInvocation = message.toolInvocations?.find((t: any) => t.toolName === 'suggestEdit');
-            if (toolInvocation && 'result' in toolInvocation) {
-                setSuggestion((toolInvocation as any).result);
-            }
-        },
-        onError: (error: any) => {
+        onError: (error) => {
             console.error("Chat error:", error);
         }
-    } as any) as any;
+    });
+
+    // Handle tool invocations from messages (v6 compatible)
+    useEffect(() => {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.role === 'assistant') {
+            // In v6, tool invocations are in the 'parts' array of the message
+            const parts = (lastMessage as any).parts || [];
+            const toolPart = parts.find((p: any) =>
+                p.type === 'tool-invocation' && p.toolInvocation?.toolName === 'suggestEdit'
+            );
+            if (toolPart?.toolInvocation?.result) {
+                setSuggestion(toolPart.toolInvocation.result);
+            }
+        }
+    }, [messages]);
 
     const isLoading = status === 'submitted' || status === 'streaming';
 
     // Wrapper to maintain compatibility with existing 'sendMessage' calls while injecting dynamic body
     const sendMessage = async (payload: { text: string }) => {
-        // AI SDK sendMessage accepts (message, options)
-        await sendChatRequest({
-            role: 'user',
-            content: payload.text
+        console.log("[AcademicCopilot] Sending message with threadId:", activeThreadIdRef.current);
+
+        await chatSendMessage({
+            text: payload.text,
         }, {
             body: {
                 threadId: activeThreadIdRef.current,

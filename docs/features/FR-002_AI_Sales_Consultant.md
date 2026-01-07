@@ -117,6 +117,8 @@ Returns user-friendly error: "Jay is currently offline (System Overload)."
 ### Data Persistence Guard
 - **Client-Side Trigger**: Persistence is triggered by the client, ensuring `userId` is available (if logged in).
 - **Atomic Saves**: Transaction-based saving prevents partial history states.
+- **Robust Deletion**: `clearAllConversations` uses an **OR** condition to wipe both User-linked and Anonymous records simultaneously, preventing "ghost history" rollbacks.
+- **Bot Isolation**: Deletion is scoped by `botType` (e.g., clearing Jay doesn't wipe Nengi).
 
 ---
 
@@ -128,7 +130,7 @@ Uses existing Prisma schema from FR-003:
 ---
 
 ## Dependencies
-- `ai` (Vercel AI SDK v5)
+- `ai` (Vercel AI SDK v6)
 - `@ai-sdk/react` (useChat hook)
 - `@ai-sdk/openai` (Groq provider)
 - `react-markdown` (Message rendering)
@@ -167,3 +169,8 @@ Uses existing Prisma schema from FR-003:
 - **Feature:** Jay's chat (`/chat`) is now wrapped in `SaasShell` for logged-in users, providing a consistent header with the `BotSwitcher`.
 - **Code Change:** `ChatInterface.tsx` now accepts a `hideHeader` prop. When `true`, the internal header is hidden, and the parent (`SaasShell`) provides the header with `BotSwitcher`.
 - **Routing:** Removed forced redirect from `/chat` to `/hub`. Users with projects can still access Jay via the switcher.
+
+### 2026-01-07: Chat Deletion & Isolation Fix
+- **Bug Fix**: fixed "Deletion Rollback" where anonymous history persisted after "Clear Chat" for logged-in users.
+- **Logic**: `clearAllConversations` now targets `userId` OR `anonymousId`.
+- **Feature**: Added `botType` scoping to deletion to prevent cross-bot data loss.

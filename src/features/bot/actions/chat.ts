@@ -1,7 +1,6 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { CoreMessage } from 'ai';
 import { z } from 'zod';
 
 // Input validation schema
@@ -35,7 +34,7 @@ type SaveConversationParams = {
     conversationId?: string;
     anonymousId?: string; // For guest users
     userId?: string;      // For auth users (future)
-    messages: CoreMessage[];
+    messages: any[];
     botType?: BotType;    // Which bot this conversation is with
 };
 
@@ -263,28 +262,39 @@ export async function mergeAnonymousData(anonymousId: string, userId: string) {
  */
 export async function clearAllConversations({
     userId,
-    anonymousId
-}: { userId?: string; anonymousId?: string }) {
+    anonymousId,
+    botType
+}: {
+    userId?: string;
+    anonymousId?: string;
+    botType?: BotType;
+}) {
     try {
         if (!userId && !anonymousId) {
             return { success: false, error: 'Either userId or anonymousId must be provided' };
         }
 
-        // Build the where clause based on what identifiers we have
-        const whereClause: { userId?: string; anonymousId?: string } = {};
+        // Build the where clause for identifiers
+        const identifierClause = [];
+        if (userId) identifierClause.push({ userId });
+        if (anonymousId) identifierClause.push({ anonymousId });
 
-        if (userId) {
-            whereClause.userId = userId;
-        } else if (anonymousId) {
-            whereClause.anonymousId = anonymousId;
+        // Build final where clause
+        const whereClause: any = {
+            OR: identifierClause
+        };
+
+        // If botType provided, filter by title (Data Isolation)
+        if (botType) {
+            whereClause.title = BOT_CONVERSATION_TITLES[botType];
         }
 
-        // Delete all conversations (messages cascade-delete via schema)
+        // Delete all matching conversations (messages cascade-delete via schema)
         const result = await prisma.conversation.deleteMany({
             where: whereClause
         });
 
-        console.log(`[clearAllConversations] Deleted ${result.count} conversations`);
+        console.log(`[clearAllConversations] Scope: ${botType || 'ALL'}, Identifiers: ${identifierClause.length}. Deleted ${result.count} conversations`);
         return { success: true, deletedCount: result.count };
     } catch (error) {
         console.error('[clearAllConversations] Failed:', error);

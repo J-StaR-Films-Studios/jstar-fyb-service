@@ -21,36 +21,9 @@ const groq = createGroq({
 
 // Allow streaming responses up to 120 seconds
 export const maxDuration = 120;
-
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1000;
 const MAX_MESSAGES = 50; // Limit history size per request
 
-// Helper to add delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Retry wrapper for streamText
-async function streamTextWithRetry(
-    config: Parameters<typeof streamText>[0],
-    retries = MAX_RETRIES
-): Promise<ReturnType<typeof streamText>> {
-    let lastError: Error | null = null;
-
-    for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-            return await streamText(config);
-        } catch (error) {
-            lastError = error as Error;
-            console.error(`[Chat API] Attempt ${attempt}/${retries} failed:`, error);
-            if (attempt < retries) {
-                const waitTime = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
-                console.log(`[Chat API] Retrying in ${waitTime}ms...`);
-                await delay(waitTime);
-            }
-        }
-    }
-    throw lastError || new Error('All retry attempts failed');
-}
+// Retries handled by SDK
 
 // AI SDK v5 message format validation
 const chatSchema = z.object({
@@ -96,17 +69,18 @@ export async function POST(req: Request) {
         // Debug Log
         console.log(`[Chat API] Processing ${modelMessages.length} messages. Last: "${modelMessages[modelMessages.length - 1]?.content?.slice(0, 50)}..."`);
 
-        const result = await streamTextWithRetry({
+        const result = streamText({
             model: groq('moonshotai/kimi-k2-instruct'), // Reliable agentic model
+            maxRetries: 3,
             stopWhen: stepCountIs(5),
             system: SYSTEM_PROMPT,
-            messages: modelMessages,
+            messages: modelMessages as any,
             // Use extracted tools
-            tools: chatTools,
-            onFinish: async ({ text, toolCalls }) => {
+            tools: chatTools as any,
+            onFinish: async ({ text, toolCalls }: { text: string; toolCalls: any[] }) => {
                 // Client-side persistence via useChatFlow
             },
-        });
+        } as any);
 
         return result.toUIMessageStreamResponse();
 

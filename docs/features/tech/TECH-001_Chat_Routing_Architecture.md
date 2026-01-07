@@ -32,30 +32,36 @@ const { sendMessage, messages } = useChat({
 });
 ```
 
-### 2. Runtime Quirks (The `append` vs `sendMessage` Issue)
-In our current environment, the `useChat` hook return signature varies based on configuration.
-- **Problem:** When using `DefaultChatTransport`, the `append` method might be undefined at runtime, causing "append is not a function" errors.
-- **Solution:** Destructure `sendMessage` from the hook instead. It functions similarly but is robust across transport modes.
+### 2. Runtime Patterns (`append` vs `sendMessage`)
+We utilize the `append` method from `useChat` to send messages with custom request bodies (context).
 
-**Correct Pattern:**
+**Pattern:**
 ```typescript
-const { sendMessage: sendChatRequest } = useChat({ ... });
+const { append } = useChat({ ... });
 
 // Wrapper to inject body options
 const sendMessage = async (text: string) => {
-    await sendChatRequest({
+    await append({
         role: 'user',
         content: text
     }, {
-        body: { threadId: '...' } // Context injection
+        body: { threadId: activeThreadId } // Context injection
     });
 };
 ```
 
-### 3. Context Injection
+### 3. Context Injection & Thread Sync
 For **Monji** (Academic Copilot), context is critical.
-- **Threads:** The UI maintains an `activeThreadId`. This is passed in the request `body`.
-- **Scope:** Users can scope chat to a specific "Chapter". This is passed as `contextScope`.
+- **Request:** The UI passes `activeThreadId` in the request body.
+- **Response:** The server returns the canonical `x-thread-id` header.
+- **Sync:** The client listens to `onResponse` to update the `activeThreadId` if the server redirects or creates a new thread.
+
+```typescript
+onResponse: (response) => {
+    const threadId = response.headers.get('x-thread-id');
+    if (threadId) setActiveThreadId(threadId);
+}
+```
 
 The API route (`src/app/api/projects/[id]/chat/route.ts`) reads these body parameters to build a prompt grounded in the specific project data.
 

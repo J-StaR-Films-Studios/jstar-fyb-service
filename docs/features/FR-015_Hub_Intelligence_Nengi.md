@@ -21,8 +21,8 @@ The primary UI for interacting with Nengi. It uses a specialized implementation 
 - **Goal:** Brainstorming, venting, cross-project context.
 - **Routing Logic:** Highly observant friend who connects dots across all projects a user owns.
 
-## SDK Implementation (AI SDK 5.0)
-Due to breaking changes in AI SDK 5.0, the `HubChatInterface` implements specific patterns:
+## SDK Implementation (AI SDK 6.0)
+Due to breaking changes in AI SDK 6.0, the `HubChatInterface` implements specific patterns:
 
 - **Transport:** Uses `DefaultChatTransport` to explicitly define the `/api/hub/chat` endpoint.
 - **Input State:** Manages `inputValue` locally as the hook no longer provides built-in input helpers in the same way.
@@ -45,6 +45,11 @@ flowchart LR
 - **Problem:** `HubChatInterface` was using outdated `useChat` properties (`api`, `initialMessages`, `input`) resulting in build errors.
 - **Solution:** Refactored the component to use `DefaultChatTransport`, local state, and `setMessages` for the initial greeting. Added `parts` parsing for message rendering.
 
+### 2026-01-07: AI SDK v6 Migration
+- **Change:** Upgraded to Vercel AI SDK v6.0.16.
+- **Modules Changed:** `HubChatInterface.tsx` uses `transport: new DefaultChatTransport({ api })` pattern.
+- **Compatibility:** No functional changes to Nengi; same API route and system prompt.
+
 ### 2026-01-05: Mobile Immersive Mode
 - **Feature:** Implemented "Immersive Mode" for Hub Chat on mobile.
 - **Behavior:** Hides the application's `MobileBottomNav` when in the Hub view to maximize vertical screen real estate for the keyboard and chat timeline.
@@ -53,4 +58,8 @@ flowchart LR
 - **Feature:** Introduced `BotSwitcher.tsx`, a dropdown component in the header allowing users to switch between AI personas (Nengi, Jay, Monji).
 - **Behavior:** Monji option links to the user's latest project workspace (`/project/[id]/workspace`). If no project exists, it falls back to `/dashboard`.
 - **Routing Change:** Removed forced redirect from `/chat` to `/hub`. Users can now access Jay anytime via the switcher.
-- **Files Changed:** `BotSwitcher.tsx`, `hub/page.tsx`, `chat/page.tsx`, `SaasShell.tsx`.
+- **Modules Changed:** `BotSwitcher.tsx`, `hub/page.tsx`, `chat/page.tsx`, `SaasShell.tsx`.
+
+### 2026-01-07: Chat Deletion Isolation
+- **Feature:** Updated `BotSwitcher` to use bot-specific deletion scope.
+- **Benefit:** Clearing "Sales Chat" (Jay) no longer accidentally wipes "Hub Chat" (Nengi) history.
