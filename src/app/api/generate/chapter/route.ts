@@ -1,23 +1,13 @@
 import { streamText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
 import { BuilderAiService } from '@/features/builder/services/builderAiService';
 import { GeminiFileSearchService } from '@/lib/gemini-file-search';
-
-// Validate environment variables
-const groqApiKey = process.env.GROQ_API_KEY;
-if (!groqApiKey) {
-    throw new Error('GROQ_API_KEY environment variable is required');
-}
-
-const groq = createOpenAI({
-    baseURL: 'https://api.groq.com/openai/v1',
-    apiKey: groqApiKey,
-});
+import { selectModel } from '@/lib/ai';
 
 export const maxDuration = 300; // Increased duration for RAG
+
 
 // Input validation schema
 const requestSchema = z.object({
@@ -192,17 +182,23 @@ export async function POST(req: Request) {
         );
 
         // 5. DETERMINE MODE: Standard or Grounded
+        // Grounded mode requires BOTH a file search store AND active documents
         const fileSearchStoreId = project.fileSearchStoreId;
-        const useGroundedParams = !!fileSearchStoreId;
+        const hasDocuments = project.documents && project.documents.length > 0;
+        const useGroundedParams = !!fileSearchStoreId && hasDocuments;
 
-        console.log(`[GenerateChapter] Mode: ${useGroundedParams ? 'GROUNDED (Gemini)' : 'STANDARD (Standard)'}`);
+        console.log(`[GenerateChapter] Mode: ${useGroundedParams ? 'GROUNDED (Gemini)' : 'STANDARD (FREE Tier)'}`);
 
         // ==========================================================
-        // MODE A: STANDARD GENERATION (Moonshot AI / Kimi)
+        // MODE A: STANDARD GENERATION (FREE Tier - DeepSeek V3 / Kimi K2)
         // ==========================================================
         if (!useGroundedParams) {
+            // Use FREE tier model for cost savings
+            const { model, modelId, provider, isFree, reason } = selectModel({ quality: 'high' });
+            console.log(`[GenerateChapter] Router selected: ${modelId} via ${provider} (free: ${isFree}) - ${reason}`);
+
             const result = streamText({
-                model: groq('moonshotai/kimi-k2-instruct-0905'), // Use specified model
+                model,
                 system: `You are an expert academic writer specializing in Final Year Project (FYP) documentation.
                 
                 STRICT ACADEMIC GUIDELINES:
@@ -225,6 +221,7 @@ export async function POST(req: Request) {
 
             return result.toTextStreamResponse();
         }
+
 
         // ==========================================================
         // MODE B: GROUNDED GENERATION (Gemini Link)

@@ -1,10 +1,10 @@
 import { streamText, tool, stepCountIs } from 'ai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { GeminiFileSearchService } from '@/lib/gemini-file-search';
 import { MONJI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
 import { ProjectContextService } from '@/features/builder/services/projectContextService';
+import { selectModel } from '@/lib/ai';
 
 
 export const maxDuration = 300;
@@ -15,10 +15,7 @@ if (!geminiApiKey) {
     throw new Error('GEMINI_API_KEY environment variable is required');
 }
 
-// Create Gemini provider using the AI SDK
-const google = createGoogleGenerativeAI({
-    apiKey: geminiApiKey,
-});
+
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id: projectId } = await params;
@@ -110,8 +107,17 @@ ${researchText}
         content: typeof m.content === 'string' ? m.content : (m.parts?.find((p: any) => p.type === 'text')?.text || '')
     }));
 
+    // Use smart routing to pick the best model
+    // We request 'high' quality (Free tier preferred) and tools support
+    const { model, modelId, provider, isFree, reason } = selectModel({
+        tools: true,
+        quality: 'high'
+    });
+
+    console.log(`[Chat API] Using model: ${modelId} via ${provider} (Free: ${isFree}) - ${reason}`);
+
     const result = streamText({
-        model: google('gemini-2.5-flash'),
+        model,
         system: systemPrompt,
         messages: coreMessages as any,
         // @ts-ignore
