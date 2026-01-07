@@ -113,6 +113,7 @@ useEffect(() => {
 
 **Bug Reference:** Hotfix 2026-01-03 - `AcademicCopilot.tsx` was sending requests to `/api/chat` instead of `/api/projects/[id]/chat` because the `api` prop was ignored.
 **Bug Reference:** Hotfix 2026-01-04 - `HubChatInterface.tsx` failed to build because `initialMessages` prop is not recognized in v5.0; resolved by using `useEffect` + `setMessages`.
+**Bug Reference:** Hotfix 2026-01-07 - Runtime error `append is not a function` in `AcademicCopilot.tsx` when using `DefaultChatTransport`. Fix: Destructure `sendMessage` instead of `append` from `useChat` hook and pass body options as second argument.
 
 ---
 

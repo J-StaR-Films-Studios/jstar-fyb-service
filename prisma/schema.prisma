@@ -231,8 +231,20 @@ model ProjectConversation {
   projectId String
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
+  
+  // Thread categorization
+  threadType   String  @default("general") // "general", "chapter_1", ..., "research", "editing"
+  threadTitle  String? // User-facing title, e.g., "Chapter 1 Revisions"
+  
+  // Context scope (what this thread "sees")
+  contextScope Json?   // { chapterNumbers: [1, 2], includeResearch: true }
+  
+  isArchived Boolean @default(false)
+  
   messages  ProjectChatMessage[]
   project   Project              @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, threadType])
 }
 
 model ProjectChatMessage {
