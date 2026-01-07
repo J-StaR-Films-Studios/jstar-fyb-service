@@ -569,7 +569,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
 
             {/* Context Overlay (Mobile Research/Chat) */}
             {mobileView === 'context' && (
-                <div className="fixed inset-0 z-40 bg-dark flex flex-col pb-24 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="fixed inset-0 z-50 bg-dark flex flex-col pb-24 animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <div className="flex-1 overflow-y-auto">
                         {activeTab === 'research' ? (
                             <div className="p-6 space-y-6">
@@ -591,6 +591,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 projectId={projectId}
                                 activeChapterId={activeChapter?.id}
                                 activeChapterNumber={activeChapter?.number}
+                                onClose={() => setMobileView('timeline')}
                             />
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full p-12 text-center">

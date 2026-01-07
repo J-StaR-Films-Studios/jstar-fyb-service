@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
     BrainCircuit,
@@ -17,7 +18,9 @@ import {
     Terminal,
     ChevronDown,
     Layout,
-    Trash2
+    Trash2,
+    MessageSquare,
+    ChevronLeft
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -30,16 +33,24 @@ interface AcademicCopilotProps {
     projectId: string;
     activeChapterId?: string;
     activeChapterNumber?: number;
+    onClose?: () => void;
 }
 
-export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber }: AcademicCopilotProps) {
+export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose }: AcademicCopilotProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [localInput, setLocalInput] = useState('');
     const [showClearConfirm, setShowClearConfirm] = useState(false);
 
+    // URL param handling for thread persistence
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const urlThreadId = searchParams.get('thread');
+
     // State for threads
-    const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+    const [activeThreadId, setActiveThreadId] = useState<string | null>(urlThreadId);
     const [suggestion, setSuggestion] = useState<any | null>(null);
+    const [lastKnownThread, setLastKnownThread] = useState<{ id: string; title: string } | null>(null);
+    const [isLoadingThreads, setIsLoadingThreads] = useState(true);
 
     // Avatar cycling state for personality transition
     const [showAI, setShowAI] = useState(false);
@@ -56,18 +67,71 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     // State for input
     const [input, setInput] = useState('');
 
-    // Sync state to ref for access inside clousures/fetch
+    // Sync state to ref for access inside closures/fetch
     const activeThreadIdRef = useRef(activeThreadId);
     useEffect(() => { activeThreadIdRef.current = activeThreadId; }, [activeThreadId]);
 
-    // Chat Hook
+    // Update URL when activeThreadId changes (shallow routing)
+    const updateUrlWithThread = useCallback((threadId: string | null) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (threadId) {
+            params.set('thread', threadId);
+        } else {
+            params.delete('thread');
+        }
+        // Use shallow routing to avoid full page reload
+        router.replace(`?${params.toString()}`, { scroll: false });
+    }, [searchParams, router]);
+
+    // Fetch last known thread on mount (for "Continue last chat" button)
+    useEffect(() => {
+        const fetchLastThread = async () => {
+            try {
+                const res = await fetch(`/api/projects/${projectId}/threads`);
+                const data = await res.json();
+                if (data.success && data.threads?.length > 0) {
+                    const mostRecent = data.threads[0];
+                    setLastKnownThread({ id: mostRecent.id, title: mostRecent.threadTitle });
+                }
+            } catch (e) {
+                console.error("Failed to fetch threads", e);
+            } finally {
+                setIsLoadingThreads(false);
+            }
+        };
+        fetchLastThread();
+    }, [projectId]);
+
+    // Chat Hook - ID scoped by thread to isolate state per conversation
     const { messages, sendMessage: chatSendMessage, status, setMessages } = useChat({
         transport: new DefaultChatTransport({ api: `/api/projects/${projectId}/chat` }),
-        id: `academic-copilot-${projectId}`, // Unique ID per project to avoid collision
+        id: `academic-copilot-${projectId}-${activeThreadId || 'new'}`, // Unique ID per thread
         onError: (error) => {
             console.error("Chat error:", error);
         }
     });
+
+    // Auto-load messages when mounting with a URL thread param
+    const hasLoadedUrlThread = useRef(false);
+    useEffect(() => {
+        if (urlThreadId && !hasLoadedUrlThread.current && !isLoadingThreads) {
+            hasLoadedUrlThread.current = true;
+            // Load messages for the URL thread
+            (async () => {
+                try {
+                    const res = await fetch(`/api/projects/${projectId}/chat?threadId=${urlThreadId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.messages) {
+                            setMessages(data.messages);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load URL thread messages", e);
+                }
+            })();
+        }
+    }, [urlThreadId, isLoadingThreads, projectId, setMessages]);
 
     // Handle tool invocations from messages (v6 compatible)
     useEffect(() => {
@@ -89,6 +153,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     // Wrapper to maintain compatibility with existing 'sendMessage' calls while injecting dynamic body
     const sendMessage = async (payload: { text: string }) => {
         console.log("[AcademicCopilot] Sending message with threadId:", activeThreadIdRef.current);
+        const wasNewThread = !activeThreadIdRef.current;
 
         await chatSendMessage({
             text: payload.text,
@@ -98,6 +163,22 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                 contextScope: activeChapterNumber ? { chapterNumbers: [activeChapterNumber] } : {}
             }
         });
+
+        // If this was a new thread, fetch the created thread ID and update state/URL
+        if (wasNewThread) {
+            try {
+                const res = await fetch(`/api/projects/${projectId}/threads`);
+                const data = await res.json();
+                if (data.success && data.threads?.length > 0) {
+                    const newestThread = data.threads[0];
+                    setActiveThreadId(newestThread.id);
+                    updateUrlWithThread(newestThread.id);
+                    setLastKnownThread({ id: newestThread.id, title: newestThread.threadTitle });
+                }
+            } catch (e) {
+                console.error("Failed to fetch new thread ID", e);
+            }
+        }
     };
 
     const handleSend = async (e?: React.FormEvent) => {
@@ -136,6 +217,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     // Handle Thread Switching
     const handleThreadSelect = async (threadId: string | null) => {
         setActiveThreadId(threadId);
+        updateUrlWithThread(threadId);
         setSuggestion(null);
         if (threadId) {
             setMessages([]); // Clear view while loading
@@ -159,6 +241,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             const data = await res.json();
             if (data.success) {
                 setActiveThreadId(data.thread.id);
+                updateUrlWithThread(data.thread.id);
                 setMessages([]);
             }
         } catch (e) {
@@ -193,9 +276,18 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             {/* Header with Thread Selector */}
             <div className="flex items-center justify-between p-4 border-b border-white/5 shrink-0 z-30 bg-black/20 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                        <Sparkles className="w-4 h-4 text-white" />
-                    </div>
+                    {onClose ? (
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                        >
+                            <ChevronLeft className="w-4 h-4 text-white" />
+                        </button>
+                    ) : (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                            <Sparkles className="w-4 h-4 text-white" />
+                        </div>
+                    )}
                     <div className="flex flex-col">
                         <ThreadSelector
                             projectId={projectId}
@@ -268,6 +360,18 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                         }
                                     </span>
                                 </div>
+
+                                {/* Continue Last Chat Button */}
+                                {lastKnownThread && !activeThreadId && (
+                                    <button
+                                        onClick={() => handleThreadSelect(lastKnownThread.id)}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 text-sm text-primary hover:bg-primary/20 transition-all mt-4 group"
+                                    >
+                                        <MessageSquare className="w-4 h-4" />
+                                        <span>Continue: {lastKnownThread.title || 'Last Chat'}</span>
+                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                )}
                             </div>
                         </motion.div>
                     )}
