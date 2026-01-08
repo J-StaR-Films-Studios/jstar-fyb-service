@@ -87,7 +87,7 @@ export const Models = {
     GROQ: {
         KIMI_K2: 'moonshotai/kimi-k2-instruct',
         KIMI_K2_0905: 'moonshotai/kimi-k2-instruct-0905',
-        GPT_OSS_120B: 'openai/gpt-oss-120b:free',
+        GPT_OSS_120B: 'openai/gpt-oss-120b',
     },
 } as const;
 
