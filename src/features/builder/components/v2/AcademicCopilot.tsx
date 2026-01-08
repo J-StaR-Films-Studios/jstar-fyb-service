@@ -33,6 +33,43 @@ import { toast } from 'sonner';
 import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { PERSONALITIES } from '@/features/bot/prompts/system';
 
+// Tool name to display name mapping with Lucide icon components
+const TOOL_CONFIG: Record<string, { name: string; Icon: typeof Loader2 }> = {
+    'generateDiagram': { name: 'Generating Diagram', Icon: Layout },
+    'suggestEdit': { name: 'Preparing Edit Suggestion', Icon: FileText },
+    'searchProjectDocuments': { name: 'Searching Documents', Icon: Search },
+    'saveUserContext': { name: 'Saving Context', Icon: Terminal },
+};
+
+// Tool Status Indicator Component for showing tool execution progress
+function ToolStatusIndicator({ toolName, state }: { toolName: string; state: string }) {
+    const toolConfig = TOOL_CONFIG[toolName] || { name: toolName, Icon: Terminal };
+    const isComplete = state === 'output-available' || state === 'result' || state === 'completed';
+    const IconComponent = toolConfig.Icon;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-2",
+                isComplete
+                    ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                    : "bg-primary/10 border border-primary/20 text-primary"
+            )}
+        >
+            <IconComponent className="w-3.5 h-3.5" />
+            <span>{toolConfig.name}</span>
+            {!isComplete ? (
+                <Loader2 className="w-3 h-3 animate-spin ml-auto" />
+            ) : (
+                <ArrowRight className="w-3 h-3 ml-auto opacity-70" />
+            )}
+        </motion.div>
+    );
+}
+
+
 // Reasoning Accordion Component for displaying AI thinking process
 function ReasoningAccordion({ reasoning, hasContent }: { reasoning: string; hasContent: boolean }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -167,6 +204,8 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                     if (res.ok) {
                         const data = await res.json();
                         if (data.messages) {
+                            console.log('[DEBUG] Loaded messages from DB:', data.messages.length,
+                                'Last message toolInvocations:', data.messages[data.messages.length - 1]?.toolInvocations);
                             setMessages(data.messages);
                         }
                     }
@@ -184,17 +223,19 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             const parts = (lastMessage as any).parts || [];
             const toolInvocations = (lastMessage as any).toolInvocations || [];
 
-            // Helper to find tool result in either parts or toolInvocations
+            // Helper to find tool result using SDK v6 parts format
+            // In v6, tools appear as parts with type = 'tool-{toolName}'
             const findToolResult = (toolName: string) => {
-                // Check toolInvocations (standard SDK struct)
+                // SDK v6 format: part.type === 'tool-{toolName}'
+                const toolPartType = `tool-${toolName}`;
+                const part = parts.find((p: any) =>
+                    p.type === toolPartType && p.state === 'output-available'
+                );
+                if (part?.output) return part.output;
+
+                // Fallback: Also check for legacy toolInvocations (for DB-loaded messages)
                 const invocation = toolInvocations.find((t: any) => t.toolName === toolName);
                 if (invocation && 'result' in invocation) return invocation.result;
-
-                // Check parts (legacy/alternative struct)
-                const part = parts.find((p: any) =>
-                    p.type === 'tool-invocation' && p.toolInvocation?.toolName === toolName
-                );
-                if (part?.toolInvocation?.result) return part.toolInvocation.result;
 
                 return null;
             };
@@ -213,14 +254,14 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         }
     }, [messages]);
 
-    const handleSaveDiagram = async (diagram: any) => {
+    const handleSaveDiagram = async (diagram: any, alsoInsert: boolean = false) => {
         try {
             const res = await fetch(`/api/projects/${projectId}/diagrams`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title: diagram.title,
-                    diagramType: diagram.type,
+                    title: diagram.title || 'Untitled Diagram',
+                    diagramType: diagram.type || 'flowchart',
                     mermaidCode: diagram.mermaidCode,
                     description: diagram.explanation || 'AI Generated Diagram'
                 })
@@ -228,7 +269,11 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             if (res.ok) {
                 toast.success('Diagram saved to project');
                 setDiagramSuggestion(null);
-                sendMessage({ text: `Saved diagram: ${diagram.title}` });
+                // Also insert into document if requested
+                if (alsoInsert && onInsertDiagram) {
+                    onInsertDiagram({ mermaidCode: diagram.mermaidCode, title: diagram.title || 'Diagram' });
+                    toast.success('Diagram inserted into document');
+                }
             } else {
                 toast.error('Failed to save diagram');
             }
@@ -486,6 +531,29 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                         const reasoningPart = parts.find((p: any) => p.type === 'reasoning');
                         const textPart = parts.find((p: any) => p.type === 'text');
 
+                        // Extract tool parts (SDK v6 format: part.type === 'tool-{toolName}')
+                        // Extract tool parts (SDK v6 format) OR db tool invocations
+                        let toolParts = parts.filter((p: any) =>
+                            typeof p.type === 'string' && p.type.startsWith('tool-')
+                        ).map((p: any) => ({
+                            toolName: p.type.replace('tool-', ''),
+                            state: p.state || 'pending',
+                            input: p.input,
+                            output: p.output
+                        }));
+
+                        // Fallback: If no streaming tool parts, check DB invocations
+                        if (toolParts.length === 0 && m.toolInvocations && Array.isArray(m.toolInvocations)) {
+                            toolParts = m.toolInvocations.map((inv: any) => ({
+                                toolName: inv.toolName,
+                                // Map DB state 'completed' -> UI state 'result' (to show checkmark/arrow)
+                                // Map DB state 'pending' -> UI state 'call' (to show spinner)
+                                state: (inv.state === 'completed' || inv.result) ? 'result' : 'call',
+                                input: inv.args,
+                                output: inv.result
+                            }));
+                        }
+
                         // Try multiple sources for reasoning content
                         const reasoningContent =
                             m.reasoning ||  // From database (after reload)
@@ -493,22 +561,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                             null;
                         const textContent = m.content || textPart?.text || '';
 
-                        // DEBUG: Log the message structure to understand what we're getting
-                        if (m.role === 'assistant') {
-                            console.log('[DEBUG] Assistant message structure:', {
-                                id: m.id,
-                                role: m.role,
-                                hasContent: !!m.content,
-                                contentPreview: typeof m.content === 'string' ? m.content.substring(0, 100) : 'not a string',
-                                partsCount: parts.length,
-                                partTypes: parts.map((p: any) => p.type),
-                                hasReasoning: !!reasoningPart,
-                                dbReasoning: !!m.reasoning, // Check if reasoning from DB
-                                reasoningPartFull: reasoningPart ? JSON.stringify(reasoningPart) : null,
-                                reasoningContent: reasoningContent ? String(reasoningContent).substring(0, 100) + '...' : null,
-                                fullParts: JSON.stringify(parts).substring(0, 1000)
-                            });
-                        }
+
 
                         return (<motion.div
                             key={m.id}
@@ -529,7 +582,20 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                     <>
                                         {/* Reasoning Accordion */}
                                         {reasoningContent && (
-                                            <ReasoningAccordion reasoning={reasoningContent} hasContent={!!textContent} />
+                                            <ReasoningAccordion reasoning={reasoningContent} hasContent={!!textContent || toolParts.length > 0} />
+                                        )}
+
+                                        {/* Tool Status Indicators */}
+                                        {toolParts.length > 0 && (
+                                            <div className="mb-3">
+                                                {toolParts.map((tp: any, idx: number) => (
+                                                    <ToolStatusIndicator
+                                                        key={`${m.id}-tool-${idx}`}
+                                                        toolName={tp.toolName}
+                                                        state={tp.state}
+                                                    />
+                                                ))}
+                                            </div>
                                         )}
 
                                         {/* Main Content */}
@@ -559,13 +625,13 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                             onApply={(content) => {
                                 if (onApplyEdit) {
                                     onApplyEdit(suggestion.chapterNumber, suggestion.original, content);
+                                    toast.success('Edit applied to chapter');
                                 }
                                 setSuggestion(null);
-                                sendMessage({ text: `Applied edit: ${content.substring(0, 20)}...` });
                             }}
                             onReject={() => {
                                 setSuggestion(null);
-                                sendMessage({ text: "I rejected that suggestion." });
+                                toast.info('Edit suggestion dismissed');
                             }}
                         />
                     )}
@@ -573,22 +639,15 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                     {/* Active Diagram Suggestion */}
                     {diagramSuggestion && (
                         <DiagramSuggestionCard
-                            title={diagramSuggestion.title}
-                            type={diagramSuggestion.type}
+                            title={diagramSuggestion.title || 'AI Diagram'}
+                            type={diagramSuggestion.type || 'flowchart'}
                             mermaidCode={diagramSuggestion.mermaidCode}
                             explanation={diagramSuggestion.explanation}
-                            onInsert={() => {
-                                if (onInsertDiagram) {
-                                    onInsertDiagram({ mermaidCode: diagramSuggestion.mermaidCode, title: diagramSuggestion.title });
-                                    toast.success('Diagram inserted');
-                                    setDiagramSuggestion(null);
-                                    sendMessage({ text: `Inserted diagram: ${diagramSuggestion.title}` });
-                                }
-                            }}
-                            onSave={() => handleSaveDiagram(diagramSuggestion)}
+                            onInsert={() => handleSaveDiagram(diagramSuggestion, true)}
+                            onSave={() => handleSaveDiagram(diagramSuggestion, false)}
                             onReject={() => {
                                 setDiagramSuggestion(null);
-                                sendMessage({ text: "I rejected the diagram." });
+                                toast.info('Diagram dismissed');
                             }}
                         />
                     )}

@@ -257,5 +257,66 @@ While `maxSteps` is preferred in newer AI SDK versions, some configurations in t
 
 ---
 
+## Pattern 4: Tool Persistence (CRITICAL)
+
+**Use Case:** Persisting tool states (e.g., "Generating Diagram...") and results (e.g., suggestion cards) across page reloads.
+
+### Server (`route.ts`)
+SDK v6 streaming does NOT automatically persist tool invocations in the return object of `toDataStreamResponse()`. You must manually extract and save them in `onFinish`.
+
+```typescript
+onFinish: async ({ text, steps }) => {
+    // 1. Extract tool invocations from steps content
+    // SDK v6 structure: step.content[] contains objects with type: 'tool-call' and 'tool-result'
+    let toolInvocations: any[] = [];
+    if (steps && Array.isArray(steps)) {
+        for (const step of steps) {
+            const content = step.content || [];
+            const toolCalls = content.filter((c: any) => c.type === 'tool-call');
+            const toolResults = content.filter((c: any) => c.type === 'tool-result');
+            
+            for (const toolCall of toolCalls) {
+                const matchingResult = toolResults.find((r: any) => r.toolCallId === toolCall.toolCallId);
+                toolInvocations.push({
+                    toolName: toolCall.toolName,
+                    args: toolCall.input || toolCall.args,
+                    result: matchingResult?.result || null,
+                    state: matchingResult ? 'completed' : 'pending'
+                });
+            }
+        }
+    }
+
+    // 2. Save to DB JSON column
+    await prisma.projectChatMessage.create({
+        data: {
+            // ...
+            toolInvocations: toolInvocations.length > 0 ? toolInvocations : undefined
+        }
+    });
+}
+```
+
+### Client (`AcademicCopilot.tsx`)
+On load, merge streaming parts with DB persistence.
+
+```typescript
+// 1. Extract tool parts
+let toolParts = parts.filter((p: any) => p.type.startsWith('tool-'));
+
+// 2. Fallback to DB if empty
+if (toolParts.length === 0 && message.toolInvocations) {
+    toolParts = message.toolInvocations.map((inv: any) => ({
+        toolName: inv.toolName,
+        // CRITICAL: Map DB 'completed' state to UI 'result' state
+        state: (inv.state === 'completed' || inv.result) ? 'result' : 'call',
+        input: inv.args,
+        output: inv.result
+    }));
+}
+```
+
+---
+
 ## Reference
 See `docs/Vercel Ai SDK.md` for full SDK documentation.
