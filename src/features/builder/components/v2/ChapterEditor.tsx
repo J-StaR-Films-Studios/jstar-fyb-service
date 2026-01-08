@@ -13,10 +13,14 @@ import Link from 'next/link';
 import { DocumentUpload } from '../DocumentUpload';
 import { ResearchStatus } from '../ResearchStatus';
 import { AcademicCopilot } from './AcademicCopilot';
+import { DiagramGenerator } from './DiagramGenerator';
+import { DiagramsList } from './DiagramsList';
 import { VersionHistoryDropdown } from './VersionHistoryDropdown';
 import { EnhanceOptionsPopover } from './EnhanceOptionsPopover';
 import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { generateMarkdownBlob, generateDocxBlob, downloadFile, sanitizeFilename, ExportOptions } from '@/lib/export-service';
+import { type Editor as TipTapEditor } from '@tiptap/core';
+import { toast } from 'sonner';
 
 interface Chapter {
     id: string;
@@ -58,12 +62,109 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
     const [activeSection, setActiveSection] = useState<{ title: string; content: string } | null>(null);
     const isDesktop = useMediaQuery("(min-width: 768px)");
 
+    // Telegram State
+    const [isCreatingDiagram, setIsCreatingDiagram] = useState(false);
+
     // Enhance State
     const [showEnhancePopover, setShowEnhancePopover] = useState(false);
     const [contentToEnhance, setContentToEnhance] = useState('');
 
     // Export State
     const [showExportModal, setShowExportModal] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+
+    // Editor Ref for Inline Insertion
+    const editorRef = useRef<TipTapEditor | null>(null);
+
+    const handleServerSideExport = async (format: 'markdown' | 'docx', options: ExportOptions) => {
+        if (format === 'markdown') {
+            // Fallback to client-side for MD as it's simple
+            const fullContent = chapters
+                .sort((a, b) => a.number - b.number)
+                .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
+                .join('\n\n');
+            const title = projectTitle || 'Project Export';
+            const blob = generateMarkdownBlob(fullContent, title);
+            downloadFile(blob, `${sanitizeFilename(title)}.md`);
+            return;
+        }
+
+        setIsExporting(true);
+        try {
+            // 1. Fetch Diagram Metadata First to know what code to look for
+            const diagramsRes = await fetch(`/api/projects/${projectId}/diagrams`);
+            const savedDiagrams = await diagramsRes.json();
+
+            const imageMap: Record<string, string> = {};
+
+            // 2. Render Diagrams
+            const mermaid = (await import('mermaid')).default;
+            mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+            for (const diag of savedDiagrams) {
+                try {
+                    const id = `export-hidden-${Math.random().toString(36).slice(2)}`;
+                    const { svg } = await mermaid.render(id, diag.mermaidCode);
+
+                    // Convert to PNG Base64
+                    const img = new Image();
+                    const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+                    const url = URL.createObjectURL(svgBlob);
+
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                        img.src = url;
+                    });
+
+                    const canvas = document.createElement('canvas');
+                    const scale = 2; // 2x scale
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.scale(scale, scale);
+                        ctx.drawImage(img, 0, 0);
+                        const pngData = canvas.toDataURL('image/png');
+                        imageMap[diag.mermaidCode] = pngData;
+                    }
+                    URL.revokeObjectURL(url);
+                } catch (e) {
+                    console.error('Failed to render diagram for export', e);
+                }
+            }
+
+            // 3. Call Server API
+            const response = await fetch(`/api/projects/${projectId}/export`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    diagrams: imageMap,
+                    options: options
+                }),
+            });
+
+            if (!response.ok) throw new Error('Export failed');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${sanitizeFilename(projectTitle || 'Project')}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+        } catch (error) {
+            console.error('Export error', error);
+            toast.error('Export failed');
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     // Auto-clear saved status after 2s
     useEffect(() => {
@@ -77,27 +178,14 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch Project Info for Title
-                // In a real app we might bundle this, but for now separate calls or passed via props
-                // Assuming we can get title from chapters endpoint or separate project endpoint
-                // For now, let's fetch chapters
-
                 const response = await fetch(`/api/projects/${projectId}/chapters`);
                 const data = await response.json();
 
                 if (data.success && data.chapters) {
-                    // Start: Transform API data to Component State
-                    // This logic mirrors ChapterGenerator but for V2
-                    // We need to map the Record<string, string> or Chapter[] to our state
-
-                    // Note: API returns `project.chapters` (Array) if available, or legacy object
-                    // Let's handle Array format primarily as we migrated
-
                     const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
                     let mappedChapters: Chapter[] = [];
 
                     if (Array.isArray(data.chapters) && data.chapters.length > 0) {
-                        // Map existing chapters from API
                         const existingChapters = new Map(
                             data.chapters.map((c: any) => [c.number, {
                                 id: c.id,
@@ -111,14 +199,12 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                             }])
                         );
 
-                        // Always create all 5 chapters, using existing data or empty stubs
                         mappedChapters = Array.from({ length: 5 }, (_, i) => {
                             const num = i + 1;
                             const existing = existingChapters.get(num);
                             if (existing) {
                                 return existing as Chapter;
                             }
-                            // Empty chapter stub
                             return {
                                 id: `chapter-${num}`,
                                 number: num,
@@ -131,8 +217,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                             };
                         });
                     } else {
-                        // Legacy object support fallback OR empty API response
-                        // Always create 5 chapters with 'draft' status so user can generate
                         mappedChapters = Array.from({ length: 5 }, (_, i) => {
                             const num = i + 1;
                             const content = data.chapters?.[`chapter_${num}`] || '';
@@ -141,7 +225,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 number: num,
                                 title: CHAPTER_TITLES[i],
                                 content: content,
-                                status: 'draft' as const, // Always draft so generate button shows
+                                status: 'draft' as const,
                                 wordCount: content ? content.split(/\s+/).length : 0,
                                 subsections: parseSubsections(content),
                                 version: 1
@@ -152,7 +236,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     if (data.topic) setProjectTitle(data.topic);
                     setChapters(mappedChapters);
                 } else {
-                    // API returned no chapters at all - initialize empty structure
                     const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
                     const emptyChapters: Chapter[] = Array.from({ length: 5 }, (_, i) => ({
                         id: `chapter-${i + 1}`,
@@ -183,20 +266,16 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
     };
 
     const saveChapterContent = useCallback(async (chapterNumber: number, content: string) => {
-        // Store pending content for manual save
         pendingContentRef.current = content;
 
-        // Optimistic update
         setChapters(prev => prev.map(c =>
             c.number === chapterNumber
                 ? { ...c, content, wordCount: content.split(/\s+/).length, subsections: parseSubsections(content) }
                 : c
         ));
 
-        // Show saving status
         setSaveStatus('saving');
 
-        // API Call
         try {
             const response = await fetch(`/api/projects/${projectId}/chapters/${chapterNumber}`, {
                 method: 'PATCH',
@@ -220,35 +299,25 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         return saveChapterContent(activeChapterNumber, content);
     }, [activeChapterNumber, saveChapterContent]);
 
-    // AI Edit Application Handler
     const handleApplyAiEdit = useCallback((chapterNumber: number, original: string, replacement: string) => {
         const chapter = chapters.find(c => c.number === chapterNumber);
 
-        if (!chapter) {
-            console.error('Target chapter not found for edit application');
-            return;
-        }
+        if (!chapter) return;
 
-        // Try to replace content
-        // Note: This simple replacement assumes the original string is unique or the first occurrence is correct.
-        // For production, we might need fuzzy matching or context-aware replacement.
         if (chapter.content.includes(original)) {
             const newContent = chapter.content.replace(original, replacement);
             saveChapterContent(chapterNumber, newContent);
         } else {
-            // Fallback: Try trimming whitespace
             const trimmedOriginal = original.trim();
             if (chapter.content.includes(trimmedOriginal)) {
-                 const newContent = chapter.content.replace(trimmedOriginal, replacement);
-                 saveChapterContent(chapterNumber, newContent);
+                const newContent = chapter.content.replace(trimmedOriginal, replacement);
+                saveChapterContent(chapterNumber, newContent);
             } else {
-                console.error('Original content not found in chapter. Edit could not be applied.');
-                // In a real implementation, we would show a toast notification here
+                toast.error('Could not find original content to replace');
             }
         }
     }, [chapters, saveChapterContent]);
 
-    // Manual save trigger
     const triggerManualSave = useCallback(() => {
         const chapter = chapters.find(c => c.number === activeChapterNumber);
         if (chapter) {
@@ -256,7 +325,25 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         }
     }, [chapters, activeChapterNumber, handleSave]);
 
-    // Save Status Indicator Component (inline)
+    const handleInsertDiagram = useCallback((diagram: { mermaidCode: string; title: string }) => {
+        if (editorRef.current) {
+            editorRef.current.chain().focus().insertContent({
+                type: 'mermaidDiagram',
+                attrs: {
+                    code: diagram.mermaidCode,
+                    title: diagram.title || 'Diagram'
+                }
+            }).run();
+
+            if (mobileView === 'context') {
+                setMobileView('editor');
+            }
+            toast.success(`Inserted "${diagram.title}"`);
+        } else {
+            toast.error('Editor not active. Please open a chapter first.');
+        }
+    }, [mobileView]);
+
     const SaveStatusBadge = ({ showText = true }: { showText?: boolean }) => {
         const config = {
             idle: { icon: <Cloud className="w-4 h-4" />, text: lastSavedAt ? 'Saved' : 'Ready', className: 'text-gray-400 bg-white/5' },
@@ -297,15 +384,12 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         }
     };
 
-    // Render Logic
     if (isLoading) return <div className="flex h-screen items-center justify-center text-primary animate-pulse">Loading Workspace...</div>;
 
     // Desktop Layout
     if (isDesktop) {
         return (
             <div className="flex h-screen w-full bg-dark text-gray-300 overflow-hidden font-sans">
-                {/* Visual Shell Logic directly here since we deleted ProjectWorkspaceLayout logic essentially */}
-
                 {/* Left Sidebar */}
                 <div className="hidden md:flex shrink-0 h-full">
                     <TimelineSidebar
@@ -314,7 +398,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                         activeChapterNumber={activeChapterNumber}
                         onChapterSelect={setActiveChapterNumber}
                         onGenerateChapter={async (chapterNumber) => {
-                            // Logic borrowed from ChapterGenerator.tsx
                             try {
                                 setChapters(prev => prev.map(c =>
                                     c.number === chapterNumber ? { ...c, status: 'in-progress' } : c
@@ -338,7 +421,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                         if (done) break;
                                         content += decoder.decode(value, { stream: true });
 
-                                        // Live update
                                         setChapters(prev => prev.map(c =>
                                             c.number === chapterNumber ? {
                                                 ...c,
@@ -350,17 +432,14 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                     }
                                 }
 
-                                // Final save
                                 handleSave(content);
 
-                                // Mark complete
                                 setChapters(prev => prev.map(c =>
                                     c.number === chapterNumber ? { ...c, status: 'complete' } : c
                                 ));
 
                             } catch (error) {
                                 console.error('Generation failed', error);
-                                // Revert status on error logic could go here
                             }
                         }}
                     />
@@ -375,6 +454,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                             : `Chapter ${activeChapterNumber} / ${activeChapter?.title || 'Untitled'}`}
                         content={activeChapter?.content}
                         onValidChange={handleSave}
+                        onEditorReady={(editor) => { editorRef.current = editor; }}
                         onEnhanceClick={(text) => {
                             setContentToEnhance(text);
                             setShowEnhancePopover(true);
@@ -405,9 +485,8 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     />
                 </main>
 
-                {/* Right Context Sidebar (Static Placeholder for Phase 1) */}
+                {/* Right Context Sidebar */}
                 <aside className="hidden lg:flex w-96 flex-col glass-panel border-l border-white/5 bg-dark/95 backdrop-blur-xl z-20">
-                    {/* Context Tabs */}
                     <div className="flex border-b border-white/5 shrink-0">
                         <button
                             onClick={() => setActiveTab('research')}
@@ -438,7 +517,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                         </button>
                     </div>
 
-                    {/* Smart Search - Only for Research Tab */}
                     {activeTab === 'research' && (
                         <div className="p-4 border-b border-white/5 shrink-0">
                             <div className="relative">
@@ -454,20 +532,11 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                         </div>
                     )}
 
-                    {/* Content Area */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         {activeTab === 'research' ? (
                             <div className="p-4 space-y-4">
-                                {/* Research Status Widget */}
                                 <ResearchStatus projectId={projectId} />
-
-                                {/* Document Upload & List */}
                                 <DocumentUpload projectId={projectId} searchQuery={searchQuery} />
-
-                                {/* Legacy Content (kept for reference or secondary view if needed) */}
-                                <div className="hidden">
-                                    {/* ... previous content ... */}
-                                </div>
                             </div>
                         ) : activeTab === 'chat' ? (
                             <AcademicCopilot
@@ -477,15 +546,26 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 onApplyEdit={handleApplyAiEdit}
                             />
                         ) : (
-                            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                                <Layout className="w-12 h-12 text-gray-600 mb-4" />
-                                <h3 className="text-gray-400 font-medium">Diagrams coming soon</h3>
+                            <div className="p-4 h-full flex flex-col">
+                                {isCreatingDiagram ? (
+                                    <DiagramGenerator
+                                        projectId={projectId}
+                                        onSave={() => setIsCreatingDiagram(false)}
+                                        onCancel={() => setIsCreatingDiagram(false)}
+                                        onInsert={handleInsertDiagram}
+                                    />
+                                ) : (
+                                    <DiagramsList
+                                        projectId={projectId}
+                                        onCreateNew={() => setIsCreatingDiagram(true)}
+                                        onInsert={handleInsertDiagram}
+                                    />
+                                )}
                             </div>
                         )}
                     </div>
                 </aside>
 
-                {/* Enhance Popover - Desktop */}
                 {showEnhancePopover && activeChapter && (
                     <EnhanceOptionsPopover
                         projectId={projectId}
@@ -501,43 +581,10 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                         onClose={() => setShowEnhancePopover(false)}
                     />
                 )}
-                {/* Export Modal - Desktop */}
                 <DownloadOptionsModal
                     isOpen={showExportModal}
                     onClose={() => setShowExportModal(false)}
-                    onConfirm={async (format, options) => {
-                        let exportChapters = chapters;
-                        // Sync before export
-                        try {
-                            const response = await fetch(`/api/projects/${projectId}/chapters`);
-                            const data = await response.json();
-                            if (data.success && data.chapters && Array.isArray(data.chapters)) {
-                                // Map and merge with current state (simplified map for export)
-                                exportChapters = data.chapters.map((c: any) => ({
-                                    number: c.number,
-                                    title: c.title,
-                                    content: c.content
-                                }));
-                            }
-                        } catch (e) {
-                            console.error("Export sync failed", e);
-                        }
-
-                        const fullContent = exportChapters
-                            .sort((a, b) => a.number - b.number)
-                            .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
-                            .join('\n\n');
-                        const title = projectTitle || 'Project Export';
-                        const filename = sanitizeFilename(title);
-
-                        if (format === 'markdown') {
-                            const blob = generateMarkdownBlob(fullContent, title);
-                            downloadFile(blob, `${filename}.md`);
-                        } else {
-                            const blob = await generateDocxBlob(fullContent, title, options);
-                            downloadFile(blob, `${filename}.docx`);
-                        }
-                    }}
+                    onConfirm={handleServerSideExport}
                     title="Export Project"
                 />
             </div>
@@ -563,7 +610,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                 <MobileTimelineView
                     chapters={chapters}
                     onChapterClick={(id) => {
-                        // Find chapter by ID and set as active
                         const clickedChapter = chapters.find(c => c.id === id);
                         if (clickedChapter) {
                             setActiveChapterNumber(clickedChapter.number);
@@ -573,14 +619,15 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                 />
             </main>
 
-            <div className="relative z-[60]">
-                <MobileFloatingNav
-                    activeTab={mobileView === 'context' ? (activeTab === 'research' ? 'research' : activeTab === 'chat' ? 'chat' : 'diagrams') : 'write'}
-                    onTabChange={handleMobileTabChange}
-                />
-            </div>
+            {mobileView !== 'editor' && (
+                <div className="relative z-[60]">
+                    <MobileFloatingNav
+                        activeTab={mobileView === 'context' ? (activeTab === 'research' ? 'research' : activeTab === 'chat' ? 'chat' : 'diagrams') : 'write'}
+                        onTabChange={handleMobileTabChange}
+                    />
+                </div>
+            )}
 
-            {/* Editor Overlay */}
             {mobileView === 'editor' && activeChapter && (
                 <SectionEditor
                     title={`Chapter ${activeChapter.number}`}
@@ -604,7 +651,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                 />
             )}
 
-            {/* Context Overlay (Mobile Research/Chat) */}
             {mobileView === 'context' && (
                 <div className="fixed inset-0 z-50 bg-dark flex flex-col pb-24 animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <div className="flex-1 overflow-y-auto">
@@ -632,16 +678,27 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 onApplyEdit={handleApplyAiEdit}
                             />
                         ) : (
-                            <div className="flex flex-col items-center justify-center h-full p-12 text-center">
-                                <Layout className="w-16 h-16 text-gray-700 mb-6" />
-                                <h3 className="text-gray-500 font-bold">Diagrams coming soon</h3>
+                            <div className="p-6">
+                                {isCreatingDiagram ? (
+                                    <DiagramGenerator
+                                        projectId={projectId}
+                                        onSave={() => setIsCreatingDiagram(false)}
+                                        onCancel={() => setIsCreatingDiagram(false)}
+                                        onInsert={handleInsertDiagram}
+                                    />
+                                ) : (
+                                    <DiagramsList
+                                        projectId={projectId}
+                                        onCreateNew={() => setIsCreatingDiagram(true)}
+                                        onInsert={handleInsertDiagram}
+                                    />
+                                )}
                             </div>
                         )}
                     </div>
                 </div>
             )}
 
-            {/* Enhance Popover - shared across desktop/mobile */}
             {showEnhancePopover && activeChapter && (
                 <EnhanceOptionsPopover
                     projectId={projectId}
@@ -649,7 +706,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     selectedContent={contentToEnhance}
                     chapterContext={activeChapter.content}
                     onApply={(enhancedContent) => {
-                        // Replace the selected content in chapter
                         const newContent = activeChapter.content === contentToEnhance
                             ? enhancedContent
                             : activeChapter.content.replace(contentToEnhance, enhancedContent);
@@ -659,43 +715,10 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                 />
             )}
 
-            {/* Export Modal */}
             <DownloadOptionsModal
                 isOpen={showExportModal}
                 onClose={() => setShowExportModal(false)}
-                onConfirm={async (format, options) => {
-                    let exportChapters = chapters;
-                    // Sync before export
-                    try {
-                        const response = await fetch(`/api/projects/${projectId}/chapters`);
-                        const data = await response.json();
-                        if (data.success && data.chapters && Array.isArray(data.chapters)) {
-                            // Map and merge with current state (simplified map for export)
-                            exportChapters = data.chapters.map((c: any) => ({
-                                number: c.number,
-                                title: c.title,
-                                content: c.content
-                            }));
-                        }
-                    } catch (e) {
-                        console.error("Export sync failed", e);
-                    }
-
-                    const fullContent = exportChapters
-                        .sort((a, b) => a.number - b.number)
-                        .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
-                        .join('\n\n');
-                    const title = projectTitle || 'Project Export';
-                    const filename = sanitizeFilename(title);
-
-                    if (format === 'markdown') {
-                        const blob = generateMarkdownBlob(fullContent, title);
-                        downloadFile(blob, `${filename}.md`);
-                    } else {
-                        const blob = await generateDocxBlob(fullContent, title, options);
-                        downloadFile(blob, `${filename}.docx`);
-                    }
-                }}
+                onConfirm={handleServerSideExport}
                 title="Export Project"
             />
         </div>

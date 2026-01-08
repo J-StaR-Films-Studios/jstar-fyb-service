@@ -593,7 +593,7 @@ Before moving to Phase 3, verify:
 
 ---
 
-## PHASE 3 [PLANNED]: AI Copilot Enhancement
+## PHASE 3 [COMPLETED]: AI Copilot Enhancement
 
 > **Goal**: Transform ProjectAssistant into a fully context-aware writing companion that can edit specific sections, answer project questions, and guide users through the writing process.
 
@@ -734,7 +734,7 @@ export const ProjectContextService = {
   async buildEditContext(
     projectId: string,
     chapterNumber: number,
-    sectionId: string
+    sectionContentToFind: string
   ) {
     const chapter = await prisma.chapter.findFirst({
       where: { projectId, number: chapterNumber }
@@ -827,7 +827,7 @@ Create a new conversation thread (e.g., "Chapter 2 Revisions").
 
 ### 3.6 UI Components
 
-#### [MODIFY] `ProjectAssistant.tsx`
+#### [MODIFY] `AcademicCopilot.tsx` (formerly `ProjectAssistant.tsx`)
 
 **Current**: Single chat interface.
 
@@ -875,7 +875,7 @@ const tools = [{
     type: 'object',
     properties: {
       targetChapter: { type: 'number', description: 'Chapter number (1-5)' },
-      targetSection: { type: 'string', description: 'Section ID or title' },
+      currentContentToReplace: { type: 'string', description: 'The EXACT text snippet to be replaced' },
       editType: { type: 'string', enum: ['rewrite', 'expand', 'condense', 'formalize', 'add_citations'] },
       newContent: { type: 'string', description: 'The suggested new content' },
       explanation: { type: 'string', description: 'Why this edit improves the writing' }
@@ -887,15 +887,15 @@ const tools = [{
 
 ### 3.8 Verification Checklist
 
-Before moving to Phase 4, verify:
+### 3.8 Verification Checklist (Completed 2026-01-08)
 
-- [ ] `ProjectContextService` builds correct context from project data
-- [ ] Chat responses are grounded in project context
-- [ ] Thread selector UI works and maintains separate histories
-- [ ] Edit commands trigger `suggestEdit` tool call
-- [ ] Edit suggestions show diff view
-- [ ] "Apply Edit" button updates chapter content
-- [ ] Context indicator shows what AI can "see"
+- [x] `ProjectContextService` builds correct context from project data
+- [x] Chat responses are grounded in project context
+- [x] Thread selector UI (`ThreadSelector.tsx`) works and maintains separate histories
+- [x] Edit commands trigger `suggestEdit` tool call
+- [x] Edit suggestions show diff view (`EditSuggestionCard.tsx`)
+- [x] "Apply Edit" button updates chapter content
+- [x] Context indicator shows what AI can "see"
 
 ---
 

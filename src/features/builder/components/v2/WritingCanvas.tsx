@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
-import { Bold, Italic, List, Image, Heading, Sparkles, Table as TableIcon } from 'lucide-react';
+import { Bold, Italic, List, Image as ImageIcon, Heading, Sparkles, Table as TableIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ImagePickerDialog } from './ImagePickerDialog';
 import { NovelEditor } from './NovelEditor';
@@ -19,10 +19,12 @@ interface WritingCanvasProps {
     saveStatus?: SaveStatus;
     /** Callback when Enhance button is clicked - receives selected text or full content */
     onEnhanceClick?: (selectedText: string) => void;
+    /** Callback when editor instance is ready */
+    onEditorReady?: (editor: TipTapEditor) => void;
     projectId: string;
 }
 
-export function WritingCanvas({ title, content, onValidChange, headerRight, saveStatus: externalSaveStatus, onEnhanceClick, projectId }: WritingCanvasProps) {
+export function WritingCanvas({ title, content, onValidChange, headerRight, saveStatus: externalSaveStatus, onEnhanceClick, onEditorReady, projectId }: WritingCanvasProps) {
     const [editor, setEditor] = useState<TipTapEditor | null>(null);
     const [internalSaveStatus, setInternalSaveStatus] = useState<SaveStatus>('idle');
     const [showImagePicker, setShowImagePicker] = useState(false);
@@ -140,7 +142,7 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
                         <List className="w-4 h-4" />
                     </button>
                     <button onClick={() => toggleFormatting('image')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Image">
-                        <Image className="w-4 h-4" />
+                        <ImageIcon className="w-4 h-4" />
                     </button>
                     <button onClick={() => toggleFormatting('table')} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Table">
                         <TableIcon className="w-4 h-4" />
@@ -158,7 +160,10 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
                         content={content || ''}
                         onUpdate={handleContentUpdate}
                         projectId={projectId}
-                        onEditorReady={(e) => setEditor(e as any)}
+                        onEditorReady={(e) => {
+                            setEditor(e as any);
+                            onEditorReady?.(e as any);
+                        }}
                     />
                 </div>
             </div>

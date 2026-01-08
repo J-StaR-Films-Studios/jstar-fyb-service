@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Wand2, Save, X } from 'lucide-react';
+import { Loader2, Wand2, Save, X, Plus } from 'lucide-react';
 import { DiagramPreview } from './DiagramPreview';
 import { toast } from 'sonner';
 
@@ -13,10 +13,21 @@ interface DiagramGeneratorProps {
   projectId: string;
   onSave: (diagram: any) => void;
   onCancel?: () => void;
+  onInsert?: (diagram: any) => void;
   initialPrompt?: string;
 }
 
-export function DiagramGenerator({ projectId, onSave, onCancel, initialPrompt }: DiagramGeneratorProps) {
+const DIAGRAM_EXAMPLES: Record<string, string> = {
+  flowchart: 'graph TD\n  A[Start] --> B{Is it working?}\n  B -->|Yes| C[Great!]\n  B -->|No| D[Debug]',
+  sequence: 'sequenceDiagram\n  Alice->>John: Hello John, how are you?\n  John-->>Alice: Great!',
+  class: 'classDiagram\n  class Animal{\n    +String name\n    +move()\n  }\n  class Dog{\n    +bark()\n  }\n  Animal <|-- Dog',
+  state: 'stateDiagram-v2\n  [*] --> Still\n  Still --> [*]\n  Still --> Moving\n  Moving --> Still',
+  er: 'erDiagram\n  CUSTOMER ||--o{ ORDER : places\n  ORDER ||--|{ LINE-ITEM : contains',
+  gantt: 'gantt\n  title A Gantt Diagram\n  dateFormat  YYYY-MM-DD\n  section Section\n  A task           :a1, 2014-01-01, 30d',
+  mindmap: 'mindmap\n  root((Mindmap))\n    Origins\n      Long history\n    Research\n      On going'
+};
+
+export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initialPrompt }: DiagramGeneratorProps) {
   const [prompt, setPrompt] = useState(initialPrompt || '');
   const [diagramType, setDiagramType] = useState('flowchart');
   const [context, setContext] = useState('');
@@ -24,6 +35,10 @@ export function DiagramGenerator({ projectId, onSave, onCancel, initialPrompt }:
   const [generatedCode, setGeneratedCode] = useState('');
   const [explanation, setExplanation] = useState('');
   const [title, setTitle] = useState('');
+  const [theme, setTheme] = useState<'default' | 'neutral' | 'dark' | 'forest' | 'base'>('dark');
+
+  // ... (rest of component)
+
 
   const handleGenerate = async () => {
     if (!prompt) return;
@@ -56,8 +71,8 @@ export function DiagramGenerator({ projectId, onSave, onCancel, initialPrompt }:
 
   const handleSave = async () => {
     if (!generatedCode || !title) {
-        toast.error('Please generate a diagram and provide a title first');
-        return;
+      toast.error('Please generate a diagram and provide a title first');
+      return;
     }
 
     try {
@@ -67,7 +82,7 @@ export function DiagramGenerator({ projectId, onSave, onCancel, initialPrompt }:
         body: JSON.stringify({
           title,
           diagramType,
-          mermaidCode: generatedCode,
+          mermaidCode: `%%{init: {'theme':'${theme}'}}%%\n${generatedCode}`,
           description: explanation
         }),
       });
@@ -85,106 +100,147 @@ export function DiagramGenerator({ projectId, onSave, onCancel, initialPrompt }:
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto border-gray-800 bg-gray-900/50 backdrop-blur-xl">
-      <CardHeader>
+    <Card className="w-full h-full border-0 bg-transparent shadow-none flex flex-col">
+      <CardHeader className="px-0 pt-0 pb-4 shrink-0">
         <div className="flex justify-between items-center">
-            <div>
-                <CardTitle>AI Diagram Generator</CardTitle>
-                <CardDescription>Describe your diagram and let AI build it.</CardDescription>
-            </div>
-            {onCancel && (
-                <Button variant="ghost" size="icon" onClick={onCancel}>
-                    <X className="h-4 w-4" />
-                </Button>
-            )}
+          <div>
+            <CardTitle className="text-lg">AI Diagram Generator</CardTitle>
+            <CardDescription>Describe your diagram and let AI build it.</CardDescription>
+          </div>
+          {onCancel && (
+            <Button variant="ghost" size="icon" onClick={onCancel} className="h-8 w-8">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Diagram Type</label>
-              <Select value={diagramType} onValueChange={setDiagramType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="flowchart">Flowchart</SelectItem>
-                  <SelectItem value="sequence">Sequence Diagram</SelectItem>
-                  <SelectItem value="class">Class Diagram</SelectItem>
-                  <SelectItem value="state">State Diagram</SelectItem>
-                  <SelectItem value="er">Entity Relationship</SelectItem>
-                  <SelectItem value="gantt">Gantt Chart</SelectItem>
-                  <SelectItem value="mindmap">Mindmap</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div>
-              <label className="text-sm font-medium mb-1 block">Description</label>
-              <Textarea
-                placeholder="Describe the process, system, or relationship you want to visualize..."
-                className="h-32 resize-none"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1 block">Title (Optional)</label>
-              <input
-                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                 value={title}
-                 onChange={(e) => setTitle(e.target.value)}
-                 placeholder="My Diagram"
-              />
-            </div>
-
-            <Button
-                onClick={handleGenerate}
-                disabled={isGenerating || !prompt}
-                className="w-full"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Generate Diagram
-                </>
-              )}
-            </Button>
+      <div className="flex-1 overflow-y-auto min-h-0 space-y-6 pr-1 custom-scrollbar">
+        {/* Controls Section */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium mb-1 block text-gray-400">Diagram Type</label>
+            <Select value={diagramType} onValueChange={setDiagramType}>
+              <SelectTrigger className="w-full bg-black/20 border-white/10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-gray-800">
+                <SelectItem value="flowchart">Flowchart</SelectItem>
+                <SelectItem value="sequence">Sequence Diagram</SelectItem>
+                <SelectItem value="class">Class Diagram</SelectItem>
+                <SelectItem value="state">State Diagram</SelectItem>
+                <SelectItem value="er">Entity Relationship</SelectItem>
+                <SelectItem value="gantt">Gantt Chart</SelectItem>
+                <SelectItem value="mindmap">Mindmap</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <label className="text-sm font-medium">Preview</label>
-                {generatedCode && (
-                    <Button size="sm" onClick={handleSave} variant="secondary">
-                        <Save className="mr-2 h-4 w-4" />
-                        Save to Project
-                    </Button>
-                )}
-            </div>
-
-            <DiagramPreview
-                code={generatedCode}
-                theme="dark"
-                className="bg-gray-950/50 min-h-[300px]"
-            />
-
-            {explanation && (
-                <div className="text-sm text-muted-foreground bg-white/5 p-3 rounded-md">
-                    <p className="font-medium mb-1 text-xs uppercase tracking-wider">AI Explanation</p>
-                    {explanation}
-                </div>
-            )}
+          <div>
+            <label className="text-sm font-medium mb-1 block text-gray-400">Theme</label>
+            <Select value={theme} onValueChange={(v: any) => setTheme(v)}>
+              <SelectTrigger className="w-full bg-black/20 border-white/10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-gray-800">
+                <SelectItem value="dark">Dark</SelectItem>
+                <SelectItem value="default">Light</SelectItem>
+                <SelectItem value="forest">Forest</SelectItem>
+                <SelectItem value="neutral">Neutral</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </CardContent>
+
+        <div>
+          <label className="text-sm font-medium mb-1 block text-gray-400">Description</label>
+          <Textarea
+            placeholder="Describe the process, system, or relationship..."
+            className="h-24 resize-none bg-black/20 border-white/10"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1 block text-gray-400">Title</label>
+          <input
+            className="flex h-9 w-full rounded-md border border-white/10 bg-black/20 px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="My Diagram"
+          />
+        </div>
+
+        <Button
+          onClick={handleGenerate}
+          disabled={isGenerating || !prompt}
+          className="w-full"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Wand2 className="mr-2 h-4 w-4" />
+              Generate Diagram
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Preview Section - Stacked below now */}
+      <div className="space-y-4 pb-4">
+        <div className="flex justify-between items-center pt-4 border-t border-white/5">
+          <label className="text-sm font-medium text-gray-400">Preview</label>
+          <div className="flex gap-2">
+            {onInsert && (
+              <Button
+                size="sm"
+                onClick={() => generatedCode && onInsert({ mermaidCode: `%%{init: {'theme':'${theme}'}}%%\n${generatedCode}`, title })}
+                disabled={!generatedCode}
+                variant="outline"
+                className="h-7 text-xs bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="mr-1.5 h-3 w-3" />
+                Insert
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={!generatedCode}
+              variant="secondary"
+              className="h-7 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save className="mr-2 h-3 w-3" />
+              Save
+            </Button>
+          </div>
+        </div>
+
+        <div className="relative">
+          {!generatedCode && (
+            <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-black/60 rounded text-[10px] text-white/50 border border-white/5 pointer-events-none">
+              Example Preview
+            </div>
+          )}
+          <DiagramPreview
+            code={generatedCode || DIAGRAM_EXAMPLES[diagramType] || ''}
+            theme={theme}
+            className="bg-black/20 min-h-[200px]"
+          />
+        </div>
+
+        {explanation && (
+          <div className="text-sm text-muted-foreground bg-white/5 p-3 rounded-md">
+            <p className="font-medium mb-1 text-xs uppercase tracking-wider text-primary">AI Explanation</p>
+            <p className="text-xs leading-relaxed">{explanation}</p>
+          </div>
+        )}
+      </div>
     </Card>
   );
 }
