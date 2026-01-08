@@ -135,6 +135,8 @@ model Project {
   conversations            ProjectConversation[]
   messages                 ProjectMessage[]
   documents                ResearchDocument[]
+
+  @@index([userId])
 }
 
 model Payment {
@@ -150,6 +152,8 @@ model Payment {
   updatedAt       DateTime @updatedAt
   project         Project  @relation(fields: [projectId], references: [id])
   user            User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model ResearchDocument {
