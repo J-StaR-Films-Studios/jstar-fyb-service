@@ -544,6 +544,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 activeChapterId={activeChapter?.id}
                                 activeChapterNumber={activeChapter?.number}
                                 onApplyEdit={handleApplyAiEdit}
+                                onInsertDiagram={handleInsertDiagram}
                             />
                         ) : (
                             <div className="p-4 h-full flex flex-col">

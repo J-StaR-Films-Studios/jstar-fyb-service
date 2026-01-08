@@ -1,901 +1,468 @@
 # Escalation Handoff Report
 
-**Generated:** 2026-01-06
-**Original Issue:** Implementing Search Highlighting in `react-pdf` Viewer
+**Generated:** 2026-01-08T20:58:00Z
+**Original Issue:** `generateDiagram` tool execution works on backend but result does not appear in Frontend UI.
 
 ---
 
 ## PART 1: THE DAMAGE REPORT
 
 ### 1.1 Original Goal
-The user requested a "Search" feature for the mobile/desktop PDF viewer (`DocumentViewerModal.tsx`). The requirements were:
-1.  Search bar to input text.
-2.  Navigation (< >) to jump between matches.
-3.  **Visual Highlighting** of the matched terms on the PDF page.
+The user wanted the AI to generate Mermaid diagrams (flowcharts) in the chat. The user would prompt "Generate a flowchart...", the AI should call the `generateDiagram` tool, and the UI should render the diagram card.
 
-### 1.2 Observed Failure / Error
-The search logic works:
--   It correctly finds matches in the PDF text.
--   It navigates to the correct page and scrolls to the match.
--   The "Match X/Y" counter works.
-
-**The Failure:** The **highlighting is invisible**. The user reports "nothing is highlighted so far" despite the viewer scrolling to the correct location.
+### 1.2 Observed Failure
+1.  **Backend Success**: The AI calls the tool. After fixing parameter hallucination (see below), the logs confirm the tool executes successfully and returns valid Mermaid code.
+    ```
+    [Chat API] Tool Executed: generateDiagram {
+      mermaidCode: 'flowchart TD...'
+    }
+    ```
+2.  **Frontend Failure**: The UI remains blank or shows a dark empty text box. The `AcademicCopilot.tsx` component fails to detect the `generateDiagram` tool result in the incoming stream.
+3.  **No Crash**: There are no console errors, just silent failure to render the specific tool result.
 
 ### 1.3 Failed Approach
-I attempted to use `react-pdf`'s `customTextRenderer` to wrap matched text in a styled element.
-1.  **Attempt 1:** Used standard Tailwind classes (`bg-yellow-400/50`). Result: Invisible.
-2.  **Attempt 2:** Used inline styles (`backgroundColor: '#facc15'`, `opacity: 0.4`). Result: Invisible.
-3.  **Attempt 3:** Used semantic `<mark>` tag with `mix-blend-mode: multiply` and `color: transparent`. Result: Still invisible.
+1.  **Backend Fixes (Retained)**:
+    -   Modified `route.ts` to handle AI parameter hallucination. The model was sending `content`, `diagram`, or `code` instead of `mermaidCode`. Added fallback logic to catch all these.
+    -   Added explicit system prompt instructions to force the model to send code, not descriptions.
+    -   **Status**: This part WORKS. The backend is solid.
+
+2.  **Frontend Fixes (Failed & Reverted)**:
+    -   Attempted to add `console.log` to `AcademicCopilot` to trace `messages`.
+    -   Attempted "brute force" search in `findToolResult` to scan all `parts` and `toolInvocations` for any object containing `mermaidCode`.
+    -   **Outcome**: Even with brute force, the code could not find the result. This suggests a fundamental disconnect in how `useChat` (AI SDK v6) is receiving/parsing the stream from `toUIMessageStreamResponse`.
 
 ### 1.4 Key Files Involved
--   `src/features/builder/components/DocumentViewerModal.tsx`
+-   `src/app/api/projects/[id]/chat/route.ts` (Backend - **Modified & Working**)
+-   `src/features/builder/components/v2/AcademicCopilot.tsx` (Frontend - **Reverted to clean state**, usage logic suspect)
 
 ### 1.5 Best-Guess Diagnosis
-The `react-pdf` (and underlying `pdf.js`) `TextLayer` is tricky.
--   It renders text as transparent `<span>` elements positioned exactly over the canvas text to specific selection.
--   It seems the `TextLayer` CSS or specific rendering logic strips or obscures background colors applied to these spans, or the `z-index` stacking context of the text layer relative to the canvas makes standard background highlights fail to render "on top" visually in a way that matches the user's expectation (or they are being rendered *behind* the opaque canvas).
--   Alternatively, the `customTextRenderer` might be stripping complex styles or not re-rendering as expected when `searchQuery` changes (though the generic re-render trigger seemed correct).
-
-**Potential Solution for Next Agent:**
--   Stop trying to style the text layer directly.
--   Instead, implement a **dedicated Highlight Layer**.
--   When `searchResults` are calculated, also calculate the bounding boxes (if possible) or use the search results to render absolute-positioned `div` highlights *underneath* the text layer but *above* the canvas, or just plain overlays.
--   OR: Investigate if `react-pdf` version 10.x has a specific prop or recommended way to do search highlighting (e.g., standard `pdf.js` has a find controller, but `react-pdf` abstracts this).
+The issue is likely a mismatch between the **backend response format** and the **frontend consumption hook**.
+-   **Backend**: Uses `(result as any).toUIMessageStreamResponse()`. This is an older/compatibility method or specific to Vercel AI SDK v6 beta features.
+-   **Frontend**: Uses `useChat` from `@ai-sdk/react`.
+-   **Hypothesis**: The `toUIMessageStreamResponse` might be sending tool results in a distinct `part` type that `useChat`'s standard `toolInvocations` property does not populate automatically, OR the `toDataStreamResponse` (which is standard for v6) should be used instead. The previous agent tried `toDataStreamResponse` but hit a TypeScript error/Runtime crash.
+-   **Next Step**: The Orchestrator needs to standardize the streaming protocol. Check if `toDataStreamResponse` is available and compatible, or write a custom frontend parser for the specific stream format being sent.
 
 ---
 
 ## PART 2: FULL FILE CONTENTS (Self-Contained)
 
-### File: `src/features/builder/components/DocumentViewerModal.tsx`
-```tsx
-"use client";
+### File: `src/app/api/projects/[id]/chat/route.ts`
+(Note: This file contains the fixes for parameter hallucination)
+```typescript
+import { streamText, tool, stepCountIs } from 'ai';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import { GeminiFileSearchService } from '@/lib/gemini-file-search';
+import { MONJI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
+import { ProjectContextService } from '@/features/builder/services/projectContextService';
+import { selectModel } from '@/lib/ai';
 
-import React, { useState, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
-import dynamic from "next/dynamic";
-import {
-    X,
-    ZoomIn,
-    ZoomOut,
-    ChevronLeft,
-    ChevronRight,
-    FileText,
-    DownloadCloud,
-    Search,
-    BookOpen,
-    User,
-    Calendar,
-    Sparkles,
-    Loader2,
-    Maximize2,
-    Minimize2,
-    Menu,
-    Settings2,
-    Info,
-    Search as SearchIcon,
-} from "lucide-react";
-import { ResearchDocument } from "@prisma/client";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
-import { useRef } from "react";
 
-// Dynamically import react-pdf components with SSR disabled
-const Document = dynamic(
-    () => import("react-pdf").then((mod) => mod.Document),
-    { ssr: false }
-);
+export const maxDuration = 300;
 
-const Page = dynamic(
-    () => import("react-pdf").then((mod) => mod.Page),
-    { ssr: false }
-);
-
-interface DocumentViewerModalProps {
-    researchDoc: ResearchDocument | null;
-    isOpen: boolean;
-    onClose: () => void;
+// Validate environment variables
+const geminiApiKey = process.env.GEMINI_API_KEY;
+if (!geminiApiKey) {
+    throw new Error('GEMINI_API_KEY environment variable is required');
 }
 
-export const DocumentViewerModal = ({
-    researchDoc,
-    isOpen,
-    onClose,
-}: DocumentViewerModalProps) => {
-    const [numPages, setNumPages] = useState<number>(0);
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const [zoom, setZoom] = useState<number>(100);
-    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
-    const [showSidebar, setShowSidebar] = useState<boolean>(true);
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    const [isMobile, setIsMobile] = useState<boolean>(false);
-    const [pdfWorkerReady, setPdfWorkerReady] = useState<boolean>(false);
-    const [containerWidth, setContainerWidth] = useState<number | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [showMobileMenu, setShowMobileMenu] = useState<boolean>(false);
 
-    // Search State
-    const [pdfDocument, setPdfDocument] = useState<any>(null); // PDFDocumentProxy
-    const [searchResults, setSearchResults] = useState<{ page: number; strIndex: number }[]>([]);
-    const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(-1);
-    const [isSearching, setIsSearching] = useState<boolean>(false);
 
-    // Update container width on resize
-    useEffect(() => {
-        if (!containerRef.current) return;
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id: projectId } = await params;
+    const body = await req.json();
+    const { messages, threadId, contextScope } = body;
 
-        const updateWidth = () => {
-            if (containerRef.current) {
-                setContainerWidth(containerRef.current.clientWidth);
-            }
-        };
+    console.log(`[Chat API] Request for project ${projectId}. ThreadId: ${threadId || 'NEW'}`);
 
-        const observer = new ResizeObserver(updateWidth);
-        observer.observe(containerRef.current);
-        updateWidth(); // Initial
+    // 1. Resolve Thread
+    let activeConversationId = threadId;
+    let activeThreadTitle = 'General Chat';
 
-        return () => observer.disconnect();
-    }, [isOpen, pdfWorkerReady]);
-
-    // Configure PDF.js worker on client side only
-    // Using CDN is the most reliable approach with Turbopack and react-pdf@10.x
-    useEffect(() => {
-        const setupWorker = async () => {
-            try {
-                const { pdfjs } = await import("react-pdf");
-                // Use CDN worker - most reliable with Next.js Turbopack
-                pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-                setPdfWorkerReady(true);
-            } catch (error) {
-                console.error("Failed to setup PDF worker:", error);
-                setLoadError("Failed to initialize PDF viewer");
-            }
-        };
-        setupWorker();
-    }, []);
-
-    // Detect mobile viewport
-    useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 768);
-        checkMobile();
-        window.addEventListener("resize", checkMobile);
-        return () => window.removeEventListener("resize", checkMobile);
-    }, []);
-
-    // Auto-hide sidebar on mobile
-    useEffect(() => {
-        if (isMobile) setShowSidebar(false);
-    }, [isMobile]);
-
-    // Load PDF URL when modal opens
-    useEffect(() => {
-        if (isOpen && researchDoc?.id) {
-            setIsLoading(true);
-            setLoadError(null);
-            setPdfUrl(`/api/documents/${researchDoc.id}/serve`);
+    if (activeConversationId) {
+        // Verify thread exists
+        const thread = await prisma.projectConversation.findUnique({
+            where: { id: activeConversationId }
+        });
+        if (!thread) {
+            // Fallback to creating a new one if not found (robustness)
+            activeConversationId = null;
         } else {
-            setPdfUrl(null);
-            // Don't reset current page if just reopening? No, reset is better.
-            setCurrentPage(1);
-            setZoom(100);
+            activeThreadTitle = thread.threadTitle || 'Chat';
         }
-    }, [isOpen, researchDoc?.id]);
+    }
 
-    // Lock body scroll when modal is open
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "unset";
-        }
-        return () => {
-            document.body.style.overflow = "unset";
-        };
-    }, [isOpen]);
-
-    // Keyboard navigation
-    useEffect(() => {
-        if (!isOpen) return;
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            switch (e.key) {
-                case "Escape":
-                    onClose();
-                    break;
-                case "ArrowLeft":
-                    scrollToPage(Math.max(1, currentPage - 1));
-                    break;
-                case "ArrowRight":
-                    scrollToPage(Math.min(numPages, currentPage + 1));
-                    break;
-                case "+":
-                case "=":
-                    if (e.ctrlKey || e.metaKey) {
-                        e.preventDefault();
-                        setZoom((z) => Math.min(200, z + 25));
-                    }
-                    break;
-                case "-":
-                    if (e.ctrlKey || e.metaKey) {
-                        e.preventDefault();
-                        setZoom((z) => Math.max(50, z - 25));
-                    }
-                    break;
+    if (!activeConversationId) {
+        // Create new thread
+        const newThread = await prisma.projectConversation.create({
+            data: {
+                projectId,
+                threadType: contextScope ? 'scoped' : 'general',
+                contextScope: contextScope || {},
+                threadTitle: 'New Conversation'
             }
-        };
+        });
+        activeConversationId = newThread.id;
+    }
 
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen, numPages, onClose, currentPage]);
+    // 2. Build Context using Service
+    // We prioritize the explicit contextScope passed in the request, 
+    // falling back to the thread's saved scope if needed (though request scope usually overrides)
+    const scope = contextScope || {};
 
-    const onDocumentLoadSuccess = useCallback(
-        (pdf: any) => {
-            setNumPages(pdf.numPages);
-            setPdfDocument(pdf);
-            setIsLoading(false);
-        },
-        []
-    );
+    // If specific chapters requested (e.g. "Chapter 1 Revisions"), fetch only those
+    const chapterNumbers = scope.chapterNumbers;
 
-    const onDocumentLoadError = useCallback((error: Error) => {
-        console.error("PDF load error:", error);
-        setLoadError("Failed to load PDF. The file may be corrupted or unavailable.");
-        setIsLoading(false);
-    }, []);
+    const context = await ProjectContextService.buildContext(projectId, {
+        chapterNumbers: chapterNumbers,
+        includeResearch: scope.includeResearch !== false // Default true
+    });
 
-    // Search Logic
-    useEffect(() => {
-        if (!searchQuery || !pdfDocument) {
-            setSearchResults([]);
-            setCurrentMatchIndex(-1);
-            return;
-        }
+    // 3. Prepare System Prompt Context
+    const researchText = context.researchSummaries.length > 0
+        ? context.researchSummaries.map(r => `- "${r.title}" (${r.year || 'n.d'}): ${r.summary}`).join('\n')
+        : 'No research documents available.';
 
-        const performSearch = async () => {
-            setIsSearching(true);
-            const results: { page: number; strIndex: number }[] = [];
-            const query = searchQuery.toLowerCase();
+    const chaptersText = context.chapters.length > 0
+        ? context.chapters.map(c => `
+## Chapter ${c.number}: ${c.title} (${c.status})
+${c.content ? c.content.slice(0, 3000) + (c.content.length > 3000 ? '...[truncated]' : '') : '(No content)'}
+`).join('\n')
+        : 'No chapters generated yet.';
 
-            // Iterate all pages (simple approach)
-            // Note: For very large docs, this should be chunked/debounced more carefully
-            for (let i = 1; i <= pdfDocument.numPages; i++) {
-                try {
-                    const page = await pdfDocument.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const strings = textContent.items.map((item: any) => item.str);
-                    
-                    // Simple string matching within items
-                    // Note: This doesn't handle matches crossing item boundaries (lines), but fits most keywords
-                    strings.forEach((str: string, index: number) => {
-                        if (str.toLowerCase().includes(query)) {
-                            results.push({ page: i, strIndex: index });
-                        }
-                    });
-                } catch (e) {
-                    console.error("Error searching page", i, e);
+    const progressCtx = `Completed ${context.currentProgress.completedChapters}/${context.currentProgress.totalChapters} chapters. Next step: ${context.currentProgress.nextRecommendedStep}`;
+
+    const systemPrompt = `${MONJI_SYSTEM_PROMPT}
+
+## Project Context
+- **Topic:** ${context.topic}
+- **Abstract:** ${context.abstract || 'Pending'}
+- **Progress:** ${progressCtx}
+
+## Working Context (Thread: ${activeThreadTitle})
+${chaptersText}
+
+## Research Library
+${researchText}
+
+## Instructions
+1. You are a co-author and writing coach.
+2. Use the provided Chapter content and Research Library to answer questions.
+3. If the user asks for a revision, use the 'suggestEdit' tool.
+4. Be concise but helpful.
+5. When using the 'generateDiagram' tool, you MUST provide the raw valid MermaidJS code string in the 'mermaidCode' (or 'code') parameter. Do not just describe the diagram.
+`;
+
+    // 4. Stream Response
+    const coreMessages = messages.map((m: any) => ({
+        role: m.role as 'user' | 'assistant' | 'system',
+        content: typeof m.content === 'string' ? m.content : (m.parts?.find((p: any) => p.type === 'text')?.text || '')
+    }));
+
+    // Detect if user wants reasoning
+    const lastUserMessage = coreMessages
+        .slice().reverse().find((m: any) => m.role === 'user')?.content || '';
+
+    const wantsReasoning = /think|reason|why|explain|analyze|compare|critique/i.test(lastUserMessage);
+
+    // Use smart routing to pick the best model
+    const { model, modelId, provider, isFree, reason } = selectModel({
+        tools: true,
+        reasoning: wantsReasoning, // Dynamic switching
+        quality: 'high'
+    });
+
+    console.log(`[Chat API] Using model: ${modelId} via ${provider} (Free: ${isFree}) - ${reason} (Reasoning Requested: ${wantsReasoning})`);
+
+    // For OpenRouter reasoning models, we pass the reasoning config via providerOptions
+    // The reasoning content comes back in a separate 'reasoning' field on the response
+    const result = streamText({
+        model,
+        system: systemPrompt, // No need for forced <think> tags - OpenRouter handles reasoning
+        messages: coreMessages as any,
+        // @ts-ignore
+        maxSteps: 5, // Allow multiple tool steps
+        // Pass reasoning config to OpenRouter when requested
+        ...(wantsReasoning && provider === 'openrouter' ? {
+            providerOptions: {
+                openrouter: {
+                    reasoning: {
+                        effort: 'high', // high effort for detailed reasoning
+                        // exclude: false // include reasoning in response (default)
+                    }
                 }
             }
+        } : {}),
+        tools: {
+            searchProjectDocuments: tool({
+                description: `Search the full text of uploaded research documents.`,
+                parameters: z.object({
+                    query: z.string(),
+                }),
+                execute: async ({ query }: { query: string }) => {
+                    try {
+                        const project = await prisma.project.findUnique({
+                            where: { id: projectId },
+                            select: { fileSearchStoreId: true }
+                        });
 
-            setSearchResults(results);
-            setCurrentMatchIndex(results.length > 0 ? 0 : -1);
-            setIsSearching(false);
-            
-            // Allow auto-jump? Maybe only on Enter.
-        };
-
-        const timeoutId = setTimeout(performSearch, 500); // Debounce
-        return () => clearTimeout(timeoutId);
-    }, [searchQuery, pdfDocument]);
-
-    // Jump to match
-    const jumpToMatch = (index: number) => {
-        if (index >= 0 && index < searchResults.length) {
-            setCurrentMatchIndex(index);
-            const match = searchResults[index];
-            scrollToPage(match.page);
-        }
-    };
-    
-    const handleNextMatch = () => jumpToMatch((currentMatchIndex + 1) % searchResults.length);
-    const handlePrevMatch = () => jumpToMatch((currentMatchIndex - 1 + searchResults.length) % searchResults.length);
-
-    // Custom Text Renderer for Highlighting
-    const textRenderer = useCallback(
-        (textItem: any) => {
-            if (!searchQuery) return textItem.str;
-
-            const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-            const parts = textItem.str.split(regex);
-
-            return (
-                <>
-                    {parts.map((part: string, i: number) => 
-                        regex.test(part) ? (
-                            <mark 
-                                key={i} 
-                                style={{ 
-                                    backgroundColor: 'rgba(255, 255, 0, 0.6)', 
-                                    color: 'transparent',
-                                    borderRadius: '2px',
-                                    padding: '0 1px',
-                                    mixBlendMode: 'multiply'
-                                }}
-                            >
-                                {part}
-                            </mark>
-                        ) : (
-                            part
-                        )
-                    )}
-                </>
-            );
-        },
-        [searchQuery]
-    );
-
-    // Scroll to specific page
-    const scrollToPage = (page: number) => {
-        const pageElement = document.getElementById(`page_${page}`);
-        if (pageElement) {
-            pageElement.scrollIntoView({ behavior: "smooth", block: "start" });
-            setCurrentPage(page);
-        }
-    };
-
-    const handleZoomIn = () => setZoom((z) => Math.min(200, z + 25));
-    const handleZoomOut = () => setZoom((z) => Math.max(50, z - 25));
-    const handlePrevPage = () => scrollToPage(Math.max(1, currentPage - 1));
-    const handleNextPage = () => scrollToPage(Math.min(numPages, currentPage + 1));
-
-    // Track visible page
-    useEffect(() => {
-        if (!numPages || isLoading) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        const pageNum = parseInt(entry.target.id.replace("page_", ""));
-                        if (!isNaN(pageNum)) {
-                            setCurrentPage(pageNum);
+                        if (!project?.fileSearchStoreId) {
+                            return "I cannot search documents because no research library has been created for this project. Please upload documents first.";
                         }
+
+                        const result = await GeminiFileSearchService.generateWithGrounding(
+                            query,
+                            [project.fileSearchStoreId]
+                        );
+                        return `Found in documents:\n${result.text}\nSOURCES: ${JSON.stringify(result.groundingChunks)}`;
+                    } catch (error: any) {
+                        console.error('[Chat Tool] Search failed:', error);
+                        // Return error as string so the AI knows it failed but chat continues
+                        return `Search failed: ${error.message || 'Unknown error'}. Please ignore this tool result.`;
+                    }
+                }
+            } as any),
+            suggestEdit: tool({
+                description: `Suggest a specific content revision for a chapter or section. Use this when the user asks to "rewrite", "improve", "fix", or "change" specific text.`,
+                parameters: z.object({
+                    chapterNumber: z.number().describe('The chapter number to edit'),
+                    currentContentToReplace: z.string().describe('The EXACT text snippet to be replaced (must match existing text)'),
+                    newContent: z.string().describe('The proposed new content'),
+                    explanation: z.string().describe('Brief reason for the change'),
+                }),
+                execute: async ({ chapterNumber, currentContentToReplace, newContent, explanation }: { chapterNumber: number; currentContentToReplace: string; newContent: string; explanation: string }) => {
+                    console.log(`[Chat API] Tool Executed: suggestEdit`, { chapterNumber, explanation });
+                    // We don't apply it here, just return the structured suggestion for the UI to render
+                    return {
+                        tool: 'suggestEdit',
+                        chapterNumber,
+                        original: currentContentToReplace,
+                        replacement: newContent,
+                        explanation
+                    };
+                }
+            } as any),
+            generateDiagram: tool({
+                description: `Generate a Mermaidjs diagram (flowchart, sequence, class, etc) based on the user's request. Return the mermaid code directly.`,
+                parameters: z.object({
+                    title: z.string().describe('A short title for the diagram'),
+                    type: z.enum(['flowchart', 'sequence', 'class', 'state', 'er', 'gantt', 'mindmap']).describe('The type of diagram to generate'),
+                    mermaidCode: z.string().describe('The complete Mermaid.js code for the diagram. Do not wrap in markdown code blocks.'),
+                    explanation: z.string().describe('Brief explanation of what the diagram shows'),
+                }),
+                execute: async (args: any) => {
+                    console.log(`[Chat API] Tool Executed: generateDiagram`, args);
+
+                    // Handle variable parameter names (model hallucination fix)
+                    const title = args.title || 'Untitled Diagram';
+                    const type = args.type || 'flowchart';
+                    const explanation = args.explanation || 'Generated by AI';
+
+                    // The model often sends 'content', 'code', or 'diagram' instead of 'mermaidCode'
+                    // We also check 'description' if it looks like code, but usually 'description' is natural text (failure case)
+                    const mermaidCode = args.mermaidCode || args.code || args.content || args.diagram || args.graph;
+
+                    // Validation for free models that might return partial/malformed JSON
+                    if (!mermaidCode) {
+                        // Return a helpful error to the model to prompt a retry
+                        return "ERROR: You failed to generate the actual MermaidJS code. You provided a description but no code. Please RETRY and provide the valid MermaidJS string in the 'code' parameter.";
+                    }
+
+                    return {
+                        tool: 'generateDiagram',
+                        title,
+                        type,
+                        mermaidCode,
+                        explanation
+                    };
+                }
+            } as any),
+            saveUserContext: tool({
+                description: `Save user details like department, course, or institution.`,
+                parameters: z.object({
+                    department: z.string().optional(),
+                    course: z.string().optional(),
+                    institution: z.string().optional(),
+                }),
+                execute: async (data: { department?: string; course?: string; institution?: string }) => {
+                    await prisma.project.update({
+                        where: { id: projectId },
+                        data: { ...data, contextComplete: true }
+                    });
+                    return "Context saved.";
+                }
+            } as any)
+        } as any,
+        onFinish: async ({ text, reasoning }: { text: string; reasoning?: any[] }) => {
+            // Save messages to the resolved thread ID
+            if (activeConversationId) {
+                const userMsg = messages[messages.length - 1];
+                if (userMsg?.role === 'user') {
+                    await prisma.projectChatMessage.create({
+                        data: {
+                            conversationId: activeConversationId,
+                            role: 'user',
+                            content: (() => {
+                                if (typeof userMsg.content === 'string' && userMsg.content) return userMsg.content;
+                                if (Array.isArray(userMsg.parts)) {
+                                    return userMsg.parts.map((p: any) => p.text || '').join('');
+                                }
+                                return '';
+                            })()
+                        }
+                    });
+                }
+
+                // Extract reasoning text from the reasoning array
+                // SDK returns reasoning as an array of {type: 'reasoning', text: '...'} objects
+                let reasoningText: string | null = null;
+                if (reasoning && Array.isArray(reasoning) && reasoning.length > 0) {
+                    reasoningText = reasoning
+                        .map((r: any) => r.text || r.content || '')
+                        .filter(Boolean)
+                        .join('\n');
+                }
+
+                await prisma.projectChatMessage.create({
+                    data: {
+                        conversationId: activeConversationId,
+                        role: 'assistant',
+                        content: text,
+                        reasoning: reasoningText || undefined
                     }
                 });
-            },
-            {
-                root: document.getElementById("pdf-scroll-container"),
-                threshold: 0.5, // 50% visibility to count as "current"
             }
-        );
+        }
+    } as any);
 
-        // Observe all pages
-        for (let i = 1; i <= numPages; i++) {
-            const pageEl = document.getElementById(`page_${i}`);
-            if (pageEl) observer.observe(pageEl);
+    return (result as any).toUIMessageStreamResponse({
+        sendReasoning: true, // Include OpenRouter reasoning in stream
+        headers: {
+            'x-thread-id': activeConversationId!
+        }
+    });
+}
+
+// DELETE: Clear project chat history
+
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id: projectId } = await params;
+    const { searchParams } = new URL(req.url);
+    const threadId = searchParams.get('threadId');
+
+    if (!threadId) {
+        return new Response(JSON.stringify({ messages: [] }), { status: 200 });
+    }
+
+    const messages = await prisma.projectChatMessage.findMany({
+        where: { conversationId: threadId },
+        orderBy: { createdAt: 'asc' },
+        select: {
+            id: true,
+            role: true,
+            content: true,
+            reasoning: true, // Include reasoning for AI messages
+            toolInvocations: true,
+            createdAt: true
+        }
+    });
+
+    return new Response(JSON.stringify({ messages }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { id: projectId } = await params;
+
+        // Find and delete all project conversations and messages
+        const conversations = await prisma.projectConversation.findMany({
+            where: { projectId }
+        });
+
+        if (conversations.length > 0) {
+            // Delete messages first, then conversations
+            await prisma.projectChatMessage.deleteMany({
+                where: {
+                    conversationId: { in: conversations.map(c => c.id) }
+                }
+            });
+            await prisma.projectConversation.deleteMany({
+                where: { projectId }
+            });
         }
 
-        return () => observer.disconnect();
-    }, [numPages, isLoading, zoom]);
+        return Response.json({ success: true });
 
-    // Parse keywords and insights from JSON strings
-    const parseJsonArray = (jsonString: string | null): string[] => {
-        if (!jsonString) return [];
-        try {
-            const parsed = JSON.parse(jsonString);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
+    } catch (error: any) {
+        console.error('[Project Chat DELETE] Error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to clear conversation' }), { status: 500 });
+    }
+}
+```
+
+### File: `src/features/builder/components/v2/AcademicCopilot.tsx`
+(Reverted to clean state - contains logic that fails to find the tool result)
+```tsx
+'use client';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+// ... imports ...
+
+export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose, onApplyEdit, onInsertDiagram }: AcademicCopilotProps) {
+    // ... state setup ...
+
+    // Chat Hook
+    const { messages, sendMessage: chatSendMessage, status, setMessages } = useChat({
+        transport: new DefaultChatTransport({ api: `/api/projects/${projectId}/chat` }),
+        id: `academic-copilot-${projectId}-${stableThreadId}`, 
+        onError: (error) => {
+            console.error("Chat error:", error);
         }
-    };
+    });
 
-    if (!isOpen || !researchDoc) return null;
+    // Handle tool invocations from messages (v6 compatible)
+    useEffect(() => {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.role === 'assistant') {
+            const parts = (lastMessage as any).parts || [];
+            const toolInvocations = (lastMessage as any).toolInvocations || [];
 
-    const keywords = parseJsonArray(researchDoc.keywords);
-    const insights = parseJsonArray(researchDoc.insights);
+            // Helper to find tool result in either parts or toolInvocations
+            const findToolResult = (toolName: string) => {
+                // Check toolInvocations (standard SDK struct)
+                const invocation = toolInvocations.find((t: any) => t.toolName === toolName);
+                if (invocation && 'result' in invocation) return invocation.result;
 
-    return createPortal(
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[9999] flex items-center justify-center animate-in fade-in duration-200">
-            {/* Backdrop click to close */}
-            <div className="absolute inset-0" onClick={onClose} />
+                // Check parts (legacy/alternative struct)
+                const part = parts.find((p: any) =>
+                    p.type === 'tool-invocation' && p.toolInvocation?.toolName === toolName
+                );
+                if (part?.toolInvocation?.result) return part.toolInvocation.result;
 
-            {/* Modal Container */}
-            <div className="w-full h-full md:h-[95vh] md:w-[95vw] md:max-w-7xl flex flex-col rounded-none md:rounded-3xl shadow-2xl relative animate-in zoom-in-95 duration-200 border-0 md:border border-white/10 overflow-hidden bg-[#030014]">
-                {/* Header */}
-                <div className="p-3 md:p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-black/40 relative z-20">
-                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1 mr-2">
-                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white shrink-0 font-bold text-[10px] md:text-xs">
-                            PDF
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <h3 className="text-sm md:text-base font-bold text-white truncate pr-2">
-                                {researchDoc.title || researchDoc.fileName}
-                            </h3>
-                            <div className="flex items-center gap-2 text-[10px] md:text-xs text-gray-500 hidden md:flex">
-                                <span>{researchDoc.author || "Unknown Author"}</span>
-                                {researchDoc.year && (
-                                    <>
-                                        <span>•</span>
-                                        <span>{researchDoc.year}</span>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                return null;
+            };
 
-                    {/* Desktop Controls */}
-                    <div className="hidden md:flex items-center gap-2 shrink-0">
-                        {/* Search */}
-                        <div className="flex items-center bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 ml-1">
-                            {isSearching ? (
-                                <Loader2 className="w-4 h-4 text-gray-500 mr-2 animate-spin" />
-                            ) : (
-                                <SearchIcon className="w-4 h-4 text-gray-500 mr-2" />
-                            )}
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleNextMatch();
-                                }}
-                                placeholder="Search..."
-                                className="bg-transparent text-sm text-white placeholder:text-gray-600 outline-none w-32 focus:w-48 transition-all"
-                            />
-                            {searchResults.length > 0 && (
-                                <div className="flex items-center gap-1 ml-2 pl-2 border-l border-white/10">
-                                    <span className="text-[10px] text-gray-400 tabular-nums">
-                                        {currentMatchIndex + 1}/{searchResults.length}
-                                    </span>
-                                    <button onClick={handlePrevMatch} className="p-1 hover:bg-white/10 rounded">
-                                        <ChevronLeft className="w-3 h-3 text-gray-400" />
-                                    </button>
-                                    <button onClick={handleNextMatch} className="p-1 hover:bg-white/10 rounded">
-                                        <ChevronRight className="w-3 h-3 text-gray-400" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+            // Handle Suggest Edit
+            const editResult = findToolResult('suggestEdit');
+            if (editResult) {
+                setSuggestion(editResult);
+            }
 
-                        {/* Zoom Controls */}
-                        <div className="flex items-center bg-white/5 border border-white/10 rounded-lg">
-                            <button
-                                onClick={handleZoomOut}
-                                disabled={zoom <= 50}
-                                className="p-2 hover:bg-white/10 disabled:opacity-30 transition-colors rounded-l-lg"
-                                title="Zoom out"
-                            >
-                                <ZoomOut className="w-4 h-4 text-gray-400" />
-                            </button>
-                            <span className="text-xs font-medium text-gray-400 w-12 text-center">
-                                {zoom}%
-                            </span>
-                            <button
-                                onClick={handleZoomIn}
-                                disabled={zoom >= 200}
-                                className="p-2 hover:bg-white/10 disabled:opacity-30 transition-colors rounded-r-lg"
-                                title="Zoom in"
-                            >
-                                <ZoomIn className="w-4 h-4 text-gray-400" />
-                            </button>
-                        </div>
+            // Handle Generate Diagram
+            const diagramResult = findToolResult('generateDiagram');
+            if (diagramResult) {
+                setDiagramSuggestion(diagramResult);
+            }
+        }
+    }, [messages]);
 
-                        {/* Page Navigation */}
-                        <div className="flex items-center bg-white/5 border border-white/10 rounded-lg">
-                            <button
-                                onClick={handlePrevPage}
-                                disabled={currentPage <= 1}
-                                className="p-2 hover:bg-white/10 disabled:opacity-30 transition-colors rounded-l-lg"
-                            >
-                                <ChevronLeft className="w-4 h-4 text-gray-400" />
-                            </button>
-                            <span className="text-xs font-medium text-gray-400 w-16 text-center">
-                                {currentPage}/{numPages || "..."}
-                            </span>
-                            <button
-                                onClick={handleNextPage}
-                                disabled={currentPage >= numPages}
-                                className="p-2 hover:bg-white/10 disabled:opacity-30 transition-colors rounded-r-lg"
-                            >
-                                <ChevronRight className="w-4 h-4 text-gray-400" />
-                            </button>
-                        </div>
-
-                        {/* Sidebar Toggle */}
-                        <button
-                            onClick={() => setShowSidebar(!showSidebar)}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-colors border border-white/10"
-                        >
-                            {showSidebar ? (
-                                <Minimize2 className="w-4 h-4 text-gray-400" />
-                            ) : (
-                                <Maximize2 className="w-4 h-4 text-gray-400" />
-                            )}
-                        </button>
-
-                        {/* Close */}
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    {/* Mobile Controls (Minimal) */}
-                    <div className="flex md:hidden items-center gap-2">
-                        <button
-                            onClick={onClose}
-                            className="p-2 bg-white/10 rounded-full text-gray-300"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Content Area */}
-                <div className="flex-1 flex overflow-hidden relative">
-                    {/* PDF Viewer */}
-                    <div
-                        ref={containerRef}
-                        className="flex-1 overflow-auto bg-[#1a1a2e] flex flex-col items-center p-0 md:p-6 pb-20 md:pb-6"
-                        id="pdf-scroll-container"
-                    >
-                        {(isLoading || !pdfWorkerReady) && (
-                            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                <Loader2 className="w-10 h-10 animate-spin mb-3" />
-                                <span className="text-sm">Loading document...</span>
-                            </div>
-                        )}
-
-                        {loadError && (
-                            <div className="flex flex-col items-center justify-center h-full text-red-400 p-6 text-center">
-                                <FileText className="w-12 h-12 mb-3 opacity-50" />
-                                <span className="text-sm">{loadError}</span>
-                            </div>
-                        )}
-
-                        {pdfUrl && pdfWorkerReady && !loadError && (
-                            <Document
-                                file={pdfUrl}
-                                onLoadSuccess={onDocumentLoadSuccess}
-                                onLoadError={onDocumentLoadError}
-                                loading={null}
-                                className="flex flex-col items-center gap-6 pb-20"
-                            >
-                                {Array.from(new Array(numPages), (el, index) => (
-                                    <div
-                                        key={`page_${index + 1}`}
-                                        id={`page_${index + 1}`}
-                                        className="relative mb-4 last:mb-0 box-border bg-white"
-                                        style={{
-                                            // Dynamic height accounting for aspect ratio (A4 approx 1.414)
-                                            minHeight: isMobile && containerWidth ? `${containerWidth * 1.4}px` : '600px',
-                                            width: isMobile && containerWidth ? containerWidth : undefined
-                                        }}
-                                    >
-                                        <Page
-                                            pageNumber={index + 1}
-                                            width={isMobile && containerWidth ? containerWidth : undefined}
-                                            scale={!isMobile ? zoom / 100 : undefined}
-                                            renderTextLayer={true} // Enable for search
-                                            renderAnnotationLayer={!isMobile}
-                                            customTextRenderer={textRenderer}
-                                            className="shadow-xl"
-                                            loading={
-                                                <div
-                                                    className="bg-white flex items-center justify-center shadow-lg"
-                                                    style={{
-                                                        width: isMobile && containerWidth ? `${containerWidth}px` : `${(595 * zoom) / 100}px`,
-                                                        height: isMobile && containerWidth ? `${containerWidth * 1.414}px` : `${(842 * zoom) / 100}px`
-                                                    }}
-                                                >
-                                                    <Loader2 className="w-8 h-8 animate-spin text-gray-200" />
-                                                </div>
-                                            }
-                                        />
-
-                                        {/* Desktop Page Number Indicator */}
-                                        <div className="absolute -right-12 top-0 text-[10px] text-gray-500 font-mono hidden xl:block">
-                                            {index + 1}
-                                        </div>
-                                    </div>
-                                ))}
-                            </Document>
-                        )}
-                    </div>
-
-                    {/* Mobile Bottom Navigation Bar */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-[#030014]/90 backdrop-blur-lg border-t border-white/10 p-3 md:hidden z-30 flex items-center justify-between pb-safe">
-                        <button
-                            onClick={() => setShowMobileMenu(!showMobileMenu)}
-                            className={`p-2 rounded-lg transition-colors ${showMobileMenu ? 'bg-white/20 text-white' : 'bg-white/5 text-gray-400'}`}
-                        >
-                            <Settings2 className="w-5 h-5" />
-                        </button>
-
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handlePrevPage}
-                                disabled={currentPage <= 1}
-                                className="p-2 bg-white/10 rounded-lg disabled:opacity-30"
-                            >
-                                <ChevronLeft className="w-4 h-4 text-white" />
-                            </button>
-                            <span className="text-xs font-medium text-gray-400 min-w-[60px] text-center">
-                                {currentPage} / {numPages || "-"}
-                            </span>
-                            <button
-                                onClick={handleNextPage}
-                                disabled={currentPage >= numPages}
-                                className="p-2 bg-white/10 rounded-lg disabled:opacity-30"
-                            >
-                                <ChevronRight className="w-4 h-4 text-white" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Mobile Tools Menu Overlay */}
-                    {showMobileMenu && (
-                        <div className="absolute bottom-[60px] left-0 right-0 bg-[#0f0f1a] border-t border-white/10 p-4 z-20 md:hidden animate-in slide-in-from-bottom-5 fade-in duration-200 shadow-2xl rounded-t-2xl">
-                            <div className="space-y-4">
-                                {/* Row 1: Search */}
-                                <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-                                    <SearchIcon className="w-4 h-4 text-gray-500 mr-2" />
-                                    <input
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder="Search document..."
-                                        className="bg-transparent text-sm text-white placeholder:text-gray-600 outline-none w-full"
-                                    />
-                                    <div className="flex items-center gap-1 ml-2 pl-2 border-l border-white/10 flex-1 justify-end">
-                                        <span className="text-[10px] text-gray-400 tabular-nums whitespace-nowrap">
-                                            {searchResults.length > 0 ? `${currentMatchIndex + 1}/${searchResults.length}` : '0/0'}
-                                        </span>
-                                        <button onClick={handlePrevMatch} className="p-1 hover:bg-white/10 rounded">
-                                            <ChevronLeft className="w-3 h-3 text-gray-400" />
-                                        </button>
-                                        <button onClick={handleNextMatch} className="p-1 hover:bg-white/10 rounded">
-                                            <ChevronRight className="w-3 h-3 text-gray-400" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Row 2: Zoom & Details */}
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center bg-white/5 border border-white/10 rounded-xl flex-1 justify-between px-1">
-                                        <button
-                                            onClick={handleZoomOut}
-                                            disabled={zoom <= 50}
-                                            className="p-2.5 hover:bg-white/10 disabled:opacity-30 text-gray-400"
-                                        >
-                                            <ZoomOut className="w-4 h-4" />
-                                        </button>
-                                        <span className="text-xs font-medium text-white">{zoom}%</span>
-                                        <button
-                                            onClick={handleZoomIn}
-                                            disabled={zoom >= 200}
-                                            className="p-2.5 hover:bg-white/10 disabled:opacity-30 text-gray-400"
-                                        >
-                                            <ZoomIn className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    <button
-                                        onClick={() => {
-                                            setShowSidebar(true);
-                                            setShowMobileMenu(false);
-                                        }}
-                                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600/20 text-blue-400 border border-blue-600/30 rounded-xl text-xs font-bold whitespace-nowrap"
-                                    >
-                                        <Info className="w-4 h-4" />
-                                        View Details
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Sidebar - Metadata & Insights */}
-                    {showSidebar && (
-                        <div className="w-full md:w-80 border-l border-white/10 bg-[#030014] md:bg-black/30 overflow-y-auto shrink-0 absolute md:relative inset-0 md:inset-auto z-40 md:z-0">
-                            {/* Mobile close button for sidebar */}
-                            <div className="md:hidden flex items-center justify-between p-4 border-b border-white/10 bg-[#030014] sticky top-0 z-10">
-                                <span className="font-bold text-white">Document Details</span>
-                                <button
-                                    onClick={() => setShowSidebar(false)}
-                                    className="p-2 hover:bg-white/10 rounded-lg"
-                                >
-                                    <X className="w-5 h-5 text-gray-400" />
-                                </button>
-                            </div>
-
-                            <div className="p-4 md:p-5 space-y-5">
-                                {/* Summary / Structured Analysis */}
-                                {(() => {
-                                    let content = null;
-                                    let isJson = false;
-                                    try {
-                                        if (researchDoc.summary) {
-                                            const cleanStr = researchDoc.summary.replace(/```json/g, '').replace(/```/g, '').trim();
-                                            if (cleanStr.startsWith('{')) {
-                                                const parsed = JSON.parse(cleanStr);
-                                                isJson = true;
-                                                content = parsed;
-                                            }
-                                        }
-                                    } catch (e) {
-                                        // Not JSON, treat as plain text
-                                    }
-
-                                    if (isJson && content) {
-                                        return (
-                                            <div className="space-y-4">
-                                                {content.objective && (
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-2 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
-                                                            <BookOpen className="w-3.5 h-3.5" />
-                                                            Objective
-                                                        </div>
-                                                        <div className="bg-blue-500/5 rounded-xl p-3 border border-blue-500/10">
-                                                            <p className="text-gray-300 text-sm leading-relaxed">{content.objective}</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {content.motivation && (
-                                                    <div className="space-y-1">
-                                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Motivation</div>
-                                                        <p className="text-gray-400 text-sm">{content.motivation}</p>
-                                                    </div>
-                                                )}
-
-                                                {content.methodology && (
-                                                    <div className="space-y-1">
-                                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Methodology</div>
-                                                        <p className="text-gray-400 text-sm">{content.methodology}</p>
-                                                    </div>
-                                                )}
-
-                                                {content.contribution && (
-                                                    <div className="space-y-1">
-                                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Contribution</div>
-                                                        <p className="text-gray-400 text-sm">{content.contribution}</p>
-                                                    </div>
-                                                )}
-
-                                                {content.limitations && (
-                                                    <div className="space-y-1">
-                                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Limitations</div>
-                                                        <p className="text-gray-400 text-sm">{content.limitations}</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    } else if (researchDoc.summary) {
-                                        return (
-                                            <div className="space-y-2">
-                                                <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                                    <BookOpen className="w-3.5 h-3.5" />
-                                                    Summary
-                                                </div>
-                                                <div className="bg-white/[0.02] rounded-xl p-3 border border-white/5">
-                                                    <p className="text-gray-300 text-sm leading-relaxed">
-                                                        {researchDoc.summary}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-                                    return null;
-                                })()}
-
-                                {/* Metadata Grid */}
-                                <div className="grid grid-cols-2 gap-3 mt-4">
-                                    <div className="bg-white/[0.02] rounded-xl p-3 border border-white/5">
-                                        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 uppercase tracking-wider mb-1">
-                                            <User className="w-3 h-3" />
-                                            Author
-                                        </div>
-                                        <span className="text-white text-sm font-medium line-clamp-1" title={researchDoc.author || "Unknown"}>
-                                            {researchDoc.author || "N/A"}
-                                        </span>
-                                    </div>
-                                    <div className="bg-white/[0.02] rounded-xl p-3 border border-white/5">
-                                        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 uppercase tracking-wider mb-1">
-                                            <Calendar className="w-3 h-3" />
-                                            Year
-                                        </div>
-                                        <span className="text-white text-sm font-medium">
-                                            {researchDoc.year || "N/A"}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Document Type */}
-                                {researchDoc.documentType && (
-                                    <div className="bg-white/[0.02] rounded-xl p-3 border border-white/5">
-                                        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 uppercase tracking-wider mb-1">
-                                            <FileText className="w-3 h-3" />
-                                            Document Type
-                                        </div>
-                                        <span className="text-white text-sm font-medium capitalize">
-                                            {researchDoc.documentType}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {/* AI Insights */}
-                                {insights.length > 0 && (
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                                            AI Insights
-                                        </div>
-                                        <div className="space-y-2">
-                                            {insights.slice(0, 3).map((insight, i) => (
-                                                <div
-                                                    key={i}
-                                                    className="bg-purple-500/5 rounded-xl p-3 border border-purple-500/10 text-sm text-gray-300"
-                                                >
-                                                    {insight}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Keywords */}
-                                {keywords.length > 0 && (
-                                    <div className="space-y-2">
-                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            Keywords
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {keywords.map((keyword, i) => (
-                                                <span
-                                                    key={i}
-                                                    className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-gray-400"
-                                                >
-                                                    {keyword}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Status */}
-                                <div className="flex items-center gap-2 pt-2">
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-400 rounded-full text-[10px] font-bold border border-green-500/20">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                                        ANALYZED
-                                    </div>
-                                    <span className="text-[10px] text-gray-600">
-                                        Context available for AI
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Download Button */}
-                            <div className="p-4 border-t border-white/10 mt-auto">
-                                <a
-                                    href={`/api/documents/${researchDoc.id}/serve`}
-                                    download={researchDoc.fileName}
-                                    className="flex items-center justify-center gap-2 w-full py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl font-bold text-sm transition-all"
-                                >
-                                    <DownloadCloud className="w-4 h-4 text-gray-400" />
-                                    Download PDF
-                                </a>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>,
-        document.body
-    );
-};
+    // ... render logic ...
+}
 ```
 
 ---
@@ -904,16 +471,13 @@ export const DocumentViewerModal = ({
 
 **Attention: Senior AI Orchestrator**
 
-You have received this Escalation Handoff Report. A local agent has failed to solve the "Visible Highlight" problem in the PDF viewer.
+The **Backend** is fixed (it correctly fields the AI tool call, handles varying parameter names, and returns a result).
+The **Frontend** is failing to "see" that result.
 
-**Your Directive:**
-1.  **Analyze the Failure:** Review `DocumentViewerModal.tsx`. The search logic is robust, but the `customTextRenderer` approach for highlighting is failing visually (likely due to `react-pdf` text layer opacity/z-index issues).
-2.  **Formulate a New Plan:**
-    *   Do NOT attempt to style the text layer spans again unless you have a completely different method (e.g., specific `pdf.js` text layer CSS variables).
-    *   **Recommended Approach:** Implement an **Overlay Highlight Layer**.
-        *   Create a separate absolute-positioned `div` layer on top of the `Page` but below the `TextLayer`.
-        *   When matches are found, you need the *coordinates* (`transform` array from `textContent.items`) to position highlight boxes. *Note: The current simple string search does NOT have coordinates. You will need to update the search logic to capture `item.transform` (x, y, width, height) along with the text.*
-        *   Render these boxes as simple colored `divs` at the correct absolute positions.
-3.  **Execute:** Generate a request for the Builder to refactor the search logic to capture coordinates and render overlay highlights.
+**Your Protocol:**
 
-**Begin your analysis now.**
+1.  **Analyze the Stream**: The previous agent utilized `toUIMessageStreamResponse`. Verify if this v6 method creates a stream structure incompatible with the `useChat` hook implementation in this codebase.
+2.  **Standardize**: Consider migrating the backend to `toDataStreamResponse` (Vercel AI SDK v6 standard) AND fixing whatever Type/Runtime error prevented it earlier. (hint: ensure `ai` package version is consistent).
+3.  **Debug Client**: If `toUIMessageStreamResponse` is kept, you must audit exactly what the browser receives. The previous agent's logs (now reverted) showed that `findToolResult` was returning null, implying the data is either not there or nested differently.
+
+**Goal**: Get the `generateDiagram` result from `route.ts` to appear in `AcademicCopilot.tsx`'s state so the `DiagramSuggestionCard` renders.

@@ -28,6 +28,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ThreadSelector } from './ThreadSelector';
 import { EditSuggestionCard } from './EditSuggestionCard';
+import { DiagramSuggestionCard } from './DiagramSuggestionCard';
+import { toast } from 'sonner';
 import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { PERSONALITIES } from '@/features/bot/prompts/system';
 
@@ -67,9 +69,10 @@ interface AcademicCopilotProps {
     activeChapterNumber?: number;
     onClose?: () => void;
     onApplyEdit?: (chapterNumber: number, original: string, replacement: string) => void;
+    onInsertDiagram?: (diagram: { mermaidCode: string; title: string }) => void;
 }
 
-export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose, onApplyEdit }: AcademicCopilotProps) {
+export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose, onApplyEdit, onInsertDiagram }: AcademicCopilotProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [localInput, setLocalInput] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -83,6 +86,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     // State for threads
     const [activeThreadId, setActiveThreadId] = useState<string | null>(urlThreadId);
     const [suggestion, setSuggestion] = useState<any | null>(null);
+    const [diagramSuggestion, setDiagramSuggestion] = useState<any | null>(null);
     const [lastKnownThread, setLastKnownThread] = useState<{ id: string; title: string } | null>(null);
     const [isLoadingThreads, setIsLoadingThreads] = useState(true);
 
@@ -177,16 +181,62 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     useEffect(() => {
         const lastMessage = messages[messages.length - 1];
         if (lastMessage?.role === 'assistant') {
-            // In v6, tool invocations are in the 'parts' array of the message
             const parts = (lastMessage as any).parts || [];
-            const toolPart = parts.find((p: any) =>
-                p.type === 'tool-invocation' && p.toolInvocation?.toolName === 'suggestEdit'
-            );
-            if (toolPart?.toolInvocation?.result) {
-                setSuggestion(toolPart.toolInvocation.result);
+            const toolInvocations = (lastMessage as any).toolInvocations || [];
+
+            // Helper to find tool result in either parts or toolInvocations
+            const findToolResult = (toolName: string) => {
+                // Check toolInvocations (standard SDK struct)
+                const invocation = toolInvocations.find((t: any) => t.toolName === toolName);
+                if (invocation && 'result' in invocation) return invocation.result;
+
+                // Check parts (legacy/alternative struct)
+                const part = parts.find((p: any) =>
+                    p.type === 'tool-invocation' && p.toolInvocation?.toolName === toolName
+                );
+                if (part?.toolInvocation?.result) return part.toolInvocation.result;
+
+                return null;
+            };
+
+            // Handle Suggest Edit
+            const editResult = findToolResult('suggestEdit');
+            if (editResult) {
+                setSuggestion(editResult);
+            }
+
+            // Handle Generate Diagram
+            const diagramResult = findToolResult('generateDiagram');
+            if (diagramResult) {
+                setDiagramSuggestion(diagramResult);
             }
         }
     }, [messages]);
+
+    const handleSaveDiagram = async (diagram: any) => {
+        try {
+            const res = await fetch(`/api/projects/${projectId}/diagrams`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: diagram.title,
+                    diagramType: diagram.type,
+                    mermaidCode: diagram.mermaidCode,
+                    description: diagram.explanation || 'AI Generated Diagram'
+                })
+            });
+            if (res.ok) {
+                toast.success('Diagram saved to project');
+                setDiagramSuggestion(null);
+                sendMessage({ text: `Saved diagram: ${diagram.title}` });
+            } else {
+                toast.error('Failed to save diagram');
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error('Error saving diagram');
+        }
+    };
 
     const isLoading = status === 'submitted' || status === 'streaming';
 
@@ -516,6 +566,29 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                             onReject={() => {
                                 setSuggestion(null);
                                 sendMessage({ text: "I rejected that suggestion." });
+                            }}
+                        />
+                    )}
+
+                    {/* Active Diagram Suggestion */}
+                    {diagramSuggestion && (
+                        <DiagramSuggestionCard
+                            title={diagramSuggestion.title}
+                            type={diagramSuggestion.type}
+                            mermaidCode={diagramSuggestion.mermaidCode}
+                            explanation={diagramSuggestion.explanation}
+                            onInsert={() => {
+                                if (onInsertDiagram) {
+                                    onInsertDiagram({ mermaidCode: diagramSuggestion.mermaidCode, title: diagramSuggestion.title });
+                                    toast.success('Diagram inserted');
+                                    setDiagramSuggestion(null);
+                                    sendMessage({ text: `Inserted diagram: ${diagramSuggestion.title}` });
+                                }
+                            }}
+                            onSave={() => handleSaveDiagram(diagramSuggestion)}
+                            onReject={() => {
+                                setDiagramSuggestion(null);
+                                sendMessage({ text: "I rejected the diagram." });
                             }}
                         />
                     )}
