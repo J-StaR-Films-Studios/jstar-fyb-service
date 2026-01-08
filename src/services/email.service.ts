@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { PaymentReceiptEmail } from '@/emails/PaymentReceipt';
+import { escapeHtml } from '@/lib/security';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'J-Star Projects <onboarding@resend.dev>';
@@ -64,11 +65,19 @@ export const EmailService = {
         }
 
         try {
+            // Sanitize inputs
+            const safeName = escapeHtml(name);
+            const safeEmail = escapeHtml(email);
+            const safeMessage = escapeHtml(message);
+            const safeUserId = userId ? escapeHtml(userId) : undefined;
+            const safePage = page ? escapeHtml(page) : undefined;
+            const safeProjectId = projectId ? escapeHtml(projectId) : undefined;
+
             const context = [
-                `From: ${name} (${email})`,
-                userId ? `User ID: ${userId}` : null,
-                page ? `Page: ${page}` : null,
-                projectId ? `Project ID: ${projectId}` : null,
+                `From: ${safeName} (${safeEmail})`,
+                safeUserId ? `User ID: ${safeUserId}` : null,
+                safePage ? `Page: ${safePage}` : null,
+                safeProjectId ? `Project ID: ${safeProjectId}` : null,
             ].filter(Boolean).join('\n');
 
             const htmlContent = `
@@ -109,24 +118,24 @@ export const EmailService = {
                                 <tr>
                                     <td style="padding: 16px;">
                                         <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">FROM</p>
-                                        <p style="margin: 0 0 4px 0; font-size: 15px; color: #ffffff; font-weight: 600;">${name}</p>
-                                        <p style="margin: 0; font-size: 13px; color: #8b5cf6;">${email}</p>
+                                        <p style="margin: 0 0 4px 0; font-size: 15px; color: #ffffff; font-weight: 600;">${safeName}</p>
+                                        <p style="margin: 0; font-size: 13px; color: #8b5cf6;">${safeEmail}</p>
                                     </td>
                                 </tr>
-                                ${userId ? `<tr><td style="padding: 0 16px 16px 16px;"><p style="margin: 0; font-size: 11px; color: #444;">User ID: ${userId}</p></td></tr>` : ''}
+                                ${safeUserId ? `<tr><td style="padding: 0 16px 16px 16px;"><p style="margin: 0; font-size: 11px; color: #444;">User ID: ${safeUserId}</p></td></tr>` : ''}
                             </table>
                         </td>
                     </tr>
                     <!-- Context Info -->
-                    ${page || projectId ? `
+                    ${safePage || safeProjectId ? `
                     <tr>
                         <td style="padding: 0 30px 20px 30px;">
                             <table width="100%" style="background-color: rgba(139, 92, 246, 0.1); border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.2);">
                                 <tr>
                                     <td style="padding: 12px 16px;">
                                         <p style="margin: 0; font-size: 11px; color: #8b5cf6; text-transform: uppercase; letter-spacing: 1px;">📍 Context</p>
-                                        ${page ? `<p style="margin: 8px 0 0 0; font-size: 12px; color: #a1a1aa;">Page: <span style="color: #e4e4e7;">${page}</span></p>` : ''}
-                                        ${projectId ? `<p style="margin: 4px 0 0 0; font-size: 12px; color: #a1a1aa;">Project: <span style="color: #e4e4e7;">${projectId}</span></p>` : ''}
+                                        ${safePage ? `<p style="margin: 8px 0 0 0; font-size: 12px; color: #a1a1aa;">Page: <span style="color: #e4e4e7;">${safePage}</span></p>` : ''}
+                                        ${safeProjectId ? `<p style="margin: 4px 0 0 0; font-size: 12px; color: #a1a1aa;">Project: <span style="color: #e4e4e7;">${safeProjectId}</span></p>` : ''}
                                     </td>
                                 </tr>
                             </table>
@@ -138,14 +147,14 @@ export const EmailService = {
                         <td style="padding: 0 30px 30px 30px;">
                             <p style="margin: 0 0 12px 0; font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Message</p>
                             <div style="background-color: #1a1a1d; border-radius: 12px; border: 1px solid #2a2a2d; padding: 20px;">
-                                <p style="margin: 0; font-size: 14px; color: #e4e4e7; line-height: 1.7;">${message.replace(/\n/g, '<br>')}</p>
+                                <p style="margin: 0; font-size: 14px; color: #e4e4e7; line-height: 1.7;">${safeMessage.replace(/\n/g, '<br>')}</p>
                             </div>
                         </td>
                     </tr>
                     <!-- Reply Button -->
                     <tr>
                         <td style="padding: 0 30px 30px 30px; text-align: center;">
-                            <a href="mailto:${email}" style="display: inline-block; background-color: #8b5cf6; border-radius: 8px; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 28px;">Reply to ${name.split(' ')[0]} →</a>
+                            <a href="mailto:${safeEmail}" style="display: inline-block; background-color: #8b5cf6; border-radius: 8px; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 28px;">Reply to ${safeName.split(' ')[0]} →</a>
                         </td>
                     </tr>
                     <!-- Footer -->
