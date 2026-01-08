@@ -182,13 +182,13 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         return content.match(/^##\s+(.+)$/gm)?.map(s => s.replace(/^##\s+/, '')) || [];
     };
 
-    const handleSave = useCallback(async (content: string) => {
+    const saveChapterContent = useCallback(async (chapterNumber: number, content: string) => {
         // Store pending content for manual save
         pendingContentRef.current = content;
 
         // Optimistic update
         setChapters(prev => prev.map(c =>
-            c.number === activeChapterNumber
+            c.number === chapterNumber
                 ? { ...c, content, wordCount: content.split(/\s+/).length, subsections: parseSubsections(content) }
                 : c
         ));
@@ -198,7 +198,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
 
         // API Call
         try {
-            const response = await fetch(`/api/projects/${projectId}/chapters/${activeChapterNumber}`, {
+            const response = await fetch(`/api/projects/${projectId}/chapters/${chapterNumber}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content })
@@ -214,7 +214,39 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
             console.error('Failed to save chapter', error);
             setSaveStatus('error');
         }
-    }, [activeChapterNumber, projectId]);
+    }, [projectId]);
+
+    const handleSave = useCallback(async (content: string) => {
+        return saveChapterContent(activeChapterNumber, content);
+    }, [activeChapterNumber, saveChapterContent]);
+
+    // AI Edit Application Handler
+    const handleApplyAiEdit = useCallback((chapterNumber: number, original: string, replacement: string) => {
+        const chapter = chapters.find(c => c.number === chapterNumber);
+
+        if (!chapter) {
+            console.error('Target chapter not found for edit application');
+            return;
+        }
+
+        // Try to replace content
+        // Note: This simple replacement assumes the original string is unique or the first occurrence is correct.
+        // For production, we might need fuzzy matching or context-aware replacement.
+        if (chapter.content.includes(original)) {
+            const newContent = chapter.content.replace(original, replacement);
+            saveChapterContent(chapterNumber, newContent);
+        } else {
+            // Fallback: Try trimming whitespace
+            const trimmedOriginal = original.trim();
+            if (chapter.content.includes(trimmedOriginal)) {
+                 const newContent = chapter.content.replace(trimmedOriginal, replacement);
+                 saveChapterContent(chapterNumber, newContent);
+            } else {
+                console.error('Original content not found in chapter. Edit could not be applied.');
+                // In a real implementation, we would show a toast notification here
+            }
+        }
+    }, [chapters, saveChapterContent]);
 
     // Manual save trigger
     const triggerManualSave = useCallback(() => {
@@ -442,6 +474,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 projectId={projectId}
                                 activeChapterId={activeChapter?.id}
                                 activeChapterNumber={activeChapter?.number}
+                                onApplyEdit={handleApplyAiEdit}
                             />
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -596,6 +629,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 activeChapterId={activeChapter?.id}
                                 activeChapterNumber={activeChapter?.number}
                                 onClose={() => setMobileView('timeline')}
+                                onApplyEdit={handleApplyAiEdit}
                             />
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full p-12 text-center">

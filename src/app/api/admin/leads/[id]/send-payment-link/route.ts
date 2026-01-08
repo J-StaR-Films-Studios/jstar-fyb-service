@@ -35,7 +35,7 @@ export async function POST(
 
         // 2. Determine Email
         let email = "hey@jstarstudios.com"; // Default Fallback
-        let userId = lead.userId;
+        const userId = lead.userId;
 
         if (userId) {
             const user = await prisma.user.findUnique({

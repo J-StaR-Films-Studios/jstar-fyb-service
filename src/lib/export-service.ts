@@ -233,7 +233,7 @@ export const generateMarkdownBlob = (content: string, title?: string): Blob => {
  */
 const parseLineToTextRuns = (text: string, options: ExportOptions): TextRun[] => {
     const runs: TextRun[] = [];
-    let currentText = text;
+    const currentText = text;
 
     // Simple parser for bold (**...**) and italic (*...*)
     // This is a basic implementation; for nested or complex markdown, a full parser is needed.

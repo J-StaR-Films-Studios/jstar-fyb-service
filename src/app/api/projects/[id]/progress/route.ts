@@ -88,10 +88,10 @@ export async function POST(
         const updatedMilestones = [...currentMilestones, milestoneEntry];
 
         // Update phase-specific progress
-        let updatedProgress = { ...currentProgress };
-        let updatedDocumentProgress = { ...currentDocumentProgress };
-        let updatedAiStatus = { ...currentAiStatus };
-        let updatedTimeTracking = { ...currentTimeTracking };
+        const updatedProgress = { ...currentProgress };
+        const updatedDocumentProgress = { ...currentDocumentProgress };
+        const updatedAiStatus = { ...currentAiStatus };
+        const updatedTimeTracking = { ...currentTimeTracking };
 
         switch (validatedData.milestone) {
             case 'OUTLINE_GENERATED':

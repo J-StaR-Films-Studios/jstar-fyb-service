@@ -119,7 +119,7 @@ export async function PATCH(
         }
 
         // Update logic
-        let updateData: any = {
+        const updateData: any = {
             lastEditedAt: new Date()
         };
 

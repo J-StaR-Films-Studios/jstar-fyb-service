@@ -146,7 +146,7 @@ export function useChatFlow(userId?: string) {
 
             const shouldTrigger = mentionsWhatsApp && !hasContactTool && m.role !== 'user' && !hasProvidedPhone && !recentlyProvidedPhone;
 
-            let finalToolInvocations = toolParts || [];
+            const finalToolInvocations = toolParts || [];
             if (shouldTrigger) {
                 // Check if we should inject synthetic card
                 // We rely on the useChatTools to force state change, here we just show the card
