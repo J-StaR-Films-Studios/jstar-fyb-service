@@ -10,11 +10,16 @@ export const dynamic = 'force-dynamic';
 // Admin check helper
 async function checkAdmin() {
     const user = await getCurrentUser();
-    // TODO: Add proper role check. For now, checking against specific email or assuming auth is enough for demo
+
     if (!user) {
         redirect("/auth/login");
     }
-    // if (user.role !== 'ADMIN') redirect("/");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((user as any).role !== 'ADMIN') {
+        redirect("/dashboard");
+    }
+
     return user;
 }
 
