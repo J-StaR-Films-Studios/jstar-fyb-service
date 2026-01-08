@@ -135,6 +135,7 @@ model Project {
   conversations            ProjectConversation[]
   messages                 ProjectMessage[]
   documents                ResearchDocument[]
+  diagrams                 ProjectDiagram[]
 
   @@index([userId])
 }
@@ -228,6 +229,22 @@ model ProjectMessage {
   content   String
   createdAt DateTime @default(now())
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ProjectDiagram {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  diagramType String
+  mermaidCode String   @db.Text
+  description String?  @db.Text
+  version     Int      @default(1)
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
 }
 
 model ProjectConversation {
