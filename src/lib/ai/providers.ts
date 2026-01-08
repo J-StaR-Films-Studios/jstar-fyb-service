@@ -59,26 +59,35 @@ export const Models = {
     // PREMIUM (Paid) - Use only when required
     GEMINI_FLASH: 'gemini-2.5-flash',
 
-    // FREE TIER - Prefer these for cost savings
+    // FREE TIER - Validated from OpenRouter (Jan 2026)
     FREE: {
-        // Best quality free models (OpenRouter)
-        DEEPSEEK_V3: 'nex-agi/deepseek-v3.1-nex-n1:free',
-        DEEPSEEK_R1: 'tngtech/deepseek-r1t2-chimera:free',
-        KIMI_K2: 'moonshotai/kimi-k2-0711:free',
-        GPT_OSS_120B: 'openai/gpt-oss-120b:free',
+        // TIER 1: Primary Workhorses (Tool Calling + Reasoning)
+        MIMO_V2_FLASH: 'xiaomi/mimo-v2-flash:free', // #1 Weekly Usage - Academia/Science GOAT, 262k context
+        DEEPSEEK_V3: 'nex-agi/deepseek-v3.1-nex-n1:free', // Solid tool-use, 131k context
 
-        // Lightweight free models
-        MIMO_FLASH: 'xiaomi/mimo-v2-flash:free',
-        NEMOTRON_VISION: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        // TIER 2: Reasoning-Focused (use with OpenRouter reasoning param)
+        REASONING: 'tngtech/tng-r1t-chimera:free', // DeepSeek R1 derivative, FREE
+        GLM_AIR: 'z-ai/glm-4.5-air:free', // Hybrid thinking mode, 131k context
 
-        // Reasoning-focused (free)
-        DEEPSEEK_CHIMERA: 'tngtech/deepseek-r1t2-chimera:free',
+        // TIER 3: Code-Focused
+        DEVSTRAL: 'mistralai/devstral-2512:free', // #1 Agentic Coder, 262k context
+        QWEN_CODER: 'qwen/qwen3-coder:free', // Qwen's specialist, 262k context
+
+        // TIER 4: Vision & Multimodal
+        NEMOTRON_VL: 'nvidia/nemotron-nano-12b-v2-vl:free', // Vision + Reasoning, 128k context
+        NEMOTRON_NANO: 'nvidia/nemotron-3-nano-30b-a3b:free', // Agent-focused MoE, 256k context
+
+        // TIER 5: Lightweight Fallbacks
+        GPT_OSS_120B: 'openai/gpt-oss-120b:free', // OpenAI's open MoE
+        GEMMA_3: 'google/gemma-3-27b-it:free', // Google's open source
+        QWEN3_4B: 'qwen/qwen3-4b:free', // Tiny dense model
     },
 
     // GROQ (Very fast, but has rate limits)
     GROQ: {
         KIMI_K2: 'moonshotai/kimi-k2-instruct',
         KIMI_K2_0905: 'moonshotai/kimi-k2-instruct-0905',
+        GPT_OSS_120B: 'openai/gpt-oss-120b:free',
     },
 } as const;
 

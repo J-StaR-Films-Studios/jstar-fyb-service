@@ -117,14 +117,23 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     }
 
     // --------------------------------------------------------
-    // RULE 2: Tools work best on native Gemini
-    // --------------------------------------------------------
-    // --------------------------------------------------------
     // RULE 2: Tools work best on native Gemini, but allow others if configured
     // --------------------------------------------------------
     if (tools) {
         // If specific low cost/free quality requested, try to use capable free models
         if ((quality === 'high' || quality === 'standard' || quality === 'free') && hasOpenRouter()) {
+
+            // Sub-rule: If Reasoning is ALSO requested, prioritize reasoning model
+            if (reasoning) {
+                return {
+                    model: openrouter!(Models.FREE.REASONING),
+                    provider: 'openrouter',
+                    modelId: Models.FREE.REASONING,
+                    isFree: true,
+                    reason: 'Reasoning + Tool calling using TNG Chimera',
+                };
+            }
+
             return {
                 model: openrouter!(Models.FREE.DEEPSEEK_V3), // DeepSeek V3 supports tools
                 provider: 'openrouter',
@@ -161,9 +170,9 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     if (vision) {
         if (hasOpenRouter()) {
             return {
-                model: openrouter!(Models.FREE.NEMOTRON_VISION),
+                model: openrouter!(Models.FREE.NEMOTRON_VL),
                 provider: 'openrouter',
-                modelId: Models.FREE.NEMOTRON_VISION,
+                modelId: Models.FREE.NEMOTRON_VL,
                 isFree: true,
                 reason: 'Vision task using free Nemotron model',
             };
@@ -180,18 +189,19 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     }
 
     // --------------------------------------------------------
-    // RULE 4: Reasoning tasks prefer DeepSeek R1
+    // RULE 4: Reasoning tasks prefer models with thinking traces
     // --------------------------------------------------------
     if (reasoning) {
         if (hasOpenRouter()) {
             return {
-                model: openrouter!(Models.FREE.DEEPSEEK_R1),
+                model: openrouter!(Models.FREE.REASONING),
                 provider: 'openrouter',
-                modelId: Models.FREE.DEEPSEEK_R1,
+                modelId: Models.FREE.REASONING,
                 isFree: true,
-                reason: 'Reasoning task using free DeepSeek R1',
+                reason: 'Reasoning task using TNG Chimera (free R1 derivative)',
             };
         }
+        // Fallback if no OpenRouter but reasoning requested
     }
 
     // --------------------------------------------------------
@@ -239,11 +249,11 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     if (quality === 'standard' || quality === 'free') {
         if (hasOpenRouter()) {
             return {
-                model: openrouter!(Models.FREE.KIMI_K2),
+                model: openrouter!(Models.FREE.MIMO_V2_FLASH),
                 provider: 'openrouter',
-                modelId: Models.FREE.KIMI_K2,
+                modelId: Models.FREE.MIMO_V2_FLASH,
                 isFree: true,
-                reason: `${quality} quality using free Kimi K2`,
+                reason: `${quality} quality using free MiMo V2 Flash`,
             };
         }
         if (hasGroq()) {

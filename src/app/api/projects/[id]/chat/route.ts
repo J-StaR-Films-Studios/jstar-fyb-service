@@ -107,21 +107,40 @@ ${researchText}
         content: typeof m.content === 'string' ? m.content : (m.parts?.find((p: any) => p.type === 'text')?.text || '')
     }));
 
+    // Detect if user wants reasoning
+    const lastUserMessage = coreMessages
+        .slice().reverse().find((m: any) => m.role === 'user')?.content || '';
+
+    const wantsReasoning = /think|reason|why|explain|analyze|compare|critique/i.test(lastUserMessage);
+
     // Use smart routing to pick the best model
-    // We request 'high' quality (Free tier preferred) and tools support
     const { model, modelId, provider, isFree, reason } = selectModel({
         tools: true,
+        reasoning: wantsReasoning, // Dynamic switching
         quality: 'high'
     });
 
-    console.log(`[Chat API] Using model: ${modelId} via ${provider} (Free: ${isFree}) - ${reason}`);
+    console.log(`[Chat API] Using model: ${modelId} via ${provider} (Free: ${isFree}) - ${reason} (Reasoning Requested: ${wantsReasoning})`);
 
+    // For OpenRouter reasoning models, we pass the reasoning config via providerOptions
+    // The reasoning content comes back in a separate 'reasoning' field on the response
     const result = streamText({
         model,
-        system: systemPrompt,
+        system: systemPrompt, // No need for forced <think> tags - OpenRouter handles reasoning
         messages: coreMessages as any,
         // @ts-ignore
         maxSteps: 5, // Allow multiple tool steps
+        // Pass reasoning config to OpenRouter when requested
+        ...(wantsReasoning && provider === 'openrouter' ? {
+            providerOptions: {
+                openrouter: {
+                    reasoning: {
+                        effort: 'high', // high effort for detailed reasoning
+                        // exclude: false // include reasoning in response (default)
+                    }
+                }
+            }
+        } : {}),
         tools: {
             searchProjectDocuments: tool({
                 description: `Search the full text of uploaded research documents.`,
@@ -129,18 +148,26 @@ ${researchText}
                     query: z.string(),
                 }),
                 execute: async ({ query }: { query: string }) => {
-                    const project = await prisma.project.findUnique({
-                        where: { id: projectId },
-                        select: { fileSearchStoreId: true }
-                    });
+                    try {
+                        const project = await prisma.project.findUnique({
+                            where: { id: projectId },
+                            select: { fileSearchStoreId: true }
+                        });
 
-                    if (!project?.fileSearchStoreId) return "No research library index found.";
+                        if (!project?.fileSearchStoreId) {
+                            return "I cannot search documents because no research library has been created for this project. Please upload documents first.";
+                        }
 
-                    const result = await GeminiFileSearchService.generateWithGrounding(
-                        query,
-                        [project.fileSearchStoreId]
-                    );
-                    return `Found in documents:\n${result.text}\nSOURCES: ${JSON.stringify(result.groundingChunks)}`;
+                        const result = await GeminiFileSearchService.generateWithGrounding(
+                            query,
+                            [project.fileSearchStoreId]
+                        );
+                        return `Found in documents:\n${result.text}\nSOURCES: ${JSON.stringify(result.groundingChunks)}`;
+                    } catch (error: any) {
+                        console.error('[Chat Tool] Search failed:', error);
+                        // Return error as string so the AI knows it failed but chat continues
+                        return `Search failed: ${error.message || 'Unknown error'}. Please ignore this tool result.`;
+                    }
                 }
             } as any),
             suggestEdit: tool({

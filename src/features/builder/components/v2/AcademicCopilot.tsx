@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ThreadSelector } from './ThreadSelector';
 import { EditSuggestionCard } from './EditSuggestionCard';
 import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
@@ -400,20 +402,16 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                             )}
                         >
                             <div className={cn(
-                                "max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm backdrop-blur-sm transition-all duration-300",
+                                "rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm backdrop-blur-sm transition-all duration-300",
                                 m.role === 'user'
-                                    ? "bg-gradient-to-br from-primary to-purple-600 text-white rounded-br-sm shadow-purple-500/10"
-                                    : "bg-white/10 text-gray-100 rounded-bl-sm border border-white/5 shadow-black/20"
+                                    ? "max-w-[85%] bg-gradient-to-br from-primary to-purple-600 text-white rounded-br-sm shadow-purple-500/10"
+                                    : "w-full bg-white/10 text-gray-100 rounded-bl-sm border border-white/5 shadow-black/20"
                             )}>
                                 {m.role === 'assistant' ? (
-                                    <div className="prose prose-invert prose-sm max-w-none">
-                                        {/* Handle AI SDK v5 message format: parts array or content string */}
-                                        {(() => {
-                                            const textContent = m.content || m.parts?.find((p: any) => p.type === 'text')?.text || '';
-                                            return (textContent as string).split('\n').map((line: string, i: number) => (
-                                                <p key={i} className="mb-2 last:mb-0 min-h-[1em]">{line}</p>
-                                            ));
-                                        })()}
+                                    <div className="prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:text-white prose-p:text-gray-200 prose-p:leading-relaxed prose-strong:text-white prose-strong:font-semibold prose-em:text-gray-300 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-ul:text-gray-200 prose-ol:text-gray-200 prose-li:marker:text-primary/70 prose-code:bg-white/10 prose-code:text-primary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-table:border-collapse prose-th:border prose-th:border-white/20 prose-th:bg-white/5 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-td:border prose-td:border-white/10 prose-td:px-3 prose-td:py-2 prose-blockquote:border-l-primary prose-blockquote:text-gray-300 prose-hr:border-white/10">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {m.content || m.parts?.find((p: any) => p.type === 'text')?.text || ''}
+                                        </ReactMarkdown>
                                     </div>
                                 ) : (
                                     <span className="font-medium tracking-wide">{m.content || m.parts?.find((p: any) => p.type === 'text')?.text || ''}</span>
