@@ -10,6 +10,16 @@ Remove-Item -Path prisma\migrations -Recurse -Force; pnpm prisma migrate dev --n
 
 ---
 
+Local DB → 
+# Create migrations against your local database
+npx prisma migrate dev --name your_change_name
+
+→ git commit → deploy →
+
+prisma migrate deploy → Cloud DB
+
+---
+
 J Star Films Studios acts as a creative technology partner, providing digital services including custom software development, AI-powered educational tools, and multimedia production for students and businesses.
 
 ---
