@@ -606,6 +606,35 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                                 </ReactMarkdown>
                                             </div>
                                         )}
+
+                                        {/* Fallback Tool Result Renderer: deeply inspect tool results if text is empty */}
+                                        {!textContent && toolParts.length > 0 && (
+                                            <div className="mt-2 space-y-2">
+                                                {toolParts.map((part: any, i: number) => {
+                                                    // Only show result if it exists and isn't handled by custom UI
+                                                    if (!part.output || ['suggestEdit', 'generateDiagram'].includes(part.toolName)) return null;
+
+                                                    // Try to parse JSON output for prettier display
+                                                    let displayContent = part.output;
+                                                    let isJson = false;
+                                                    try {
+                                                        const parsed = JSON.parse(part.output);
+                                                        displayContent = JSON.stringify(parsed, null, 2);
+                                                        isJson = true;
+                                                    } catch (e) { }
+
+                                                    return (
+                                                        <div key={i} className="bg-black/20 rounded-lg p-3 border border-white/5 text-xs font-mono overflow-x-auto">
+                                                            <div className="text-gray-400 mb-1 flex items-center gap-2">
+                                                                <Terminal className="w-3 h-3" />
+                                                                <span>Result from {part.toolName}:</span>
+                                                            </div>
+                                                            <pre className="text-primary/90 whitespace-pre-wrap">{displayContent}</pre>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </>
                                 ) : (
                                     <span className="font-medium tracking-wide">{textContent}</span>

@@ -1,10 +1,9 @@
 import { streamText, tool, stepCountIs } from 'ai';
 import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
-import { GeminiFileSearchService } from '@/lib/gemini-file-search';
 import { MONJI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
 import { ProjectContextService } from '@/features/builder/services/projectContextService';
 import { selectModel } from '@/lib/ai';
+import { createAcademicTools } from '@/lib/ai/academicTools';
 
 
 export const maxDuration = 300;
@@ -100,19 +99,45 @@ ${researchText}
 3. If the user asks for a revision, use the 'suggestEdit' tool.
 4. Be concise but helpful.
 5. When using the 'generateDiagram' tool, describe what the diagram should show in detail (nodes, relationships, flow). The system will generate the Mermaid code for you.
+6. CRITICAL: When you use a tool (like listChapters, searchProjectDocuments), you MUST analyze the return value and provide a helpful natural language summary to the user. Do not stop after the tool runs. Explain what you found.
 `;
 
     // 4. Stream Response
-    const coreMessages = messages.map((m: any) => ({
-        role: m.role as 'user' | 'assistant' | 'system',
-        content: typeof m.content === 'string' ? m.content : (m.parts?.find((p: any) => p.type === 'text')?.text || '')
-    }));
+    const coreMessages = messages.map((m: any) => {
+        // Handle SDK v6 CoreMessage format directly if possible, or convert from UI messages
+        // Simple string content
+        if (typeof m.content === 'string') {
+            return {
+                role: m.role as 'user' | 'assistant' | 'system',
+                content: m.content
+            };
+        }
+
+        // Parts based content (SDK v6 standard)
+        if (Array.isArray(m.parts)) {
+            // Filter for text parts for now, as streamText expects valid CoreMessage content
+            // Note: core messages for LLMs usually take simple strings or specific array parts.
+            // We extract text to be safe or pass struct if model supports it.
+            // For strict compliance:
+            return {
+                role: m.role as 'user' | 'assistant' | 'system',
+                content: m.parts.map((p: any) => p.text || '').join('')
+            };
+        }
+
+        return {
+            role: m.role as 'user' | 'assistant' | 'system',
+            content: ''
+        };
+    });
 
     // Detect if user wants reasoning
+    // Detect if user wants reasoning OR if the request implies complex tool usage that benefits from reasoning
     const lastUserMessage = coreMessages
         .slice().reverse().find((m: any) => m.role === 'user')?.content || '';
 
-    const wantsReasoning = /think|reason|why|explain|analyze|compare|critique/i.test(lastUserMessage);
+    // Expanded trigger words to include tool actions which need diligent output processing
+    const wantsReasoning = /think|reason|why|explain|analyze|compare|critique|list|search|find|load|generate|create|add/i.test(lastUserMessage);
 
     // Use smart routing to pick the best model
     const { model, modelId, provider, isFree, reason } = selectModel({
@@ -142,122 +167,22 @@ ${researchText}
                 }
             }
         } : {}),
-        tools: {
-            searchProjectDocuments: tool({
-                description: `Search the full text of uploaded research documents.`,
-                parameters: z.object({
-                    query: z.string(),
-                }),
-                execute: async ({ query }: { query: string }) => {
-                    try {
-                        const project = await prisma.project.findUnique({
-                            where: { id: projectId },
-                            select: { fileSearchStoreId: true }
-                        });
-
-                        if (!project?.fileSearchStoreId) {
-                            return "I cannot search documents because no research library has been created for this project. Please upload documents first.";
-                        }
-
-                        const result = await GeminiFileSearchService.generateWithGrounding(
-                            query,
-                            [project.fileSearchStoreId]
-                        );
-                        return `Found in documents:\n${result.text}\nSOURCES: ${JSON.stringify(result.groundingChunks)}`;
-                    } catch (error: any) {
-                        console.error('[Chat Tool] Search failed:', error);
-                        // Return error as string so the AI knows it failed but chat continues
-                        return `Search failed: ${error.message || 'Unknown error'}. Please ignore this tool result.`;
+        // Pass reasoning config to OpenRouter when requested
+        ...(wantsReasoning && provider === 'openrouter' ? {
+            providerOptions: {
+                openrouter: {
+                    reasoning: {
+                        effort: 'high', // high effort for detailed reasoning
+                        // exclude: false // include reasoning in response (default)
                     }
                 }
-            } as any),
-            suggestEdit: tool({
-                description: `Suggest a specific content revision for a chapter or section. Use this when the user asks to "rewrite", "improve", "fix", or "change" specific text.`,
-                parameters: z.object({
-                    chapterNumber: z.number().describe('The chapter number to edit'),
-                    currentContentToReplace: z.string().describe('The EXACT text snippet to be replaced (must match existing text)'),
-                    newContent: z.string().describe('The proposed new content'),
-                    explanation: z.string().describe('Brief reason for the change'),
-                }),
-                execute: async ({ chapterNumber, currentContentToReplace, newContent, explanation }: { chapterNumber: number; currentContentToReplace: string; newContent: string; explanation: string }) => {
-                    console.log(`[Chat API] Tool Executed: suggestEdit`, { chapterNumber, explanation });
-                    // We don't apply it here, just return the structured suggestion for the UI to render
-                    return {
-                        tool: 'suggestEdit',
-                        chapterNumber,
-                        original: currentContentToReplace,
-                        replacement: newContent,
-                        explanation
-                    };
-                }
-            } as any),
-            generateDiagram: tool({
-                description: `Generate a Mermaidjs diagram (flowchart, sequence, class, etc). Describe what the diagram should show in detail - do not write the Mermaid code yourself, the system will generate it.`,
-                parameters: z.object({
-                    title: z.string().describe('A short title for the diagram'),
-                    type: z.enum(['flowchart', 'sequence', 'class', 'state', 'er', 'gantt', 'mindmap']).describe('The type of diagram to generate'),
-                    description: z.string().describe('Detailed description of what the diagram should show: nodes, relationships, flow direction, labels, and any specific structure requirements'),
-                    relevantContext: z.string().optional().describe('Any chapter or research content that provides context for this diagram'),
-                    explanation: z.string().describe('Brief explanation of what the diagram represents'),
-                }),
-                execute: async (args: any) => {
-                    console.log(`[Chat API] Tool Executing: generateDiagram (delegating to service)`, {
-                        type: args.type,
-                        descriptionLength: args.description?.length
-                    });
+            }
+        } : {}),
 
-                    const title = args.title || 'Untitled Diagram';
-                    const type = args.type || 'flowchart';
-                    const description = args.description || '';
-                    const explanation = args.explanation || '';
-
-                    // Validate description was provided
-                    if (!description) {
-                        return "ERROR: You must provide a detailed description of what the diagram should show. Do not try to write Mermaid code - just describe the diagram structure.";
-                    }
-
-                    try {
-                        // Delegate to specialized diagram service
-                        const { generateDiagramCode } = await import('@/lib/ai/diagramService');
-                        const result = await generateDiagramCode({
-                            diagramType: type,
-                            description: description,
-                            projectContext: args.relevantContext || chaptersText.slice(0, 2000), // Inject chapter context
-                        });
-
-                        console.log(`[Chat API] Tool Completed: generateDiagram`, {
-                            mermaidCodeLength: result.mermaidCode.length
-                        });
-
-                        return {
-                            tool: 'generateDiagram',
-                            title,
-                            type,
-                            mermaidCode: result.mermaidCode,
-                            explanation: explanation || result.explanation
-                        };
-                    } catch (error: any) {
-                        console.error('[Chat API] generateDiagram failed:', error);
-                        return `ERROR: Failed to generate diagram: ${error.message}. Please try again with a clearer description.`;
-                    }
-                }
-            } as any),
-            saveUserContext: tool({
-                description: `Save user details like department, course, or institution.`,
-                parameters: z.object({
-                    department: z.string().optional(),
-                    course: z.string().optional(),
-                    institution: z.string().optional(),
-                }),
-                execute: async (data: { department?: string; course?: string; institution?: string }) => {
-                    await prisma.project.update({
-                        where: { id: projectId },
-                        data: { ...data, contextComplete: true }
-                    });
-                    return "Context saved.";
-                }
-            } as any)
-        } as any,
+        // Use centralized tool definitions
+        tools: createAcademicTools(projectId, activeConversationId, {
+            chaptersText
+        }) as any,
         onFinish: async ({ text, reasoning, steps }: { text: string; reasoning?: any[]; steps?: any[] }) => {
             console.log('[Chat API] onFinish called:', {
                 textLength: text?.length || 0,
