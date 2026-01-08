@@ -140,7 +140,7 @@ export function useChatFlow(userId?: string) {
 
 
             // Ensure the final message is included
-            let messagesToSave = [...currentMessages];
+            const messagesToSave = [...currentMessages];
             const lastMsg = messagesToSave[messagesToSave.length - 1];
 
             // If the last message in state doesn't match the finished message ID, append it.
@@ -311,7 +311,7 @@ export function useChatFlow(userId?: string) {
             }
 
             // Re-build tool invocations array properly
-            let finalToolInvocations = toolParts || [];
+            const finalToolInvocations = toolParts || [];
             if (shouldTrigger) {
                 // Double check if we already pushed it (if toolParts existed)
                 const alreadyAdded = finalToolInvocations.some((p: any) => p.type === 'tool-requestContactInfo');

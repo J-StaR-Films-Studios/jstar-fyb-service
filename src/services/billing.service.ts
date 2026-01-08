@@ -108,7 +108,7 @@ export const BillingService = {
     async updateProjectUnlock(projectId: string, amountKobo?: number) {
         // CRITICAL FIX: Atomic update of both isUnlocked AND isLocked in same DB call
         // Previous bug: Two separate calls could leave project in inconsistent state
-        let updateData: any = {
+        const updateData: any = {
             isUnlocked: true,
             isLocked: true,  // Topic Lock: Enforced atomically with unlock
             lockedAt: new Date(),

@@ -60,7 +60,7 @@ export function useChatPersistence(userId?: string) {
         if (!currentUserId && !currentAnonymousId) return;
 
         // Ensure the final message is included
-        let messagesToSave = [...currentMessages];
+        const messagesToSave = [...currentMessages];
         const lastMsg = messagesToSave[messagesToSave.length - 1];
 
         if (!lastMsg || lastMsg.id !== message.id) {

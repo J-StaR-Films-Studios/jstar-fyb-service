@@ -248,7 +248,7 @@ export async function POST(req: Request) {
             (async () => {
                 try {
                     // 1. Get or Create FileSearchStore for this project
-                    let project = await prisma.project.findUnique({
+                    const project = await prisma.project.findUnique({
                         where: { id: projectId },
                         select: { fileSearchStoreId: true }
                     });

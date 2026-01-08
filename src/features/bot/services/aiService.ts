@@ -101,7 +101,7 @@ export class AiService {
         const lowerText = text.toLowerCase();
 
         // Department detection
-        let department = this.detectDepartment(text);
+        const department = this.detectDepartment(text);
 
         // Keyword-based twist generation
         let twist: string;

@@ -237,10 +237,10 @@ export const DocumentViewerModal = ({
                             const matchWidth = totalWidth * lengthRatio;
 
                             // PDF coordinates
-                            let x = tx[4] + matchXOffset; // tx[4] is x
-                            let y = tx[5]; // tx[5] is y
-                            let w = matchWidth;
-                            let h = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]); // approximate height from scale
+                            const x = tx[4] + matchXOffset; // tx[4] is x
+                            const y = tx[5]; // tx[5] is y
+                            const w = matchWidth;
+                            const h = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]); // approximate height from scale
 
                             // Adjust for PDF coordinate system (bottom-up) to Viewport (top-down)
                             const rect = viewport.convertToViewportRectangle([x, y, x + w, y + h]);

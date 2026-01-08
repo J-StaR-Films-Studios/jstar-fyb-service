@@ -66,9 +66,10 @@ interface AcademicCopilotProps {
     activeChapterId?: string;
     activeChapterNumber?: number;
     onClose?: () => void;
+    onApplyEdit?: (chapterNumber: number, original: string, replacement: string) => void;
 }
 
-export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose }: AcademicCopilotProps) {
+export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose, onApplyEdit }: AcademicCopilotProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [localInput, setLocalInput] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -313,7 +314,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             timeoutRef.current = setTimeout(cycle, nextDelay);
         };
 
-        let timeoutRef = { current: null as NodeJS.Timeout | null };
+        const timeoutRef = { current: null as NodeJS.Timeout | null };
         timeoutRef.current = setTimeout(cycle, cycleTimings[0]);
 
         return () => {
@@ -506,6 +507,9 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                             newContent={suggestion.replacement}
                             explanation={suggestion.explanation}
                             onApply={(content) => {
+                                if (onApplyEdit) {
+                                    onApplyEdit(suggestion.chapterNumber, suggestion.original, content);
+                                }
                                 setSuggestion(null);
                                 sendMessage({ text: `Applied edit: ${content.substring(0, 20)}...` });
                             }}
