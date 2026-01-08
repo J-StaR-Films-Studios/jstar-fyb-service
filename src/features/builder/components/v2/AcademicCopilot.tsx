@@ -31,6 +31,36 @@ import { EditSuggestionCard } from './EditSuggestionCard';
 import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { PERSONALITIES } from '@/features/bot/prompts/system';
 
+// Reasoning Accordion Component for displaying AI thinking process
+function ReasoningAccordion({ reasoning, hasContent }: { reasoning: string; hasContent: boolean }) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className={cn("text-xs", hasContent && "mb-3")}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors font-mono uppercase tracking-wider"
+            >
+                <span className={cn("transform transition-transform", isOpen ? "rotate-90" : "")}>▶</span>
+                Thinking Process
+            </button>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="mt-2 pl-4 border-l-2 border-primary/20 text-gray-400 italic font-mono whitespace-pre-wrap text-[11px] leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar"
+                    >
+                        {reasoning}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {hasContent && <div className="h-px w-full bg-white/10 mt-3" />}
+        </div>
+    );
+}
+
 interface AcademicCopilotProps {
     projectId: string;
     activeChapterId?: string;
@@ -82,9 +112,11 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         } else {
             params.delete('thread');
         }
-        // Use shallow routing to avoid full page reload
-        router.replace(`?${params.toString()}`, { scroll: false });
-    }, [searchParams, router]);
+        // Use window.history directly to avoid React re-renders
+        // This updates the URL without triggering Next.js routing
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState(null, '', newUrl);
+    }, [searchParams]);
 
     // Fetch last known thread on mount (for "Continue last chat" button)
     useEffect(() => {
@@ -105,10 +137,14 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         fetchLastThread();
     }, [projectId]);
 
-    // Chat Hook - ID scoped by thread to isolate state per conversation
+    // Chat Hook - Use a STABLE ID that doesn't change mid-conversation
+    // If we started as a new thread, keep 'new' in the ID even after we get a real thread ID
+    // This prevents the hook from reinitializing and clearing messages
+    const [stableThreadId] = useState(urlThreadId || 'new');
+
     const { messages, sendMessage: chatSendMessage, status, setMessages } = useChat({
         transport: new DefaultChatTransport({ api: `/api/projects/${projectId}/chat` }),
-        id: `academic-copilot-${projectId}-${activeThreadId || 'new'}`, // Unique ID per thread
+        id: `academic-copilot-${projectId}-${stableThreadId}`, // Stable ID - doesn't change mid-conversation
         onError: (error) => {
             console.error("Chat error:", error);
         }
@@ -391,8 +427,39 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                         </motion.div>
                     )}
 
-                    {messages.map((m: any) => (
-                        <motion.div
+                    {messages.map((m: any) => {
+                        // Extract reasoning from either:
+                        // 1. SDK v6 parts array (during streaming)
+                        // 2. Database reasoning field (after reload)
+                        const parts = m.parts || [];
+                        const reasoningPart = parts.find((p: any) => p.type === 'reasoning');
+                        const textPart = parts.find((p: any) => p.type === 'text');
+
+                        // Try multiple sources for reasoning content
+                        const reasoningContent =
+                            m.reasoning ||  // From database (after reload)
+                            reasoningPart?.text || reasoningPart?.reasoning || reasoningPart?.content || // From SDK parts (streaming)
+                            null;
+                        const textContent = m.content || textPart?.text || '';
+
+                        // DEBUG: Log the message structure to understand what we're getting
+                        if (m.role === 'assistant') {
+                            console.log('[DEBUG] Assistant message structure:', {
+                                id: m.id,
+                                role: m.role,
+                                hasContent: !!m.content,
+                                contentPreview: typeof m.content === 'string' ? m.content.substring(0, 100) : 'not a string',
+                                partsCount: parts.length,
+                                partTypes: parts.map((p: any) => p.type),
+                                hasReasoning: !!reasoningPart,
+                                dbReasoning: !!m.reasoning, // Check if reasoning from DB
+                                reasoningPartFull: reasoningPart ? JSON.stringify(reasoningPart) : null,
+                                reasoningContent: reasoningContent ? String(reasoningContent).substring(0, 100) + '...' : null,
+                                fullParts: JSON.stringify(parts).substring(0, 1000)
+                            });
+                        }
+
+                        return (<motion.div
                             key={m.id}
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -408,17 +475,28 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                     : "w-full bg-white/10 text-gray-100 rounded-bl-sm border border-white/5 shadow-black/20"
                             )}>
                                 {m.role === 'assistant' ? (
-                                    <div className="prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:text-white prose-p:text-gray-200 prose-p:leading-relaxed prose-strong:text-white prose-strong:font-semibold prose-em:text-gray-300 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-ul:text-gray-200 prose-ol:text-gray-200 prose-li:marker:text-primary/70 prose-code:bg-white/10 prose-code:text-primary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-table:border-collapse prose-th:border prose-th:border-white/20 prose-th:bg-white/5 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-td:border prose-td:border-white/10 prose-td:px-3 prose-td:py-2 prose-blockquote:border-l-primary prose-blockquote:text-gray-300 prose-hr:border-white/10">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                            {m.content || m.parts?.find((p: any) => p.type === 'text')?.text || ''}
-                                        </ReactMarkdown>
-                                    </div>
+                                    <>
+                                        {/* Reasoning Accordion */}
+                                        {reasoningContent && (
+                                            <ReasoningAccordion reasoning={reasoningContent} hasContent={!!textContent} />
+                                        )}
+
+                                        {/* Main Content */}
+                                        {textContent && (
+                                            <div className="prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:text-white prose-p:text-gray-200 prose-p:leading-relaxed prose-strong:text-white prose-strong:font-semibold prose-em:text-gray-300 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-ul:text-gray-200 prose-ol:text-gray-200 prose-li:marker:text-primary/70 prose-code:bg-white/10 prose-code:text-primary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-table:border-collapse prose-th:border prose-th:border-white/20 prose-th:bg-white/5 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-td:border prose-td:border-white/10 prose-td:px-3 prose-td:py-2 prose-blockquote:border-l-primary prose-blockquote:text-gray-300 prose-hr:border-white/10">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                    {textContent}
+                                                </ReactMarkdown>
+                                            </div>
+                                        )}
+                                    </>
                                 ) : (
-                                    <span className="font-medium tracking-wide">{m.content || m.parts?.find((p: any) => p.type === 'text')?.text || ''}</span>
+                                    <span className="font-medium tracking-wide">{textContent}</span>
                                 )}
                             </div>
                         </motion.div>
-                    ))}
+                        );
+                    })}
 
                     {/* Active Edit Suggestion */}
                     {suggestion && (

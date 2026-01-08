@@ -155,9 +155,9 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
         // Fallback: Groq also supports tools
         if (hasGroq()) {
             return {
-                model: groq!(Models.GROQ.KIMI_K2),
+                model: groq!(Models.GROQ.KIMI_K2_0905),
                 provider: 'groq',
-                modelId: Models.GROQ.KIMI_K2,
+                modelId: Models.GROQ.KIMI_K2_0905,
                 isFree: false,
                 reason: 'Tool calling fallback to Groq (Gemini unavailable)',
             };
@@ -236,9 +236,9 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
         // Fallback to Groq
         if (hasGroq()) {
             return {
-                model: groq!(Models.GROQ.KIMI_K2),
+                model: groq!(Models.GROQ.GPT_OSS_120B),
                 provider: 'groq',
-                modelId: Models.GROQ.KIMI_K2,
+                modelId: Models.GROQ.GPT_OSS_120B,
                 isFree: false,
                 reason: 'High quality fallback to Groq Kimi K2',
             };

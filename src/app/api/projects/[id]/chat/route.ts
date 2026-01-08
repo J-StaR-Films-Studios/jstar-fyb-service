@@ -205,7 +205,7 @@ ${researchText}
                 }
             } as any)
         } as any,
-        onFinish: async ({ text }: { text: string }) => {
+        onFinish: async ({ text, reasoning }: { text: string; reasoning?: any[] }) => {
             // Save messages to the resolved thread ID
             if (activeConversationId) {
                 const userMsg = messages[messages.length - 1];
@@ -224,11 +224,23 @@ ${researchText}
                         }
                     });
                 }
+
+                // Extract reasoning text from the reasoning array
+                // SDK returns reasoning as an array of {type: 'reasoning', text: '...'} objects
+                let reasoningText: string | null = null;
+                if (reasoning && Array.isArray(reasoning) && reasoning.length > 0) {
+                    reasoningText = reasoning
+                        .map((r: any) => r.text || r.content || '')
+                        .filter(Boolean)
+                        .join('\n');
+                }
+
                 await prisma.projectChatMessage.create({
                     data: {
                         conversationId: activeConversationId,
                         role: 'assistant',
-                        content: text
+                        content: text,
+                        reasoning: reasoningText || undefined
                     }
                 });
             }
@@ -236,6 +248,7 @@ ${researchText}
     } as any);
 
     return result.toUIMessageStreamResponse({
+        sendReasoning: true, // Include OpenRouter reasoning in stream
         headers: {
             'x-thread-id': activeConversationId!
         }
@@ -260,6 +273,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             id: true,
             role: true,
             content: true,
+            reasoning: true, // Include reasoning for AI messages
             toolInvocations: true,
             createdAt: true
         }

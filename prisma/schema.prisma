@@ -252,6 +252,7 @@ model ProjectChatMessage {
   conversationId  String
   role            String
   content         String
+  reasoning       String?             // AI reasoning/thinking content (optional)
   toolInvocations Json?
   createdAt       DateTime            @default(now())
   conversation    ProjectConversation @relation(fields: [conversationId], references: [id])
