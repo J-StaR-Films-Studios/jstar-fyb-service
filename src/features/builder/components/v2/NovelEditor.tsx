@@ -23,6 +23,7 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { Markdown } from 'tiptap-markdown';
 import BubbleMenu from '@tiptap/extension-bubble-menu';
 import { TableBubbleMenu } from './TableBubbleMenu';
+import { MermaidExtension } from './editor/extensions/MermaidExtension';
 
 interface NovelEditorProps {
     content: string; // Markdown string
@@ -114,6 +115,7 @@ const extensions = [
     BubbleMenu.configure({
         pluginKey: 'table-bubble-menu',
     }),
+    MermaidExtension,
 ];
 
 export function NovelEditor({ content, onUpdate, projectId, className, onEditorReady }: NovelEditorProps) {
