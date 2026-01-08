@@ -4,12 +4,13 @@ import { getSession } from '@/lib/auth-server';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string; diagramId: string } }
+  { params }: { params: Promise<{ id: string; diagramId: string }> }
 ) {
+  const { diagramId } = await params;
   const session = await getSession();
   if (!session) return new NextResponse('Unauthorized', { status: 401 });
 
-  const diagram = await DiagramService.getDiagramById(params.diagramId);
+  const diagram = await DiagramService.getDiagramById(diagramId);
   if (!diagram) return new NextResponse('Not found', { status: 404 });
 
   return NextResponse.json(diagram);
@@ -17,24 +18,26 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string; diagramId: string } }
+  { params }: { params: Promise<{ id: string; diagramId: string }> }
 ) {
+  const { diagramId } = await params;
   const session = await getSession();
   if (!session) return new NextResponse('Unauthorized', { status: 401 });
 
   const body = await req.json();
-  const diagram = await DiagramService.updateDiagram(params.diagramId, body);
+  const diagram = await DiagramService.updateDiagram(diagramId, body);
 
   return NextResponse.json(diagram);
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; diagramId: string } }
+  { params }: { params: Promise<{ id: string; diagramId: string }> }
 ) {
+  const { diagramId } = await params;
   const session = await getSession();
   if (!session) return new NextResponse('Unauthorized', { status: 401 });
 
-  await DiagramService.deleteDiagram(params.diagramId);
+  await DiagramService.deleteDiagram(diagramId);
   return new NextResponse(null, { status: 204 });
 }

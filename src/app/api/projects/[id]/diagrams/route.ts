@@ -4,25 +4,27 @@ import { getSession } from '@/lib/auth-server';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getSession();
   if (!session) return new NextResponse('Unauthorized', { status: 401 });
 
-  const diagrams = await DiagramService.getProjectDiagrams(params.id);
+  const diagrams = await DiagramService.getProjectDiagrams(id);
   return NextResponse.json(diagrams);
 }
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getSession();
   if (!session) return new NextResponse('Unauthorized', { status: 401 });
 
   const body = await req.json();
   const diagram = await DiagramService.createDiagram({
-    projectId: params.id,
+    projectId: id,
     ...body,
   });
 

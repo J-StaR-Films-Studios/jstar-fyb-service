@@ -3,15 +3,16 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } from 'do
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth-server';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getSession();
     if (!session) return new NextResponse('Unauthorized', { status: 401 });
 
     const { diagrams } = await req.json(); // Map of { diagramId: base64String }
 
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { chapters: { orderBy: { number: 'asc' } } }
     });
 
