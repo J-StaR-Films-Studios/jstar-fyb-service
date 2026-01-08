@@ -1,9 +1,11 @@
-import { streamText, tool, stepCountIs, type CoreMessage } from 'ai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { streamText, tool, stepCountIs } from 'ai';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { GeminiFileSearchService } from '@/lib/gemini-file-search';
 import { MONJI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
+import { ProjectContextService } from '@/features/builder/services/projectContextService';
+import { selectModel } from '@/lib/ai';
+
 
 export const maxDuration = 300;
 
@@ -13,227 +15,276 @@ if (!geminiApiKey) {
     throw new Error('GEMINI_API_KEY environment variable is required');
 }
 
-// Create Gemini provider using the AI SDK
-const google = createGoogleGenerativeAI({
-    apiKey: geminiApiKey,
-});
+
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id: projectId } = await params;
     const body = await req.json();
-    const { messages, conversationId } = body;
+    const { messages, threadId, contextScope } = body;
 
-    // 1. Fetch Project with enhanced context
-    const project = await prisma.project.findUnique({
-        where: { id: projectId },
-        include: {
-            outline: true,
-            chapters: {
-                select: { number: true, title: true, status: true, version: true }
-            },
-            documents: {
-                where: { status: 'PROCESSED' },
-                select: {
-                    id: true,
-                    title: true,
-                    author: true,
-                    year: true,
-                    summary: true,
-                    documentType: true
-                }
-            },
-            // Fetch prior Jay onboarding messages if linked
-            messages: {
-                take: 20,
-                orderBy: { createdAt: 'desc' },
-                select: { role: true, content: true }
-            }
+    console.log(`[Chat API] Request for project ${projectId}. ThreadId: ${threadId || 'NEW'}`);
+
+    // 1. Resolve Thread
+    let activeConversationId = threadId;
+    let activeThreadTitle = 'General Chat';
+
+    if (activeConversationId) {
+        // Verify thread exists
+        const thread = await prisma.projectConversation.findUnique({
+            where: { id: activeConversationId }
+        });
+        if (!thread) {
+            // Fallback to creating a new one if not found (robustness)
+            activeConversationId = null;
+        } else {
+            activeThreadTitle = thread.threadTitle || 'Chat';
         }
+    }
+
+    if (!activeConversationId) {
+        // Create new thread
+        const newThread = await prisma.projectConversation.create({
+            data: {
+                projectId,
+                threadType: contextScope ? 'scoped' : 'general',
+                contextScope: contextScope || {},
+                threadTitle: 'New Conversation'
+            }
+        });
+        activeConversationId = newThread.id;
+    }
+
+    // 2. Build Context using Service
+    // We prioritize the explicit contextScope passed in the request, 
+    // falling back to the thread's saved scope if needed (though request scope usually overrides)
+    const scope = contextScope || {};
+
+    // If specific chapters requested (e.g. "Chapter 1 Revisions"), fetch only those
+    const chapterNumbers = scope.chapterNumbers;
+
+    const context = await ProjectContextService.buildContext(projectId, {
+        chapterNumbers: chapterNumbers,
+        includeResearch: scope.includeResearch !== false // Default true
     });
 
-    if (!project) {
-        return new Response('Project not found', { status: 404 });
-    }
+    // 3. Prepare System Prompt Context
+    const researchText = context.researchSummaries.length > 0
+        ? context.researchSummaries.map(r => `- "${r.title}" (${r.year || 'n.d'}): ${r.summary}`).join('\n')
+        : 'No research documents available.';
 
-    // 2. Resolve Conversation ID
-    let activeConversationId = conversationId;
-    if (!activeConversationId) {
-        const conv = await prisma.projectConversation.create({
-            data: { projectId }
-        });
-        activeConversationId = conv.id;
-    }
-
-    // 3. Prepare Enhanced Context
-    const outlineData = project.outline?.content
-        ? (typeof project.outline.content === 'string' ? project.outline.content : JSON.stringify(project.outline.content))
-        : 'No outline available';
-
-    // 3b. Prepare Research Context (Summaries)
-    const researchContext = project.documents.length > 0
-        ? project.documents.map(d =>
-            `- [${d.documentType}] "${d.title}" by ${d.author || 'Unknown'} (${d.year || 'n.d'}): ${d.summary ? d.summary.substring(0, 200) + '...' : 'No summary'}`
-        ).join('\n')
-        : 'No research documents uploaded yet.';
-
-    // 3c. Prepare Chapter Context (Status)
-    const chapterContext = project.chapters.length > 0
-        ? project.chapters.map(c => `- Chapter ${c.number}: ${c.title} (${c.status}, v${c.version})`).join('\n')
+    const chaptersText = context.chapters.length > 0
+        ? context.chapters.map(c => `
+## Chapter ${c.number}: ${c.title} (${c.status})
+${c.content ? c.content.slice(0, 3000) + (c.content.length > 3000 ? '...[truncated]' : '') : '(No content)'}
+`).join('\n')
         : 'No chapters generated yet.';
 
-    // 3d. Prepare Prior Jay Chat Summary (if available)
-    const priorJayChatContext = project.jayContextSummary
-        ? `\n## Prior Onboarding Context\n${project.jayContextSummary}\n`
-        : (project.messages.length > 0
-            ? `\n## Prior Onboarding Chat (Last 20 messages)\n${project.messages.reverse().map(m => `${m.role}: ${m.content}`).join('\n')}\n`
-            : '');
-
-    // 3e. User/Academic Context
-    const userContext = [
-        project.department ? `- **Department:** ${project.department}` : null,
-        project.course ? `- **Course:** ${project.course}` : null,
-        project.institution ? `- **Institution:** ${project.institution}` : null,
-        project.complexity ? `- **Complexity Level:** ${project.complexity}/5` : null,
-    ].filter(Boolean).join('\n') || '- No academic context available yet.';
+    const progressCtx = `Completed ${context.currentProgress.completedChapters}/${context.currentProgress.totalChapters} chapters. Next step: ${context.currentProgress.nextRecommendedStep}`;
 
     const systemPrompt = `${MONJI_SYSTEM_PROMPT}
 
 ## Project Context
-- **Topic:** ${project.topic}
-- **Twist:** ${project.twist || 'None'}
-- **Abstract:** ${project.abstract || 'Not generated yet'}
+- **Topic:** ${context.topic}
+- **Abstract:** ${context.abstract || 'Pending'}
+- **Progress:** ${progressCtx}
 
-## Student's Academic Context
-${userContext}
-${priorJayChatContext}
-## Research Library (Summaries)
-${researchContext}
+## Working Context (Thread: ${activeThreadTitle})
+${chaptersText}
 
-## Current Progress
-${chapterContext}
+## Research Library
+${researchText}
 
-## Generated Outline
-${outlineData}
-
-## Additional Instructions
-You are **NOT** a general assistant. You are specifically trained on THIS student's project. You should:
-1. **Reference their specific topic and twist** when giving advice.
-2. **Use the Research Library** for all writing suggestions to ensure grounded, accurate content.
-3. **NEVER ask what their topic is** - you already know it from the context above.
-4. For **RESEARCH QUESTIONS** (e.g., "What does my research say about X?"), use the "searchProjectDocuments" tool to find direct quotes.
-5. Be conversational, encouraging, and maintain Nigerian academic standards.
-6. If the user asks for content generation, base it on their outline structure.
-7. **PROACTIVELY SAVE CONTEXT**: If the user mentions their department, course, or institution (e.g., "I'm a CS student at UNILAG"), IMMEDIATELY call the saveUserContext tool to save it - do NOT wait to be asked. After saving, acknowledge briefly (e.g., "Got it, I've noted you're in Computer Science at UNILAG!").
-
-**IMPORTANT**: Always answer the user's question FIRST using the context you have. Missing fields like department or institution are nice-to-have but should NEVER block you from helping.
+## Instructions
+1. You are a co-author and writing coach.
+2. Use the provided Chapter content and Research Library to answer questions.
+3. If the user asks for a revision, use the 'suggestEdit' tool.
+4. Be concise but helpful.
 `;
 
     // 4. Stream Response
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-        console.error('[Academic Copilot API] Invalid messages array:', messages);
-        return new Response(JSON.stringify({ error: 'Messages array is required and must not be empty' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-        });
-    }
-
-    // Explicitly type messages for the AI SDK
-    const coreMessages: CoreMessage[] = messages.map((m: any) => ({
+    const coreMessages = messages.map((m: any) => ({
         role: m.role as 'user' | 'assistant' | 'system',
         content: typeof m.content === 'string' ? m.content : (m.parts?.find((p: any) => p.type === 'text')?.text || '')
     }));
 
+    // Detect if user wants reasoning
+    const lastUserMessage = coreMessages
+        .slice().reverse().find((m: any) => m.role === 'user')?.content || '';
+
+    const wantsReasoning = /think|reason|why|explain|analyze|compare|critique/i.test(lastUserMessage);
+
+    // Use smart routing to pick the best model
+    const { model, modelId, provider, isFree, reason } = selectModel({
+        tools: true,
+        reasoning: wantsReasoning, // Dynamic switching
+        quality: 'high'
+    });
+
+    console.log(`[Chat API] Using model: ${modelId} via ${provider} (Free: ${isFree}) - ${reason} (Reasoning Requested: ${wantsReasoning})`);
+
+    // For OpenRouter reasoning models, we pass the reasoning config via providerOptions
+    // The reasoning content comes back in a separate 'reasoning' field on the response
     const result = streamText({
-        model: google('gemini-2.5-flash'), // Gemini 2.5 Flash (stable)
-        system: systemPrompt,
-        messages: coreMessages,
-        stopWhen: stepCountIs(5), // Allow tool usage steps
+        model,
+        system: systemPrompt, // No need for forced <think> tags - OpenRouter handles reasoning
+        messages: coreMessages as any,
+        // @ts-ignore
+        maxSteps: 5, // Allow multiple tool steps
+        // Pass reasoning config to OpenRouter when requested
+        ...(wantsReasoning && provider === 'openrouter' ? {
+            providerOptions: {
+                openrouter: {
+                    reasoning: {
+                        effort: 'high', // high effort for detailed reasoning
+                        // exclude: false // include reasoning in response (default)
+                    }
+                }
+            }
+        } : {}),
         tools: {
             searchProjectDocuments: tool({
-                description: `Search the full text of uploaded research documents for specific information, quotes, or evidence. Use this when the user asks questions like "What does my research say about Y?" or "Find quotes about Z".`,
-                inputSchema: z.object({
-                    query: z.string().describe('The search query for the research library'),
+                description: `Search the full text of uploaded research documents.`,
+                parameters: z.object({
+                    query: z.string(),
                 }),
                 execute: async ({ query }: { query: string }) => {
                     try {
-                        if (!project.fileSearchStoreId) return "No research library index found. Please upload documents first.";
+                        const project = await prisma.project.findUnique({
+                            where: { id: projectId },
+                            select: { fileSearchStoreId: true }
+                        });
+
+                        if (!project?.fileSearchStoreId) {
+                            return "I cannot search documents because no research library has been created for this project. Please upload documents first.";
+                        }
 
                         const result = await GeminiFileSearchService.generateWithGrounding(
                             query,
                             [project.fileSearchStoreId]
                         );
-
-                        // Format the grounded result for the chat model
-                        return `Here is the information found in the documents:\n\n${result.text}\n\nSOURCES/CITATIONS:\n${JSON.stringify(result.groundingChunks)}`;
+                        return `Found in documents:\n${result.text}\nSOURCES: ${JSON.stringify(result.groundingChunks)}`;
                     } catch (error: any) {
                         console.error('[Chat Tool] Search failed:', error);
-                        return `Search failed: ${error.message}`;
+                        // Return error as string so the AI knows it failed but chat continues
+                        return `Search failed: ${error.message || 'Unknown error'}. Please ignore this tool result.`;
                     }
                 }
-            }),
-            saveUserContext: tool({
-                description: `PROACTIVELY save user context whenever they mention their department, course code, or institution. Call this tool IMMEDIATELY when the user says things like "I'm in Computer Science", "I study at UNILAG", "my course is CSC 499", etc. Do NOT wait for them to ask you to save it - just save it automatically and briefly acknowledge.`,
-                inputSchema: z.object({
-                    department: z.string().optional().describe('e.g., Computer Science'),
-                    course: z.string().optional().describe('e.g., CSC 499'),
-                    institution: z.string().optional().describe('e.g., University of Lagos'),
+            } as any),
+            suggestEdit: tool({
+                description: `Suggest a specific content revision for a chapter or section. Use this when the user asks to "rewrite", "improve", "fix", or "change" specific text.`,
+                parameters: z.object({
+                    chapterNumber: z.number().describe('The chapter number to edit'),
+                    currentContentToReplace: z.string().describe('The EXACT text snippet to be replaced (must match existing text)'),
+                    newContent: z.string().describe('The proposed new content'),
+                    explanation: z.string().describe('Brief reason for the change'),
                 }),
-                execute: async ({ department, course, institution }) => {
-                    try {
-                        const updateData: any = {};
-                        if (department) updateData.department = department;
-                        if (course) updateData.course = course;
-                        if (institution) updateData.institution = institution;
-
-                        if (Object.keys(updateData).length > 0) {
-                            await prisma.project.update({
-                                where: { id: projectId },
-                                data: {
-                                    ...updateData,
-                                    contextComplete: !!(department && project.topic)
-                                }
-                            });
-                            return `Context saved successfully: ${JSON.stringify(updateData)}`;
-                        }
-                        return 'No context to save';
-                    } catch (error: any) {
-                        console.error('[Chat Tool] Context save failed:', error);
-                        return `Failed to save context: ${error.message}`;
-                    }
+                execute: async ({ chapterNumber, currentContentToReplace, newContent, explanation }: { chapterNumber: number; currentContentToReplace: string; newContent: string; explanation: string }) => {
+                    // We don't apply it here, just return the structured suggestion for the UI to render
+                    return {
+                        tool: 'suggestEdit',
+                        chapterNumber,
+                        original: currentContentToReplace,
+                        replacement: newContent,
+                        explanation
+                    };
                 }
-            })
-        },
-        onFinish: async ({ text }) => {
-            // Save User Message (last one)
-            const lastUserMessage = messages[messages.length - 1];
-            if (lastUserMessage && lastUserMessage.role === 'user') {
-                const userContent = typeof lastUserMessage.content === 'string'
-                    ? lastUserMessage.content
-                    : (lastUserMessage.parts?.find((p: any) => p.type === 'text')?.text || '');
+            } as any),
+            saveUserContext: tool({
+                description: `Save user details like department, course, or institution.`,
+                parameters: z.object({
+                    department: z.string().optional(),
+                    course: z.string().optional(),
+                    institution: z.string().optional(),
+                }),
+                execute: async (data: { department?: string; course?: string; institution?: string }) => {
+                    await prisma.project.update({
+                        where: { id: projectId },
+                        data: { ...data, contextComplete: true }
+                    });
+                    return "Context saved.";
+                }
+            } as any)
+        } as any,
+        onFinish: async ({ text, reasoning }: { text: string; reasoning?: any[] }) => {
+            // Save messages to the resolved thread ID
+            if (activeConversationId) {
+                const userMsg = messages[messages.length - 1];
+                if (userMsg?.role === 'user') {
+                    await prisma.projectChatMessage.create({
+                        data: {
+                            conversationId: activeConversationId,
+                            role: 'user',
+                            content: (() => {
+                                if (typeof userMsg.content === 'string' && userMsg.content) return userMsg.content;
+                                if (Array.isArray(userMsg.parts)) {
+                                    return userMsg.parts.map((p: any) => p.text || '').join('');
+                                }
+                                return '';
+                            })()
+                        }
+                    });
+                }
+
+                // Extract reasoning text from the reasoning array
+                // SDK returns reasoning as an array of {type: 'reasoning', text: '...'} objects
+                let reasoningText: string | null = null;
+                if (reasoning && Array.isArray(reasoning) && reasoning.length > 0) {
+                    reasoningText = reasoning
+                        .map((r: any) => r.text || r.content || '')
+                        .filter(Boolean)
+                        .join('\n');
+                }
+
                 await prisma.projectChatMessage.create({
                     data: {
                         conversationId: activeConversationId,
-                        role: 'user',
-                        content: userContent
+                        role: 'assistant',
+                        content: text,
+                        reasoning: reasoningText || undefined
                     }
                 });
             }
+        }
+    } as any);
 
-            // Save Assistant Message
-            await prisma.projectChatMessage.create({
-                data: {
-                    conversationId: activeConversationId,
-                    role: 'assistant',
-                    content: text
-                }
-            });
-        },
+    return result.toUIMessageStreamResponse({
+        sendReasoning: true, // Include OpenRouter reasoning in stream
+        headers: {
+            'x-thread-id': activeConversationId!
+        }
     });
-
-    return result.toUIMessageStreamResponse();
 }
 
 // DELETE: Clear project chat history
+
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id: projectId } = await params;
+    const { searchParams } = new URL(req.url);
+    const threadId = searchParams.get('threadId');
+
+    if (!threadId) {
+        return new Response(JSON.stringify({ messages: [] }), { status: 200 });
+    }
+
+    const messages = await prisma.projectChatMessage.findMany({
+        where: { conversationId: threadId },
+        orderBy: { createdAt: 'asc' },
+        select: {
+            id: true,
+            role: true,
+            content: true,
+            reasoning: true, // Include reasoning for AI messages
+            toolInvocations: true,
+            createdAt: true
+        }
+    });
+
+    return new Response(JSON.stringify({ messages }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id: projectId } = await params;

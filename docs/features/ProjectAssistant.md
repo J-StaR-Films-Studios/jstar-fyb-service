@@ -22,13 +22,13 @@ New models added to `prisma/schema.prisma`:
     - Streams response to client.
     - Saves conversation history to Database.
 
-### 3. Frontend Component (`ProjectAssistant.tsx`)
-- **Location:** `src/features/builder/components/ProjectAssistant.tsx`
-- **Uses:** `useChat` hook from `@ai-sdk/react`.
+### 3. Frontend Component (`AcademicCopilot.tsx`)
+- **Location:** `src/features/builder/components/v2/AcademicCopilot.tsx`
+- **Uses:** `useChat` hook from `@ai-sdk/react` with `DefaultChatTransport` (AI SDK v6).
 - **UI:** 
-    - Floating/Fixed panel or embedded in `ChapterOutliner`.
+    - Sidebar panel in the project workspace.
     - Shows typing indicators.
-    - Persists chat history within the session.
+    - Persists chat history via threaded conversations.
 
 ### 4. Integration
 - Integrated into `ChapterOutliner.tsx` (The Builder Dashboard).

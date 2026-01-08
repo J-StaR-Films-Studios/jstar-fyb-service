@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
     BrainCircuit,
@@ -17,29 +18,293 @@ import {
     Terminal,
     ChevronDown,
     Layout,
-    Trash2
+    Trash2,
+    MessageSquare,
+    ChevronLeft
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { ThreadSelector } from './ThreadSelector';
+import { EditSuggestionCard } from './EditSuggestionCard';
+import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { PERSONALITIES } from '@/features/bot/prompts/system';
+
+// Reasoning Accordion Component for displaying AI thinking process
+function ReasoningAccordion({ reasoning, hasContent }: { reasoning: string; hasContent: boolean }) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className={cn("text-xs", hasContent && "mb-3")}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors font-mono uppercase tracking-wider"
+            >
+                <span className={cn("transform transition-transform", isOpen ? "rotate-90" : "")}>▶</span>
+                Thinking Process
+            </button>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="mt-2 pl-4 border-l-2 border-primary/20 text-gray-400 italic font-mono whitespace-pre-wrap text-[11px] leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar"
+                    >
+                        {reasoning}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {hasContent && <div className="h-px w-full bg-white/10 mt-3" />}
+        </div>
+    );
+}
 
 interface AcademicCopilotProps {
     projectId: string;
     activeChapterId?: string;
     activeChapterNumber?: number;
+    onClose?: () => void;
 }
 
-export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber }: AcademicCopilotProps) {
+export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose }: AcademicCopilotProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [localInput, setLocalInput] = useState('');
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+    // URL param handling for thread persistence
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const urlThreadId = searchParams.get('thread');
+
+    // State for threads
+    const [activeThreadId, setActiveThreadId] = useState<string | null>(urlThreadId);
+    const [suggestion, setSuggestion] = useState<any | null>(null);
+    const [lastKnownThread, setLastKnownThread] = useState<{ id: string; title: string } | null>(null);
+    const [isLoadingThreads, setIsLoadingThreads] = useState(true);
 
     // Avatar cycling state for personality transition
     const [showAI, setShowAI] = useState(false);
     const cycleTimings = [3000, 5000, 5000, 10000]; // ms
     const cycleIndexRef = useRef(0);
 
+    // Auto-scroll logic
+    const scrollToBottom = () => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    };
+
+    // State for input
+    const [input, setInput] = useState('');
+
+    // Sync state to ref for access inside closures/fetch
+    const activeThreadIdRef = useRef(activeThreadId);
+    useEffect(() => { activeThreadIdRef.current = activeThreadId; }, [activeThreadId]);
+
+    // Update URL when activeThreadId changes (shallow routing)
+    const updateUrlWithThread = useCallback((threadId: string | null) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (threadId) {
+            params.set('thread', threadId);
+        } else {
+            params.delete('thread');
+        }
+        // Use window.history directly to avoid React re-renders
+        // This updates the URL without triggering Next.js routing
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState(null, '', newUrl);
+    }, [searchParams]);
+
+    // Fetch last known thread on mount (for "Continue last chat" button)
+    useEffect(() => {
+        const fetchLastThread = async () => {
+            try {
+                const res = await fetch(`/api/projects/${projectId}/threads`);
+                const data = await res.json();
+                if (data.success && data.threads?.length > 0) {
+                    const mostRecent = data.threads[0];
+                    setLastKnownThread({ id: mostRecent.id, title: mostRecent.threadTitle });
+                }
+            } catch (e) {
+                console.error("Failed to fetch threads", e);
+            } finally {
+                setIsLoadingThreads(false);
+            }
+        };
+        fetchLastThread();
+    }, [projectId]);
+
+    // Chat Hook - Use a STABLE ID that doesn't change mid-conversation
+    // If we started as a new thread, keep 'new' in the ID even after we get a real thread ID
+    // This prevents the hook from reinitializing and clearing messages
+    const [stableThreadId] = useState(urlThreadId || 'new');
+
+    const { messages, sendMessage: chatSendMessage, status, setMessages } = useChat({
+        transport: new DefaultChatTransport({ api: `/api/projects/${projectId}/chat` }),
+        id: `academic-copilot-${projectId}-${stableThreadId}`, // Stable ID - doesn't change mid-conversation
+        onError: (error) => {
+            console.error("Chat error:", error);
+        }
+    });
+
+    // Auto-load messages when mounting with a URL thread param
+    const hasLoadedUrlThread = useRef(false);
+    useEffect(() => {
+        if (urlThreadId && !hasLoadedUrlThread.current && !isLoadingThreads) {
+            hasLoadedUrlThread.current = true;
+            // Load messages for the URL thread
+            (async () => {
+                try {
+                    const res = await fetch(`/api/projects/${projectId}/chat?threadId=${urlThreadId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.messages) {
+                            setMessages(data.messages);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load URL thread messages", e);
+                }
+            })();
+        }
+    }, [urlThreadId, isLoadingThreads, projectId, setMessages]);
+
+    // Handle tool invocations from messages (v6 compatible)
+    useEffect(() => {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.role === 'assistant') {
+            // In v6, tool invocations are in the 'parts' array of the message
+            const parts = (lastMessage as any).parts || [];
+            const toolPart = parts.find((p: any) =>
+                p.type === 'tool-invocation' && p.toolInvocation?.toolName === 'suggestEdit'
+            );
+            if (toolPart?.toolInvocation?.result) {
+                setSuggestion(toolPart.toolInvocation.result);
+            }
+        }
+    }, [messages]);
+
+    const isLoading = status === 'submitted' || status === 'streaming';
+
+    // Wrapper to maintain compatibility with existing 'sendMessage' calls while injecting dynamic body
+    const sendMessage = async (payload: { text: string }) => {
+        console.log("[AcademicCopilot] Sending message with threadId:", activeThreadIdRef.current);
+        const wasNewThread = !activeThreadIdRef.current;
+
+        await chatSendMessage({
+            text: payload.text,
+        }, {
+            body: {
+                threadId: activeThreadIdRef.current,
+                contextScope: activeChapterNumber ? { chapterNumbers: [activeChapterNumber] } : {}
+            }
+        });
+
+        // If this was a new thread, fetch the created thread ID and update state/URL
+        if (wasNewThread) {
+            try {
+                const res = await fetch(`/api/projects/${projectId}/threads`);
+                const data = await res.json();
+                if (data.success && data.threads?.length > 0) {
+                    const newestThread = data.threads[0];
+                    setActiveThreadId(newestThread.id);
+                    updateUrlWithThread(newestThread.id);
+                    setLastKnownThread({ id: newestThread.id, title: newestThread.threadTitle });
+                }
+            } catch (e) {
+                console.error("Failed to fetch new thread ID", e);
+            }
+        }
+    };
+
+    const handleSend = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!input.trim() || isLoading) return;
+
+        const userMessage = input;
+        setInput('');
+
+        await sendMessage({ text: userMessage });
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setInput(e.target.value);
+        // Auto-resize
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages, suggestion]);
+
+    // Internal helper to load messages
+    const loadThreadMessages = async (threadId: string) => {
+        try {
+            const res = await fetch(`/api/projects/${projectId}/chat?threadId=${threadId}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.messages) {
+                    setMessages(data.messages);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load thread messages", error);
+        }
+    };
+
+    // Handle Thread Switching
+    const handleThreadSelect = async (threadId: string | null) => {
+        setActiveThreadId(threadId);
+        updateUrlWithThread(threadId);
+        setSuggestion(null);
+        if (threadId) {
+            setMessages([]); // Clear view while loading
+            await loadThreadMessages(threadId);
+        } else {
+            setMessages([]);
+        }
+    };
+
+    const handleCreateThread = async (type: 'general' | 'chapter' | 'research', title?: string) => {
+        try {
+            const res = await fetch(`/api/projects/${projectId}/threads`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type,
+                    title: title || `New ${type} discussion`,
+                    contextScope: activeChapterNumber ? { chapterNumbers: [activeChapterNumber] } : {}
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setActiveThreadId(data.thread.id);
+                updateUrlWithThread(data.thread.id);
+                setMessages([]);
+            }
+        } catch (e) {
+            console.error("Failed to create thread", e);
+        }
+    };
+
+    const handleQuickAction = (prompt: string) => {
+        sendMessage({ text: prompt });
+    };
+
+    // Avatar animation cycle
     useEffect(() => {
         const cycle = () => {
             setShowAI(prev => !prev);
@@ -56,139 +321,39 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         };
     }, []);
 
-    // API endpoint for project-specific chat
-    const apiEndpoint = projectId ? `/api/projects/${projectId}/chat` : '/api/chat';
-    console.log('[AcademicCopilot] Using API endpoint:', apiEndpoint, 'projectId:', projectId);
-
-    // AI SDK 5.0 requires DefaultChatTransport for custom API endpoints
-    const { messages, sendMessage, status, error, setMessages } = useChat({
-        transport: new DefaultChatTransport({
-            api: apiEndpoint,
-            body: {
-                projectId,
-                chapterId: activeChapterId,
-                chapterNumber: activeChapterNumber
-            }
-        }),
-        id: projectId ? `academic-copilot-${projectId}` : 'academic-copilot-fallback',
-    });
-
-    const isLoading = status === 'streaming' || status === 'submitted';
-
-    // Auto-scroll to bottom
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [messages]);
-
-    // CRITICAL: Guard against undefined projectId AFTER all hooks
-    if (!projectId) {
-        console.error('[AcademicCopilot] projectId is undefined!');
-        return (
-            <div className="flex items-center justify-center h-full text-red-400 text-sm p-4">
-                Error: Project ID is missing. Please refresh the page.
-            </div>
-        );
-    }
-
-    const quickActions = [
-        { id: 'fact-check', icon: Search, label: 'Deep Fact Check', color: 'text-accent', prompt: 'Fact check the last paragraph I wrote using my research library.' },
-        { id: 'suggest-edits', icon: Sparkles, label: 'Suggest Edits', color: 'text-primary', prompt: 'Based on my uploaded papers, suggest improvements for this section.' },
-        { id: 'cite-source', icon: Quote, label: 'Find Citations', color: 'text-green-400', prompt: 'Find a direct quote from my library that supports the methodology used here.' },
-        { id: 'draft-intro', icon: FileText, label: 'Draft Intro', color: 'text-yellow-400', prompt: 'Using the project abstract and research, draft an introduction for this chapter.' }
-    ];
-
-    const handleQuickAction = (prompt: string) => {
-        setLocalInput(prompt);
-    };
-
-    const handleFormSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!localInput.trim() || isLoading) return;
-
-        const userMessage = localInput;
-        setLocalInput('');
-
-        try {
-            // AI SDK 5.0 uses parts array instead of content
-            await sendMessage({
-                role: 'user',
-                parts: [{ type: 'text', text: userMessage }],
-            });
-        } catch (err) {
-            console.error('[AcademicCopilot] Send failed:', err);
-        }
-    };
-
-    const handleClearChat = async () => {
-        try {
-            // Clear messages from the AI SDK state
-            setMessages([]);
-            // Also clear from the database if there's a project conversation
-            await fetch(`/api/projects/${projectId}/chat`, { method: 'DELETE' });
-            setShowClearConfirm(false);
-        } catch (err) {
-            console.error('[AcademicCopilot] Clear failed:', err);
-        }
-    };
-
     return (
         <div className="flex flex-col h-full bg-dark/20 overflow-hidden relative">
-            {/* Clear Chat Confirmation Modal */}
-            <AnimatePresence>
-                {showClearConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-                        onClick={() => setShowClearConfirm(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-dark border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
-                        >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
-                                    <Trash2 className="w-5 h-5 text-red-400" />
-                                </div>
-                                <h3 className="font-display font-bold text-lg">Clear Chat?</h3>
-                            </div>
-                            <p className="text-sm text-gray-400 mb-6">
-                                This will delete all messages with Monji and start fresh. This action cannot be undone.
-                            </p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowClearConfirm(false)}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleClearChat}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-bold transition-colors"
-                                >
-                                    Clear All
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
-            {/* Trash Button - Fixed in corner */}
-            <div className="absolute top-2 right-2 z-20">
-                <button
-                    onClick={() => setShowClearConfirm(true)}
-                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-red-400 transition-colors"
-                    title="Clear Chat"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
+            {/* Header with Thread Selector */}
+            <div className="flex items-center justify-between p-4 border-b border-white/5 shrink-0 z-30 bg-black/20 backdrop-blur-sm">
+                <div className="flex items-center gap-3">
+                    {onClose ? (
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                        >
+                            <ChevronLeft className="w-4 h-4 text-white" />
+                        </button>
+                    ) : (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                            <Sparkles className="w-4 h-4 text-white" />
+                        </div>
+                    )}
+                    <div className="flex flex-col">
+                        <ThreadSelector
+                            projectId={projectId}
+                            activeThreadId={activeThreadId}
+                            onThreadSelect={handleThreadSelect}
+                            onCreateThread={handleCreateThread}
+                        />
+                    </div>
+                </div>
+
+                {/* Context Indicator */}
+                <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] uppercase font-bold text-gray-400">
+                    <Layout className="w-3 h-3" />
+                    {activeChapterNumber ? `Chapter ${activeChapterNumber}` : 'Full Project (DEBUG)'}
+                </div>
             </div>
 
             {/* Ambient Background Glow */}
@@ -197,185 +362,235 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             {/* Chat Body */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar"
+                className="flex-1 overflow-y-auto p-4 pb-48 space-y-6 custom-scrollbar"
             >
-                {messages.length === 0 ? (
-                    /* V3: Empty State Widgets */
-                    <div className="h-full flex flex-col items-center justify-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        <div className="text-center space-y-2">
-                            <div className="relative w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4">
-                                {/* Monji Avatar */}
-                                <div className={cn(
-                                    "absolute inset-0 transition-all duration-700 ease-in-out border-2 border-amber-500/30 rounded-2xl overflow-hidden",
-                                    showAI ? "opacity-0 scale-90" : "opacity-100 scale-100"
-                                )}>
-                                    <Image
-                                        src={PERSONALITIES.monji.avatar}
-                                        alt="Monji"
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </div>
-                                {/* AI Icon */}
-                                <div className={cn(
-                                    "absolute inset-0 flex items-center justify-center bg-primary/20 border-2 border-primary/30 rounded-2xl transition-all duration-700 ease-in-out",
-                                    showAI ? "opacity-100 scale-100" : "opacity-0 scale-110"
-                                )}>
-                                    <BrainCircuit className="w-8 h-8 text-primary" />
-                                </div>
-                            </div>
-                            <h3 className="font-display font-bold text-white text-lg transition-all duration-500">
-                                {showAI ? "Academic AI" : "Monji"}
-                            </h3>
-                            <p className="text-xs text-gray-400 max-w-[220px] mx-auto leading-relaxed min-h-[48px] flex items-center">
-                                <span className="transition-opacity duration-500">
-                                    {showAI
-                                        ? "Powered by your research library. Ask me anything about your project."
-                                        : "Your academic copilot. I'm trained on your research library to help you write with confidence."
-                                    }
-                                </span>
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 w-full max-w-[320px]">
-                            {quickActions.map((action) => (
-                                <button
-                                    key={action.id}
-                                    onClick={() => handleQuickAction(action.prompt)}
-                                    className="bg-white/5 border border-white/5 p-4 rounded-2xl hover:bg-white/10 hover:border-white/10 transition-all text-center group active:scale-95"
-                                >
-                                    <action.icon className={cn("w-5 h-5 mx-auto mb-2 transition-transform group-hover:scale-110", action.color)} />
-                                    <span className="text-[10px] font-bold uppercase text-gray-500 group-hover:text-gray-300 tracking-wider">
-                                        {action.label}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    /* V1: Chat Flow */
-                    <div className="space-y-6">
-                        {messages.map((m: any) => {
-                            // Extract content and tool invocations from potential 'parts' or direct properties
-                            let content = '';
-                            let toolInvocations: any[] = [];
-
-                            if (m.parts) {
-                                m.parts.forEach((p: any) => {
-                                    if (p.type === 'text') content += p.text;
-                                    else if (p.type?.startsWith('tool-')) toolInvocations.push(p);
-                                });
-                            } else {
-                                content = m.content || '';
-                                toolInvocations = m.toolInvocations || [];
-                            }
-
-                            return (
-                                <div key={m.id} className={cn(
-                                    "flex flex-col",
-                                    m.role === 'user' ? "items-end" : "items-start"
-                                )}>
+                <AnimatePresence mode="popLayout">
+                    {messages.length === 0 && (
+                        /* Empty State */
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="h-full flex flex-col items-center justify-center space-y-8"
+                        >
+                            <div className="text-center space-y-2">
+                                <div className="relative w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4">
+                                    {/* Monji Avatar */}
                                     <div className={cn(
-                                        "max-w-[90%] rounded-2xl p-4 text-xs leading-relaxed transition-all shadow-sm",
-                                        m.role === 'user'
-                                            ? "bg-primary/20 border border-primary/30 text-white rounded-tr-none"
-                                            : "bg-white/5 border border-white/5 text-gray-300 rounded-tl-none"
+                                        "absolute inset-0 transition-all duration-700 ease-in-out border-2 border-amber-500/30 rounded-2xl overflow-hidden",
+                                        showAI ? "opacity-0 scale-90" : "opacity-100 scale-100"
                                     )}>
-                                        {content}
-
-                                        {/* Sub-agent / Tool Call Results */}
-                                        {toolInvocations.map((toolInvocation: any) => {
-                                            const { toolName, toolCallId, state, type } = toolInvocation;
-                                            const actualToolName = toolName || type?.replace('tool-', '');
-
-                                            if (state === 'call' || state === 'calling') {
-                                                return (
-                                                    <div key={toolCallId} className="mt-4 flex items-center gap-2 text-[10px] text-primary font-bold animate-pulse">
-                                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                                        Searching library...
-                                                    </div>
-                                                );
-                                            }
-
-                                            if ((state === 'result' || state === 'output-available') && actualToolName === 'searchProjectDocuments') {
-                                                // V5: Rich Citation Cards
-                                                return (
-                                                    <div key={toolCallId} className="mt-4 space-y-3 pt-4 border-t border-white/10">
-                                                        <div className="flex items-center gap-2 text-[10px] text-accent font-bold uppercase tracking-widest">
-                                                            <Search className="w-3 h-3" /> Grounded Result
-                                                        </div>
-                                                        <div className="p-3 bg-black/40 rounded-xl border border-white/5 hover:border-accent/30 transition-colors group">
-                                                            <p className="text-[11px] text-gray-400 italic mb-2">
-                                                                "Source data correlated with your query..."
-                                                            </p>
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2 text-[9px] text-gray-500 font-mono">
-                                                                    <FileText className="w-3 h-3" /> ref_01.pdf
-                                                                </div>
-                                                                <button className="text-[9px] font-bold text-primary uppercase tracking-tighter hover:text-accent transition-colors flex items-center gap-1">
-                                                                    Analyze Further <ArrowRight className="w-2 h-2" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }
-                                            return null;
-                                        })}
+                                        <Image
+                                            src={PERSONALITIES.monji.avatar}
+                                            alt="Monji"
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                    {/* AI Icon */}
+                                    <div className={cn(
+                                        "absolute inset-0 flex items-center justify-center bg-primary/20 border-2 border-primary/30 rounded-2xl transition-all duration-700 ease-in-out",
+                                        showAI ? "opacity-100 scale-100" : "opacity-0 scale-110"
+                                    )}>
+                                        <BrainCircuit className="w-8 h-8 text-primary" />
                                     </div>
                                 </div>
-                            );
-                        })}
-                        {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                            <div className="flex items-center gap-2 text-[10px] text-gray-500 px-2 animate-pulse">
-                                <Terminal className="w-3 h-3" /> Copilot is thinking...
+                                <h3 className="font-display font-bold text-white text-lg transition-all duration-500">
+                                    {showAI ? "Academic AI" : "Monji"}
+                                </h3>
+                                <div className="text-xs text-gray-400 max-w-[220px] mx-auto leading-relaxed min-h-[48px] flex flex-col items-center justify-center">
+                                    <span className="transition-opacity duration-500 block mb-1">
+                                        {showAI
+                                            ? "Powered by your research library."
+                                            : "Your academic copilot."
+                                        }
+                                    </span>
+                                    <span className="text-primary/70 block">
+                                        {activeChapterNumber
+                                            ? `Focused on Chapter ${activeChapterNumber}`
+                                            : "Ready to help plan or research."
+                                        }
+                                    </span>
+                                </div>
+
+                                {/* Continue Last Chat Button */}
+                                {lastKnownThread && !activeThreadId && (
+                                    <button
+                                        onClick={() => handleThreadSelect(lastKnownThread.id)}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 text-sm text-primary hover:bg-primary/20 transition-all mt-4 group"
+                                    >
+                                        <MessageSquare className="w-4 h-4" />
+                                        <span>Continue: {lastKnownThread.title || 'Last Chat'}</span>
+                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                )}
                             </div>
-                        )}
-                        {error && (
-                            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-xs text-red-400 flex items-center gap-3">
-                                <AlertCircle className="w-4 h-4 shrink-0" />
-                                <span>Something went wrong. Please try again.</span>
+                        </motion.div>
+                    )}
+
+                    {messages.map((m: any) => {
+                        // Extract reasoning from either:
+                        // 1. SDK v6 parts array (during streaming)
+                        // 2. Database reasoning field (after reload)
+                        const parts = m.parts || [];
+                        const reasoningPart = parts.find((p: any) => p.type === 'reasoning');
+                        const textPart = parts.find((p: any) => p.type === 'text');
+
+                        // Try multiple sources for reasoning content
+                        const reasoningContent =
+                            m.reasoning ||  // From database (after reload)
+                            reasoningPart?.text || reasoningPart?.reasoning || reasoningPart?.content || // From SDK parts (streaming)
+                            null;
+                        const textContent = m.content || textPart?.text || '';
+
+                        // DEBUG: Log the message structure to understand what we're getting
+                        if (m.role === 'assistant') {
+                            console.log('[DEBUG] Assistant message structure:', {
+                                id: m.id,
+                                role: m.role,
+                                hasContent: !!m.content,
+                                contentPreview: typeof m.content === 'string' ? m.content.substring(0, 100) : 'not a string',
+                                partsCount: parts.length,
+                                partTypes: parts.map((p: any) => p.type),
+                                hasReasoning: !!reasoningPart,
+                                dbReasoning: !!m.reasoning, // Check if reasoning from DB
+                                reasoningPartFull: reasoningPart ? JSON.stringify(reasoningPart) : null,
+                                reasoningContent: reasoningContent ? String(reasoningContent).substring(0, 100) + '...' : null,
+                                fullParts: JSON.stringify(parts).substring(0, 1000)
+                            });
+                        }
+
+                        return (<motion.div
+                            key={m.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className={cn(
+                                "flex w-full mb-4",
+                                m.role === 'user' ? "justify-end" : "justify-start"
+                            )}
+                        >
+                            <div className={cn(
+                                "rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm backdrop-blur-sm transition-all duration-300",
+                                m.role === 'user'
+                                    ? "max-w-[85%] bg-gradient-to-br from-primary to-purple-600 text-white rounded-br-sm shadow-purple-500/10"
+                                    : "w-full bg-white/10 text-gray-100 rounded-bl-sm border border-white/5 shadow-black/20"
+                            )}>
+                                {m.role === 'assistant' ? (
+                                    <>
+                                        {/* Reasoning Accordion */}
+                                        {reasoningContent && (
+                                            <ReasoningAccordion reasoning={reasoningContent} hasContent={!!textContent} />
+                                        )}
+
+                                        {/* Main Content */}
+                                        {textContent && (
+                                            <div className="prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:text-white prose-p:text-gray-200 prose-p:leading-relaxed prose-strong:text-white prose-strong:font-semibold prose-em:text-gray-300 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-ul:text-gray-200 prose-ol:text-gray-200 prose-li:marker:text-primary/70 prose-code:bg-white/10 prose-code:text-primary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-table:border-collapse prose-th:border prose-th:border-white/20 prose-th:bg-white/5 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-td:border prose-td:border-white/10 prose-td:px-3 prose-td:py-2 prose-blockquote:border-l-primary prose-blockquote:text-gray-300 prose-hr:border-white/10">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                    {textContent}
+                                                </ReactMarkdown>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <span className="font-medium tracking-wide">{textContent}</span>
+                                )}
                             </div>
-                        )}
-                    </div>
-                )}
+                        </motion.div>
+                        );
+                    })}
+
+                    {/* Active Edit Suggestion */}
+                    {suggestion && (
+                        <EditSuggestionCard
+                            chapterNumber={suggestion.chapterNumber}
+                            originalContent={suggestion.original}
+                            newContent={suggestion.replacement}
+                            explanation={suggestion.explanation}
+                            onApply={(content) => {
+                                setSuggestion(null);
+                                sendMessage({ text: `Applied edit: ${content.substring(0, 20)}...` });
+                            }}
+                            onReject={() => {
+                                setSuggestion(null);
+                                sendMessage({ text: "I rejected that suggestion." });
+                            }}
+                        />
+                    )}
+
+                    {isLoading && (
+                        <motion.div className="flex justify-start w-full">
+                            <div className="bg-white/5 rounded-2xl rounded-bl-none px-4 py-3 border border-white/5 flex gap-1 items-center">
+                                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 bg-dark/40 border-t border-white/5">
-                <form
-                    onSubmit={handleFormSubmit}
-                    className="relative"
-                >
-                    <textarea
-                        value={localInput}
-                        onChange={(e) => setLocalInput(e.target.value)}
-                        placeholder="Ask your Academic Copilot..."
-                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 pr-12 text-xs outline-none focus:border-primary/50 resize-none h-20 transition-all focus:bg-white/[0.07] custom-scrollbar"
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleFormSubmit(e as any);
-                            }
-                        }}
-                    />
-                    <button
-                        type="submit"
-                        disabled={isLoading || !localInput.trim()}
-                        className={cn(
-                            "absolute bottom-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition-all",
-                            isLoading || !localInput.trim()
-                                ? "bg-white/5 text-gray-600"
-                                : "bg-primary text-white hover:scale-105 active:scale-95 shadow-lg shadow-primary/20"
-                        )}
-                    >
-                        {isLoading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <Send className="w-4 h-4" />
-                        )}
-                    </button>
+            {/* Floating Command Center Input */}
+            <div className="p-4 pb-2 md:pb-6 absolute bottom-0 left-0 right-0 bg-gradient-to-t from-dark via-dark/80 to-transparent pt-12">
+                {/* Quick Actions (Contextual) */}
+                <AnimatePresence>
+                    {messages.length === 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="flex gap-2 overflow-x-auto pb-4 no-scrollbar mask-fade-right px-1"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        >
+                            {[
+                                "Summarize my research so far",
+                                "Draft the introduction for this chapter",
+                                "Find quotes about... ",
+                                "Critique my argument flow"
+                            ].map((action, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => handleQuickAction(action)}
+                                    className="whitespace-nowrap px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-gray-400 hover:text-white hover:bg-white/10 hover:border-primary/30 transition-all flex items-center gap-2 hover:-translate-y-0.5 shadow-sm"
+                                >
+                                    <Sparkles className="w-3 h-3 text-primary/70" />
+                                    {action}
+                                </button>
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <form onSubmit={handleSend} className="relative group">
+                    <div className={cn(
+                        "absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-600/20 rounded-3xl blur-xl transition-opacity duration-500",
+                        input ? "opacity-100" : "opacity-0"
+                    )} />
+
+                    <div className="relative flex items-end p-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl shadow-black/50 transition-all duration-300 group-focus-within:border-primary/50 group-focus-within:bg-black/40 group-focus-within:shadow-primary/10">
+                        <textarea
+                            ref={textareaRef}
+                            value={input}
+                            onChange={handleInputChange}
+                            onKeyDown={handleKeyDown}
+                            placeholder={activeChapterNumber ? `Ask about Chapter ${activeChapterNumber}...` : "How can I help you write?"}
+                            className="flex-1 bg-transparent border-none text-sm text-white placeholder-gray-500 px-4 py-3 focus:ring-0 outline-none min-h-[44px] max-h-[200px] resize-none overflow-y-auto w-full custom-scrollbar"
+                            rows={1}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!input.trim() || isLoading}
+                            className="mb-1 mr-1 p-2 rounded-xl bg-primary text-white disabled:opacity-50 disabled:bg-gray-700 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 shrink-0"
+                        >
+                            {isLoading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Send className="w-5 h-5" />
+                            )}
+                        </button>
+                    </div>
                 </form>
+                <div className="text-[10px] text-center text-gray-600 mt-2 font-medium">
+                    Monji can make mistakes. Verify important info.
+                </div>
             </div>
         </div>
     );

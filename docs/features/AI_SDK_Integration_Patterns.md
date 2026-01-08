@@ -1,11 +1,11 @@
 # AI SDK Integration Patterns
 
 ## Overview
-This document describes how Vercel AI SDK v5 is used throughout the J Star FYB Service application.
+This document describes how Vercel AI SDK v6 is used throughout the J Star FYB Service application.
 
 ## SDK Version
-- `ai`: ^5.x (Vercel AI SDK Core)
-- `@ai-sdk/react`: ^1.x (React hooks)
+- `ai`: ^6.x (Vercel AI SDK Core)
+- `@ai-sdk/react`: ^3.x (React hooks)
 - `@ai-sdk/openai`: ^1.x (OpenAI-compatible providers)
 
 ---
@@ -74,7 +74,7 @@ const isLoading = status === 'streaming' || status === 'submitted';
 
 ### Custom API Endpoints (CRITICAL)
 
-> ⚠️ **AI SDK 5.0 Breaking Change**: The `api` prop passed directly to `useChat` is **ignored**. You MUST use `DefaultChatTransport`.
+> ⚠️ **AI SDK 6.0 Breaking Change**: The `api` prop passed directly to `useChat` is **ignored**. You MUST use `DefaultChatTransport`.
 
 ```typescript
 import { useChat } from '@ai-sdk/react';
@@ -113,6 +113,8 @@ useEffect(() => {
 
 **Bug Reference:** Hotfix 2026-01-03 - `AcademicCopilot.tsx` was sending requests to `/api/chat` instead of `/api/projects/[id]/chat` because the `api` prop was ignored.
 **Bug Reference:** Hotfix 2026-01-04 - `HubChatInterface.tsx` failed to build because `initialMessages` prop is not recognized in v5.0; resolved by using `useEffect` + `setMessages`.
+**Bug Reference:** Hotfix 2026-01-07 - Runtime error `append is not a function` in `AcademicCopilot.tsx` when using `DefaultChatTransport`. Fix: Destructure `sendMessage` instead of `append` from `useChat` hook and pass body options as second argument.
+**Bug Reference:** Hotfix 2026-01-07 - Upgraded to AI SDK v6.0.16. Key changes: deprecated `onResponse`/`onFinish` callbacks removed from `useChat`, tool definitions now use `inputSchema` instead of `parameters`.
 
 ---
 
