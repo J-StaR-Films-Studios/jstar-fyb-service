@@ -2,7 +2,7 @@
 
 import { PenTool, Library, Network, Settings, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { memo } from 'react';
 
 type Tab = 'write' | 'research' | 'chat' | 'diagrams' | 'settings';
 
@@ -11,7 +11,7 @@ interface MobileFloatingNavProps {
     onTabChange: (tab: Tab) => void;
 }
 
-export function MobileFloatingNav({ activeTab, onTabChange }: MobileFloatingNavProps) {
+export const MobileFloatingNav = memo(function MobileFloatingNav({ activeTab, onTabChange }: MobileFloatingNavProps) {
 
     return (
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#030014]/90 backdrop-blur-2xl border border-white/10 rounded-full p-2 shadow-2xl flex items-center gap-1 z-50 max-w-[95vw] overflow-hidden">
@@ -86,4 +86,4 @@ export function MobileFloatingNav({ activeTab, onTabChange }: MobileFloatingNavP
 
         </nav>
     );
-}
+});

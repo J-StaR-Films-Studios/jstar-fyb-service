@@ -190,6 +190,7 @@ export function NovelEditor({ content, onUpdate, projectId, className, onEditorR
                     onCreate={handleCreate}
                     onUpdate={handleUpdate}
                     slotAfter={null}
+                    immediatelyRender={false}
                 >
                     <TableBubbleMenu editor={editorInstance as any} />
                 </EditorContent>

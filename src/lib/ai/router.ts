@@ -135,11 +135,11 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
             }
 
             return {
-                model: openrouter!(Models.FREE.DEEPSEEK_V3), // DeepSeek V3 supports tools
+                model: openrouter!(Models.FREE.NVIDIA_3_NANO), // Nvidia Nemotron 3 Nano
                 provider: 'openrouter',
-                modelId: Models.FREE.DEEPSEEK_V3,
+                modelId: Models.FREE.NVIDIA_3_NANO,
                 isFree: true,
-                reason: 'Tool calling using capable free model (DeepSeek V3)',
+                reason: 'Tool calling using capable free model (Nvidia Nemotron 3 Nano)',
             };
         }
 
@@ -226,11 +226,11 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     if (quality === 'high') {
         if (hasOpenRouter()) {
             return {
-                model: openrouter!(Models.FREE.DEEPSEEK_V3),
+                model: openrouter!(Models.FREE.NVIDIA_3_NANO),
                 provider: 'openrouter',
-                modelId: Models.FREE.DEEPSEEK_V3,
+                modelId: Models.FREE.NVIDIA_3_NANO,
                 isFree: true,
-                reason: 'High quality using free DeepSeek V3',
+                reason: 'High quality using free Nvidia Nemotron 3 Nano',
             };
         }
         // Fallback to Groq

@@ -63,7 +63,7 @@ export const Models = {
     FREE: {
         // TIER 1: Primary Workhorses (Tool Calling + Reasoning)
         MIMO_V2_FLASH: 'xiaomi/mimo-v2-flash:free', // #1 Weekly Usage - Academia/Science GOAT, 262k context
-        DEEPSEEK_V3: 'nex-agi/deepseek-v3.1-nex-n1:free', // Solid tool-use, 131k context
+        NVIDIA_3_NANO: 'nvidia/nemotron-3-nano-30b-a3b:free', // Solid tool-use, 131k context
 
         // TIER 2: Reasoning-Focused (use with OpenRouter reasoning param)
         REASONING: 'tngtech/tng-r1t-chimera:free', // DeepSeek R1 derivative, FREE

@@ -266,11 +266,14 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         fetchData(false);
     }, [fetchData]);
 
-    // Polling Interval (every 5 seconds)
+    // Polling Interval (every 30 seconds)
     useEffect(() => {
+        // Only poll if tab is visible to save resources
         const interval = setInterval(() => {
-            fetchData(true);
-        }, 5000);
+            if (!document.hidden) {
+                fetchData(true);
+            }
+        }, 30000);
         return () => clearInterval(interval);
     }, [fetchData]);
 
@@ -560,6 +563,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 activeChapterNumber={activeChapter?.number}
                                 onApplyEdit={handleApplyAiEdit}
                                 onInsertDiagram={handleInsertDiagram}
+                                onToolCompleted={() => fetchData(true)}
                             />
                         ) : (
                             <div className="p-4 h-full flex flex-col">
@@ -692,6 +696,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 activeChapterNumber={activeChapter?.number}
                                 onClose={() => setMobileView('timeline')}
                                 onApplyEdit={handleApplyAiEdit}
+                                onToolCompleted={() => fetchData(true)}
                             />
                         ) : (
                             <div className="p-6">

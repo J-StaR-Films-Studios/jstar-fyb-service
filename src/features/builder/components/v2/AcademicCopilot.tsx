@@ -24,82 +24,14 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { ThreadSelector } from './ThreadSelector';
 import { EditSuggestionCard } from './EditSuggestionCard';
 import { DiagramSuggestionCard } from './DiagramSuggestionCard';
-import { ToolResultCard } from './ToolResultCard';
 import { toast } from 'sonner';
 import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { PERSONALITIES } from '@/features/bot/prompts/system';
 
-// Tool name to display name mapping with Lucide icon components
-const TOOL_CONFIG: Record<string, { name: string; Icon: typeof Loader2 }> = {
-    'generateDiagram': { name: 'Generating Diagram', Icon: Layout },
-    'suggestEdit': { name: 'Preparing Edit Suggestion', Icon: FileText },
-    'searchProjectDocuments': { name: 'Searching Documents', Icon: Search },
-    'saveUserContext': { name: 'Saving Context', Icon: Terminal },
-};
-
-// Tool Status Indicator Component for showing tool execution progress
-function ToolStatusIndicator({ toolName, state }: { toolName: string; state: string }) {
-    const toolConfig = TOOL_CONFIG[toolName] || { name: toolName, Icon: Terminal };
-    const isComplete = state === 'output-available' || state === 'result' || state === 'completed';
-    const IconComponent = toolConfig.Icon;
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-2",
-                isComplete
-                    ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                    : "bg-primary/10 border border-primary/20 text-primary"
-            )}
-        >
-            <IconComponent className="w-3.5 h-3.5" />
-            <span>{toolConfig.name}</span>
-            {!isComplete ? (
-                <Loader2 className="w-3 h-3 animate-spin ml-auto" />
-            ) : (
-                <ArrowRight className="w-3 h-3 ml-auto opacity-70" />
-            )}
-        </motion.div>
-    );
-}
-
-
-// Reasoning Accordion Component for displaying AI thinking process
-function ReasoningAccordion({ reasoning, hasContent }: { reasoning: string; hasContent: boolean }) {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-        <div className={cn("text-xs", hasContent && "mb-3")}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors font-mono uppercase tracking-wider"
-            >
-                <span className={cn("transform transition-transform", isOpen ? "rotate-90" : "")}>▶</span>
-                Thinking Process
-            </button>
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="mt-2 pl-4 border-l-2 border-primary/20 text-gray-400 italic font-mono whitespace-pre-wrap text-[11px] leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar"
-                    >
-                        {reasoning}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-            {hasContent && <div className="h-px w-full bg-white/10 mt-3" />}
-        </div>
-    );
-}
+import { AcademicMessageBubble } from './AcademicMessageBubble';
 
 interface AcademicCopilotProps {
     projectId: string;
@@ -108,9 +40,10 @@ interface AcademicCopilotProps {
     onClose?: () => void;
     onApplyEdit?: (chapterNumber: number, original: string, replacement: string) => void;
     onInsertDiagram?: (diagram: { mermaidCode: string; title: string }) => void;
+    onToolCompleted?: () => void;
 }
 
-export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose, onApplyEdit, onInsertDiagram }: AcademicCopilotProps) {
+export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumber, onClose, onApplyEdit, onInsertDiagram, onToolCompleted }: AcademicCopilotProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [localInput, setLocalInput] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -133,12 +66,28 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     const cycleTimings = [3000, 5000, 5000, 10000]; // ms
     const cycleIndexRef = useRef(0);
 
-    // Auto-scroll logic
-    const scrollToBottom = () => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    // Auto-scroll logic with throttling
+    const requestRef = useRef<number | null>(null);
+    const scrollToBottom = (instant = false) => {
+        if (!scrollRef.current) return;
+
+        const target = scrollRef.current;
+        const isAtBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 100;
+
+        // Only auto-scroll if user is already near bottom or forced
+        if (instant || isAtBottom) {
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+            requestRef.current = requestAnimationFrame(() => {
+                target.scrollTop = target.scrollHeight;
+            });
         }
     };
+
+    useEffect(() => {
+        return () => {
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        };
+    }, []);
 
     // State for input
     const [input, setInput] = useState('');
@@ -190,6 +139,19 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         id: `academic-copilot-${projectId}-${stableThreadId}`, // Stable ID - doesn't change mid-conversation
         onError: (error) => {
             console.error("Chat error:", error);
+        },
+        onFinish: (message) => {
+            // Smart Refresh: Check for mutation tools
+            const toolInvocations = (message as any).toolInvocations || [];
+            const MUTATION_TOOLS = ['generateSection', 'addChapter', 'generateChapterOutline', 'saveUserContext'];
+
+            // Check if any loaded tool is a mutation tool
+            const hasMutation = toolInvocations.some((t: any) => MUTATION_TOOLS.includes(t.toolName));
+
+            if (hasMutation && onToolCompleted) {
+                console.log("[AcademicCopilot] Mutation tool finished, triggering refresh.");
+                onToolCompleted();
+            }
         }
     });
 
@@ -205,8 +167,6 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                     if (res.ok) {
                         const data = await res.json();
                         if (data.messages) {
-                            // console.log('[DEBUG] Loaded messages from DB:', data.messages.length,
-                            //     'Last message toolInvocations:', data.messages[data.messages.length - 1]?.toolInvocations);
                             setMessages(data.messages);
                         }
                     }
@@ -284,37 +244,109 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         }
     };
 
+    // Helper to extract diagrams from text
+    const extractDiagramsFromText = (text: string) => {
+        const diagrams: { code: string; type: string }[] = [];
+        const regex = /```mermaid\s*([\s\S]*?)```/g;
+        let match;
+
+        while ((match = regex.exec(text)) !== null) {
+            const code = match[1].trim();
+            // Try to detect type from first word
+            const firstWord = code.split(/\s+/)[0];
+            const type = ['graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'erDiagram', 'gantt', 'pie', 'journey'].includes(firstWord)
+                ? firstWord
+                : 'flowchart';
+
+            diagrams.push({ code, type });
+        }
+
+        return diagrams;
+    };
+
+    const handleApplySuggestion = async (content: string) => {
+        if (!suggestion) return;
+
+        // 1. Scan for diagrams and save/notify
+        const diagrams = extractDiagramsFromText(content);
+        if (diagrams.length > 0) {
+            console.log("Detected diagrams in suggestion:", diagrams.length);
+            for (const d of diagrams) {
+                // Determine a title (fallback to generic)
+                const title = `Insight Diagram (Ch ${suggestion.chapterNumber})`;
+
+                await handleSaveDiagram({
+                    mermaidCode: d.code,
+                    title: title,
+                    type: d.type,
+                    explanation: 'Automatically saved from accepted edit suggestion.'
+                }, false); // don't double insert, the text insertion handles it
+            }
+            if (diagrams.length === 1) toast.success("Diagram saved to library");
+            else toast.success(`${diagrams.length} diagrams saved to library`);
+        }
+
+        // 2. Apply the edit
+        if (onApplyEdit) {
+            onApplyEdit(suggestion.chapterNumber, suggestion.original, content);
+            toast.success('Edit applied to chapter');
+        }
+        setSuggestion(null);
+    };
+
+    const handleRejectSuggestion = () => {
+        setSuggestion(null);
+        toast.info('Edit suggestion dismissed');
+    };
+
     const isLoading = status === 'submitted' || status === 'streaming';
 
     // Wrapper to maintain compatibility with existing 'sendMessage' calls while injecting dynamic body
     const sendMessage = async (payload: { text: string }) => {
-        // console.log("[AcademicCopilot] Sending message with threadId:", activeThreadIdRef.current);
-        const wasNewThread = !activeThreadIdRef.current;
+        let currentThreadId = activeThreadIdRef.current;
+        let wasNewThread = false;
+
+        // RACE CONDITION FIX: Ensure thread exists BEFORE sending message
+        if (!currentThreadId) {
+            wasNewThread = true;
+            try {
+                // Determine context
+                const contextScope = activeChapterNumber ? { chapterNumbers: [activeChapterNumber] } : {};
+
+                // Explicitly create thread first
+                const res = await fetch(`/api/projects/${projectId}/threads`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'general',
+                        title: payload.text.slice(0, 30) || 'New Conversation',
+                        contextScope
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success && data.thread) {
+                    currentThreadId = data.thread.id;
+                    setActiveThreadId(currentThreadId);
+                    updateUrlWithThread(currentThreadId);
+
+                    // Update ref immediately to prevent race in subsequent calls
+                    activeThreadIdRef.current = currentThreadId;
+                }
+            } catch (e) {
+                console.error("Failed to pre-create thread", e);
+                // Fallback: let useChat handle it (but risk race condition)
+            }
+        }
 
         await chatSendMessage({
             text: payload.text,
         }, {
             body: {
-                threadId: activeThreadIdRef.current,
+                threadId: currentThreadId, // Use the resolved ID
                 contextScope: activeChapterNumber ? { chapterNumbers: [activeChapterNumber] } : {}
             }
         });
-
-        // If this was a new thread, fetch the created thread ID and update state/URL
-        if (wasNewThread) {
-            try {
-                const res = await fetch(`/api/projects/${projectId}/threads`);
-                const data = await res.json();
-                if (data.success && data.threads?.length > 0) {
-                    const newestThread = data.threads[0];
-                    setActiveThreadId(newestThread.id);
-                    updateUrlWithThread(newestThread.id);
-                    setLastKnownThread({ id: newestThread.id, title: newestThread.threadTitle });
-                }
-            } catch (e) {
-                console.error("Failed to fetch new thread ID", e);
-            }
-        }
     };
 
     const handleSend = async (e?: React.FormEvent) => {
@@ -344,8 +376,11 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     };
 
     useEffect(() => {
-        scrollToBottom();
-    }, [messages, suggestion]);
+        // Only scroll if we are NOT loading history, or if it's a new message
+        if (!isLoadingThreads) {
+            scrollToBottom();
+        }
+    }, [messages, suggestion, isLoadingThreads]);
 
     // Internal helper to load messages
     const loadThreadMessages = async (threadId: string) => {
@@ -402,21 +437,26 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     };
 
     // Avatar animation cycle
+    // Avatar animation cycle - Paused during thinking
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
+        // Don't animate if loading (thinking) to save resources on mobile
+        if (isLoading) return;
+
         const cycle = () => {
             setShowAI(prev => !prev);
             cycleIndexRef.current = (cycleIndexRef.current + 1) % cycleTimings.length;
             const nextDelay = cycleTimings[cycleIndexRef.current];
-            timeoutRef.current = setTimeout(cycle, nextDelay);
+            timeoutId = setTimeout(cycle, nextDelay);
         };
 
-        const timeoutRef = { current: null as NodeJS.Timeout | null };
-        timeoutRef.current = setTimeout(cycle, cycleTimings[0]);
+        timeoutId = setTimeout(cycle, cycleTimings[0]);
 
         return () => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            if (timeoutId) clearTimeout(timeoutId);
         };
-    }, []);
+    }, [isLoading]);
 
     return (
         <div className="flex flex-col h-full bg-dark/20 overflow-hidden relative">
@@ -480,6 +520,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                             src={PERSONALITIES.monji.avatar}
                                             alt="Monji"
                                             fill
+                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                             className="object-cover"
                                         />
                                     </div>
@@ -524,115 +565,9 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                         </motion.div>
                     )}
 
-                    {messages.map((m: any) => {
-                        // Extract reasoning from either:
-                        // 1. SDK v6 parts array (during streaming)
-                        // 2. Database reasoning field (after reload)
-                        const parts = m.parts || [];
-                        const reasoningPart = parts.find((p: any) => p.type === 'reasoning');
-                        const textPart = parts.find((p: any) => p.type === 'text');
-
-                        // Extract tool parts (SDK v6 format: part.type === 'tool-{toolName}')
-                        // Extract tool parts (SDK v6 format) OR db tool invocations
-                        let toolParts = parts.filter((p: any) =>
-                            typeof p.type === 'string' && p.type.startsWith('tool-')
-                        ).map((p: any) => ({
-                            toolName: p.type.replace('tool-', ''),
-                            state: p.state || 'pending',
-                            input: p.input,
-                            output: p.output
-                        }));
-
-                        // Fallback: If no streaming tool parts, check DB invocations
-                        if (toolParts.length === 0 && m.toolInvocations && Array.isArray(m.toolInvocations)) {
-                            toolParts = m.toolInvocations.map((inv: any) => ({
-                                toolName: inv.toolName,
-                                // Map DB state 'completed' -> UI state 'result' (to show checkmark/arrow)
-                                // Map DB state 'pending' -> UI state 'call' (to show spinner)
-                                state: (inv.state === 'completed' || inv.result) ? 'result' : 'call',
-                                input: inv.args,
-                                output: inv.result
-                            }));
-                        }
-
-                        // Try multiple sources for reasoning content
-                        const reasoningContent =
-                            m.reasoning ||  // From database (after reload)
-                            reasoningPart?.text || reasoningPart?.reasoning || reasoningPart?.content || // From SDK parts (streaming)
-                            null;
-                        const textContent = m.content || textPart?.text || '';
-
-
-
-                        return (<motion.div
-                            key={m.id}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className={cn(
-                                "flex w-full mb-4",
-                                m.role === 'user' ? "justify-end" : "justify-start"
-                            )}
-                        >
-                            <div className={cn(
-                                "rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm backdrop-blur-sm transition-all duration-300",
-                                m.role === 'user'
-                                    ? "max-w-[85%] bg-gradient-to-br from-primary to-purple-600 text-white rounded-br-sm shadow-purple-500/10"
-                                    : "w-full bg-white/10 text-gray-100 rounded-bl-sm border border-white/5 shadow-black/20"
-                            )}>
-                                {m.role === 'assistant' ? (
-                                    <>
-                                        {/* Reasoning Accordion */}
-                                        {reasoningContent && (
-                                            <ReasoningAccordion reasoning={reasoningContent} hasContent={!!textContent || toolParts.length > 0} />
-                                        )}
-
-                                        {/* Tool Status Indicators */}
-                                        {toolParts.length > 0 && (
-                                            <div className="mb-3">
-                                                {toolParts.map((tp: any, idx: number) => (
-                                                    <ToolStatusIndicator
-                                                        key={`${m.id}-tool-${idx}`}
-                                                        toolName={tp.toolName}
-                                                        state={tp.state}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Main Content */}
-                                        {textContent && (
-                                            <div className="prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:text-white prose-p:text-gray-200 prose-p:leading-relaxed prose-strong:text-white prose-strong:font-semibold prose-em:text-gray-300 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-ul:text-gray-200 prose-ol:text-gray-200 prose-li:marker:text-primary/70 prose-code:bg-white/10 prose-code:text-primary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-table:border-collapse prose-th:border prose-th:border-white/20 prose-th:bg-white/5 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-td:border prose-td:border-white/10 prose-td:px-3 prose-td:py-2 prose-blockquote:border-l-primary prose-blockquote:text-gray-300 prose-hr:border-white/10">
-                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                    {textContent}
-                                                </ReactMarkdown>
-                                            </div>
-                                        )}
-
-                                        {/* Enhanced Tool Result Renderer */}
-                                        {!textContent && toolParts.length > 0 && (
-                                            <div className="mt-2 text-sm">
-                                                {toolParts.map((part: any, i: number) => {
-                                                    // Only show result if it exists and isn't handled by custom UI
-                                                    if (!part.output || ['suggestEdit', 'generateDiagram'].includes(part.toolName)) return null;
-
-                                                    return (
-                                                        <ToolResultCard
-                                                            key={i}
-                                                            toolName={part.toolName}
-                                                            result={part.output}
-                                                        />
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <span className="font-medium tracking-wide">{textContent}</span>
-                                )}
-                            </div>
-                        </motion.div>
-                        );
-                    })}
+                    {messages.map((m: any) => (
+                        <AcademicMessageBubble key={m.id} message={m} />
+                    ))}
 
                     {/* Active Edit Suggestion */}
                     {suggestion && (
@@ -641,17 +576,8 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                             originalContent={suggestion.original}
                             newContent={suggestion.replacement}
                             explanation={suggestion.explanation}
-                            onApply={(content) => {
-                                if (onApplyEdit) {
-                                    onApplyEdit(suggestion.chapterNumber, suggestion.original, content);
-                                    toast.success('Edit applied to chapter');
-                                }
-                                setSuggestion(null);
-                            }}
-                            onReject={() => {
-                                setSuggestion(null);
-                                toast.info('Edit suggestion dismissed');
-                            }}
+                            onApply={handleApplySuggestion}
+                            onReject={handleRejectSuggestion}
                         />
                     )}
 
@@ -702,7 +628,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                 "Critique my argument flow"
                             ].map((action, i) => (
                                 <button
-                                    key={i}
+                                    key={`quick-action-${i}`}
                                     onClick={() => handleQuickAction(action)}
                                     className="whitespace-nowrap px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-gray-400 hover:text-white hover:bg-white/10 hover:border-primary/30 transition-all flex items-center gap-2 hover:-translate-y-0.5 shadow-sm"
                                 >

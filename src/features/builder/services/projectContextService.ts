@@ -45,35 +45,44 @@ export const ProjectContextService = {
         maxTokens?: number; // Placeholder for future token management
     }): Promise<ProjectContext> {
 
-        const project = await prisma.project.findUnique({
-            where: { id: projectId },
-            include: {
-                outline: true,
-                chapters: {
-                    orderBy: { number: 'asc' },
-                    where: options?.chapterNumbers && options.chapterNumbers.length > 0
-                        ? { number: { in: options.chapterNumbers } }
-                        : undefined
-                },
-                documents: options?.includeResearch !== false // Default to true unless explicitly false
-                    ? {
-                        where: { status: 'PROCESSED' },
-                        select: { title: true, author: true, year: true, summary: true }
-                    }
-                    : false
-            }
-        });
+        // Run queries in parallel
+        const [project, allChaptersCount, completedChaptersCount] = await Promise.all([
+            prisma.project.findUnique({
+                where: { id: projectId },
+                select: {
+                    id: true,
+                    topic: true,
+                    abstract: true,
+                    outlineGenerated: true, // Required for getNextStep
+                    outline: { select: { content: true } },
+                    chapters: {
+                        orderBy: { number: 'asc' },
+                        where: options?.chapterNumbers && options.chapterNumbers.length > 0
+                            ? { number: { in: options.chapterNumbers } }
+                            : undefined,
+                        select: {
+                            number: true,
+                            title: true,
+                            content: true,
+                            status: true
+                        }
+                    },
+                    documents: options?.includeResearch !== false
+                        ? {
+                            where: { status: 'PROCESSED' },
+                            select: { title: true, author: true, year: true, summary: true }
+                        }
+                        : false
+                }
+            }),
+            prisma.chapter.count({ where: { projectId } }),
+            prisma.chapter.count({ where: { projectId, status: 'COMPLETE' } })
+        ]);
 
         if (!project) throw new Error('Project not found');
 
-        // Count ALL chapters for progress, not just fetched ones
-        const allChaptersCount = await prisma.chapter.count({ where: { projectId } });
-        const completedChaptersCount = await prisma.chapter.count({
-            where: { projectId, status: 'COMPLETE' }
-        });
-
         // Format chapters
-        const chapters = (project.chapters as Chapter[]).map(c => ({
+        const chapters = project.chapters.map(c => ({
             number: c.number,
             title: c.title,
             content: c.content,
@@ -81,7 +90,8 @@ export const ProjectContextService = {
         }));
 
         // Format research
-        const researchSummaries = project.documents ? (project.documents as Partial<ResearchDocument>[]).map(d => ({
+        // @ts-ignore - Prisma types for conditional relations can be tricky, but we know usage matches logic
+        const researchSummaries = project.documents ? project.documents.map((d: any) => ({
             title: d.title || 'Untitled',
             author: d.author ?? null,
             year: d.year ?? null,
@@ -97,7 +107,7 @@ export const ProjectContextService = {
             currentProgress: {
                 completedChapters: completedChaptersCount,
                 totalChapters: 5, // Default for academic projects
-                nextRecommendedStep: this.getNextStep(project, completedChaptersCount)
+                nextRecommendedStep: this.getNextStep(project as unknown as Project, completedChaptersCount)
             }
         };
     },

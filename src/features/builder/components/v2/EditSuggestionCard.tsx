@@ -3,6 +3,9 @@ import { ArrowRight, Check, X, Pencil, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { DiagramPreview } from './DiagramPreview';
 
 interface EditSuggestionCardProps {
     chapterNumber: number;
@@ -49,7 +52,41 @@ export function EditSuggestionCard({
                             <ArrowRight className="w-4 h-4 text-purple-400 opacity-50 rotate-90" />
                         </div>
                         <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-sm text-green-100 font-medium">
-                            {editedContent}
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                    code({ node, inline, className, children, ...props }: any) {
+                                        const match = /language-(\w+)/.exec(className || '');
+                                        const isMermaid = match && match[1] === 'mermaid';
+
+                                        if (!inline && isMermaid) {
+                                            return (
+                                                <div className="my-2">
+                                                    <DiagramPreview
+                                                        code={String(children).replace(/\n$/, '')}
+                                                        theme="dark"
+                                                        className="w-full"
+                                                    />
+                                                </div>
+                                            );
+                                        }
+
+                                        return !inline ? (
+                                            <pre className="bg-black/20 p-2 rounded overflow-x-auto text-xs my-1">
+                                                <code className={className} {...props}>
+                                                    {children}
+                                                </code>
+                                            </pre>
+                                        ) : (
+                                            <code className="bg-black/20 px-1 rounded text-xs" {...props}>
+                                                {children}
+                                            </code>
+                                        );
+                                    }
+                                }}
+                            >
+                                {editedContent}
+                            </ReactMarkdown>
                         </div>
                     </div>
                 ) : (
