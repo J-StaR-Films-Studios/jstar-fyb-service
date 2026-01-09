@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { validateService, getEnv } from "@/lib/env-validation";
 
 // Validate payment service configuration
@@ -76,6 +76,21 @@ export const PaystackService = {
     verifyWebhookSignature(body: string, signature: string): boolean {
         if (!PAYSTACK_SECRET) return false;
         const hash = createHmac('sha512', PAYSTACK_SECRET).update(body).digest('hex');
-        return hash === signature;
+
+        try {
+            const hashBuffer = Buffer.from(hash);
+            const signatureBuffer = Buffer.from(signature);
+
+            // Prevent timing attacks by checking length first, then using timingSafeEqual
+            if (hashBuffer.length !== signatureBuffer.length) {
+                return false;
+            }
+
+            return timingSafeEqual(hashBuffer, signatureBuffer);
+        } catch (error) {
+            // Handle potential Buffer creation errors (though unlikely with hex strings)
+            console.error('[PaystackService] Signature verification error:', error);
+            return false;
+        }
     }
 };
