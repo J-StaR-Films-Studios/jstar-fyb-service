@@ -157,7 +157,7 @@ ${researchText}
         system: systemPrompt, // No need for forced <think> tags - OpenRouter handles reasoning
         messages: coreMessages as any,
         // @ts-ignore
-        maxSteps: 15, // Allow multiple tool steps (Increased to 15 for bulk operations)
+        maxSteps: 5, // Simple mode: user requests one action, Monji executes, waits for next
         // Pass reasoning config to OpenRouter when requested
         ...(wantsReasoning && provider === 'openrouter' ? {
             providerOptions: {
@@ -169,17 +169,7 @@ ${researchText}
                 }
             }
         } : {}),
-        // Pass reasoning config to OpenRouter when requested
-        ...(wantsReasoning && provider === 'openrouter' ? {
-            providerOptions: {
-                openrouter: {
-                    reasoning: {
-                        effort: 'high', // high effort for detailed reasoning
-                        // exclude: false // include reasoning in response (default)
-                    }
-                }
-            }
-        } : {}),
+
 
         // Use centralized tool definitions
         tools: createAcademicTools(projectId, activeConversationId, {
