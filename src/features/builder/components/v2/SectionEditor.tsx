@@ -68,8 +68,8 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
     }, [debouncedSetEditedContent, debouncedSave]);
 
     const handleDone = () => {
-        // Force immediate save on Done
-        debouncedSave.flush();
+        // Force immediate save on Done and cancel pending debounced saves
+        debouncedSave.cancel();
         onSave(latestContentRef.current);
         onClose();
     };
@@ -86,7 +86,6 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
         const text = editor.state.doc.textBetween(from, to, ' ');
 
         if (!text && from === to) {
-            // @ts-expect-error - novel types might be incomplete for storage
             const fullText = editor.storage.markdown?.getMarkdown() || latestContentRef.current;
             onEnhanceClick(fullText);
         } else {
