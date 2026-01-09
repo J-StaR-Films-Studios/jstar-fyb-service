@@ -100,7 +100,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
         const match = imageMarkdown.match(/!\[(.*?)\]\((.*?)\)/);
         if (match) {
             const [, alt, src] = match;
-            // @ts-expect-error - novel/tiptap types issue
+            // @ts-ignore - novel/tiptap types issue
             editor.chain().focus().setImage({ src, alt }).run();
         } else {
             editor.chain().focus().insertContent(imageMarkdown).run();
@@ -118,23 +118,23 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
 
         switch (format) {
             case 'bold':
-                // @ts-expect-error - novel/tiptap types issue
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().toggleBold().run();
                 break;
             case 'italic':
-                // @ts-expect-error - novel/tiptap types issue
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().toggleItalic().run();
                 break;
             case 'heading':
-                // @ts-expect-error - novel/tiptap types issue
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().toggleHeading({ level: 2 }).run();
                 break;
             case 'list':
-                // @ts-expect-error - novel/tiptap types issue
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().toggleBulletList().run();
                 break;
             case 'table':
-                // @ts-expect-error - novel/tiptap types issue
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
                 break;
         }
