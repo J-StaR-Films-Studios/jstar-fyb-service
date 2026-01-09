@@ -29,6 +29,7 @@ import remarkGfm from 'remark-gfm';
 import { ThreadSelector } from './ThreadSelector';
 import { EditSuggestionCard } from './EditSuggestionCard';
 import { DiagramSuggestionCard } from './DiagramSuggestionCard';
+import { ToolResultCard } from './ToolResultCard';
 import { toast } from 'sonner';
 import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { PERSONALITIES } from '@/features/bot/prompts/system';
@@ -607,35 +608,19 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                             </div>
                                         )}
 
-                                        {/* Fallback Tool Result Renderer: deeply inspect tool results if text is empty */}
+                                        {/* Enhanced Tool Result Renderer */}
                                         {!textContent && toolParts.length > 0 && (
-                                            <div className="mt-2 space-y-2">
+                                            <div className="mt-2 text-sm">
                                                 {toolParts.map((part: any, i: number) => {
                                                     // Only show result if it exists and isn't handled by custom UI
                                                     if (!part.output || ['suggestEdit', 'generateDiagram'].includes(part.toolName)) return null;
 
-                                                    // Try to parse JSON output for prettier display
-                                                    let displayContent = part.output;
-
-                                                    if (typeof displayContent === 'object' && displayContent !== null) {
-                                                        displayContent = JSON.stringify(displayContent, null, 2);
-                                                    } else if (typeof displayContent === 'string') {
-                                                        try {
-                                                            const parsed = JSON.parse(displayContent);
-                                                            displayContent = JSON.stringify(parsed, null, 2);
-                                                        } catch (e) {
-                                                            // Keep as string if not JSON
-                                                        }
-                                                    }
-
                                                     return (
-                                                        <div key={i} className="bg-black/20 rounded-lg p-3 border border-white/5 text-xs font-mono overflow-x-auto">
-                                                            <div className="text-gray-400 mb-1 flex items-center gap-2">
-                                                                <Terminal className="w-3 h-3" />
-                                                                <span>Result from {part.toolName}:</span>
-                                                            </div>
-                                                            <pre className="text-primary/90 whitespace-pre-wrap">{displayContent}</pre>
-                                                        </div>
+                                                        <ToolResultCard
+                                                            key={i}
+                                                            toolName={part.toolName}
+                                                            result={part.output}
+                                                        />
                                                     );
                                                 })}
                                             </div>
