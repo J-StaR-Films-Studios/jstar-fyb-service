@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { X, Bold, Heading, List, Image, Mic, Sparkles, MessageSquare, Check, Loader2, Italic, Table as TableIcon, Download } from 'lucide-react';
 import { useDebouncedCallback } from 'use-debounce';
 import { VersionHistoryDropdown } from './VersionHistoryDropdown';
@@ -24,16 +24,30 @@ interface SectionEditorProps {
     onExport?: () => void;
 }
 
-export function SectionEditor({ title, content: initialContent, wordCount: initialWordCount = 0, onClose, onSave, onOpenChat, projectId, chapterNumber, currentVersion, onEnhanceClick, onExport }: SectionEditorProps) {
+export function SectionEditor({ title, content: initialContent, wordCount: _initialWordCount = 0, onClose, onSave, onOpenChat, projectId, chapterNumber, currentVersion, onEnhanceClick, onExport }: SectionEditorProps) {
     const [editor, setEditor] = useState<EditorInstance | null>(null);
     const [editedContent, setEditedContent] = useState(initialContent);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
     const [showImagePicker, setShowImagePicker] = useState(false);
 
-    // Calculate word count on the fly
+    // Ref to track the latest content without triggering re-renders
+    // Initialized with initialContent
+    const latestContentRef = useRef(initialContent);
+
+    // Calculate word count on the fly based on state (which is now debounced)
     const currentWordCount = useMemo(() => {
         return editedContent.trim() ? editedContent.trim().split(/\s+/).length : 0;
     }, [editedContent]);
+
+    // Debounced UI update for word count and other reactive elements
+    // This prevents re-rendering the whole component on every keystroke
+    const debouncedSetEditedContent = useDebouncedCallback(
+        (content: string) => {
+            setEditedContent(content);
+        },
+        500, // Update UI every 500ms max
+        { maxWait: 2000 }
+    );
 
     // Debounced auto-save - 1.5 second delay
     const debouncedSave = useDebouncedCallback(
@@ -46,15 +60,17 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
         1500
     );
 
-    const handleContentUpdate = (newContent: string) => {
-        setEditedContent(newContent);
+    // Memoized handler to ensure NovelEditor props remain stable
+    const handleContentUpdate = useCallback((newContent: string) => {
+        latestContentRef.current = newContent;
+        debouncedSetEditedContent(newContent);
         debouncedSave(newContent);
-    };
+    }, [debouncedSetEditedContent, debouncedSave]);
 
     const handleDone = () => {
-        // Force immediate save on Done
-        debouncedSave.flush();
-        onSave(editedContent);
+        // Force immediate save on Done and cancel pending debounced saves
+        debouncedSave.cancel();
+        onSave(latestContentRef.current);
         onClose();
     };
 
@@ -62,7 +78,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
         if (!onEnhanceClick) return;
 
         if (!editor) {
-            onEnhanceClick(editedContent);
+            onEnhanceClick(latestContentRef.current);
             return;
         }
 
@@ -70,8 +86,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
         const text = editor.state.doc.textBetween(from, to, ' ');
 
         if (!text && from === to) {
-            // @ts-ignore
-            const fullText = editor.storage.markdown?.getMarkdown() || editedContent;
+            const fullText = editor.storage.markdown?.getMarkdown() || latestContentRef.current;
             onEnhanceClick(fullText);
         } else {
             onEnhanceClick(text);
@@ -85,7 +100,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
         const match = imageMarkdown.match(/!\[(.*?)\]\((.*?)\)/);
         if (match) {
             const [, alt, src] = match;
-            // @ts-ignore
+            // @ts-ignore - novel/tiptap types issue
             editor.chain().focus().setImage({ src, alt }).run();
         } else {
             editor.chain().focus().insertContent(imageMarkdown).run();
@@ -103,49 +118,26 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
 
         switch (format) {
             case 'bold':
-                // @ts-ignore
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().toggleBold().run();
                 break;
             case 'italic':
-                // @ts-ignore
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().toggleItalic().run();
                 break;
             case 'heading':
-                // @ts-ignore
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().toggleHeading({ level: 2 }).run();
                 break;
             case 'list':
-                // @ts-ignore
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().toggleBulletList().run();
                 break;
             case 'table':
-                // @ts-ignore
+                // @ts-ignore - novel/tiptap types issue
                 editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
                 break;
         }
-    };
-
-    // Save status indicator
-    const StatusIndicator = () => {
-        if (saveStatus === 'idle') {
-            return (
-                <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div> Editing
-                </span>
-            );
-        }
-        if (saveStatus === 'saving') {
-            return (
-                <span className="text-[10px] text-yellow-400 flex items-center justify-center gap-1">
-                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> Saving...
-                </span>
-            );
-        }
-        return (
-            <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
-                <Check className="w-2.5 h-2.5" /> Saved
-            </span>
-        );
     };
 
     return (
@@ -158,7 +150,20 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                 </button>
                 <div className="text-center">
                     <h2 className="font-bold text-sm text-gray-200">{title}</h2>
-                    <StatusIndicator />
+                    {/* Status Indicator */}
+                    {saveStatus === 'idle' ? (
+                        <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
+                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div> Editing
+                        </span>
+                    ) : saveStatus === 'saving' ? (
+                        <span className="text-[10px] text-yellow-400 flex items-center justify-center gap-1">
+                            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Saving...
+                        </span>
+                    ) : (
+                        <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
+                            <Check className="w-2.5 h-2.5" /> Saved
+                        </span>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <VersionHistoryDropdown
@@ -168,6 +173,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                         currentContent={editedContent}
                         onRestore={(content) => {
                             setEditedContent(content);
+                            latestContentRef.current = content; // Sync ref
                             onSave(content);
                             // Also update the editor content
                             if (editor) {
@@ -280,7 +286,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: initi
                     {onOpenChat && (
                         <button
                             onClick={() => {
-                                onSave(editedContent);
+                                onSave(latestContentRef.current);
                                 onOpenChat();
                             }}
                             className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
