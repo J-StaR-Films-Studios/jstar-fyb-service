@@ -1,11 +1,26 @@
-
 import { tool } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { GeminiFileSearchService } from '@/lib/gemini-file-search';
-import { ChapterService } from '@/features/builder/services/chapterService';
 import { generateText } from 'ai'; // For hybrid generation
-import { selectModel } from '@/lib/ai';
+import { ChapterService } from '@/features/builder/services/chapterService';
+import { ProjectContextService } from '@/features/builder/services/projectContextService';
+import { GeminiFileSearchService } from '@/lib/gemini-file-search';
+import { selectModel } from '@/lib/ai/router';
+
+// Simple Mutex for Sequential Execution
+class SimpleMutex {
+    private promise = Promise.resolve();
+
+    lock(): Promise<() => void> {
+        let unlock: () => void;
+        const next = new Promise<void>(resolve => unlock = resolve);
+        const willLock = this.promise.then(() => unlock);
+        this.promise = this.promise.then(() => next);
+        return willLock;
+    }
+}
+
+const sectionMutex = new SimpleMutex();
 
 export const createAcademicTools = (
     projectId: string,
@@ -192,7 +207,7 @@ export const createAcademicTools = (
                         topic: '', // Service will fetch from DB
                         focus
                     });
-                    return `[SYSTEM: execution complete] Generated Outline:\n${JSON.stringify(outline, null, 2)}\n\n[INSTRUCTION: Present this outline to the user and ask for approval or changes.]`;
+                    return `[SYSTEM: execution complete] Generated Outline:\n${JSON.stringify(outline, null, 2)}\n\n[INSTRUCTION: Present this outline. IF the user's original request was to "generate the full chapter" or "do it all", PROCEED IMMEDIATELY to calling 'generateSection' for each item in the outline. Do not stop to ask. Otherwise, ask for approval.]`;
                 } catch (error: any) {
                     return `Failed to generate outline: ${error.message}`;
                 }
@@ -209,37 +224,70 @@ export const createAcademicTools = (
                 context: z.string().optional().describe('Additional context for generation')
             }),
             execute: async ({ chapterNumber, sectionTitle, content, instructions, context }) => {
-                // Hybrid Logic
-                let finalContent = content;
+                // ACQUIRE LOCK (The "Queue")
+                // This ensures multiple calls wait for each other in line.
+                const unlock = await sectionMutex.lock();
 
-                if (!finalContent && instructions) {
-                    // Agentic Mode: Generate content on the fly
-                    console.log('[Tool] Generating section content from instructions:', instructions);
-                    const { model } = selectModel({ quality: 'high' });
-                    const result = await generateText({
-                        model,
-                        prompt: `
-                        Write a section titled "${sectionTitle}" for Chapter ${chapterNumber}.
-                        Instructions: ${instructions}
-                        Context: ${context || 'None provided'}
-                        Keep it academic and professional.
-                        `
-                    });
-                    finalContent = result.text;
+                try {
+                    // Hybrid Logic
+                    let finalContent = content;
+
+                    if (!finalContent && instructions) {
+                        // Agentic Mode: Generate content on the fly
+                        console.log(`[Tool:Queue] Running generation for "${sectionTitle}"...`);
+                        const { model } = selectModel({ quality: 'high' });
+                        const result = await generateText({
+                            model,
+                            prompt: `
+                            Write a section titled "${sectionTitle}" for Chapter ${chapterNumber}.
+                            Instructions: ${instructions}
+                            Context: ${context || 'None provided'}
+                            Keep it academic and professional.
+                            `
+                        });
+                        finalContent = result.text;
+                    }
+
+                    if (!finalContent) {
+                        return "Error: Please provide either 'content' (direct) or 'instructions' (for generation).";
+                    }
+
+                    // CRITICAL: Actually save to the database!
+                    // First ensure the chapter exists or create it
+                    let chapter = await ChapterService.getChapter(projectId, chapterNumber);
+                    if (!chapter) {
+                        // Create phantom chapter if missing
+                        chapter = await ChapterService.createChapter(projectId, {
+                            number: chapterNumber,
+                            title: `Chapter ${chapterNumber}`,
+                            content: ''
+                        });
+                    }
+
+                    // Append or Update? For now, we append to the end if content exists, or just set it.
+                    // A smarter way to try to place it, but appending is safe.
+                    const newContent = chapter.content
+                        ? `${chapter.content}\n\n${finalContent}`
+                        : finalContent;
+
+                    await ChapterService.updateChapterContent(projectId, chapterNumber, newContent);
+
+                    // Return success + LATEST state so the Agent can "Read what's done"
+                    return {
+                        tool: 'generateSection',
+                        status: 'success',
+                        chapterNumber,
+                        sectionTitle,
+                        generatedContent: finalContent,
+                        message: `Section "${sectionTitle}" generated AND SAVED to Chapter ${chapterNumber}. (Queue: Released)`
+                    };
+
+                } catch (error: any) {
+                    return `Failed to generate section: ${error.message}`;
+                } finally {
+                    // RELEASE LOCK
+                    unlock();
                 }
-
-                if (!finalContent) {
-                    return "Error: Please provide either 'content' (direct) or 'instructions' (for generation).";
-                }
-
-                return {
-                    tool: 'generateSection',
-                    status: 'success',
-                    chapterNumber,
-                    sectionTitle,
-                    generatedContent: finalContent,
-                    message: `Section "${sectionTitle}" ready. Review below.`
-                };
             }
         })
     };

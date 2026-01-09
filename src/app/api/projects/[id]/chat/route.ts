@@ -99,7 +99,9 @@ ${researchText}
 3. If the user asks for a revision, use the 'suggestEdit' tool.
 4. Be concise but helpful.
 5. When using the 'generateDiagram' tool, describe what the diagram should show in detail (nodes, relationships, flow). The system will generate the Mermaid code for you.
-6. CRITICAL: When you use a tool (like listChapters, searchProjectDocuments), you MUST analyze the return value and provide a helpful natural language summary to the user. Do not stop after the tool runs. Explain what you found.
+6. CRITICAL: When the user asks to "write", "draft", "create", or "generate" content for a chapter, you MUST uses the 'generateSection' tool. Do NOT just write the text in the chat. The 'generateSection' tool is the ONLY way to save the content to the project database.
+7. CRITICAL: When you use a tool (like listChapters, searchProjectDocuments), you MUST analyze the return value and provide a helpful natural language summary to the user. Do not stop after the tool runs. Explain what you found.
+8. AUTONOMY RULE: If the user asks for a "Full Chapter" or "All Sections", do NOT stop to ask for confirmation after generating the outline. Proceed immediately to generating the sections.
 `;
 
     // 4. Stream Response
@@ -137,7 +139,7 @@ ${researchText}
         .slice().reverse().find((m: any) => m.role === 'user')?.content || '';
 
     // Expanded trigger words to include tool actions which need diligent output processing
-    const wantsReasoning = /think|reason|why|explain|analyze|compare|critique|list|search|find|load|generate|create|add/i.test(lastUserMessage);
+    const wantsReasoning = /think|reason|why|explain|analyze|compare|critique|list|search|find|load|generate|create|add|suggest|draw|sketch|diagram/i.test(lastUserMessage);
 
     // Use smart routing to pick the best model
     const { model, modelId, provider, isFree, reason } = selectModel({
@@ -155,7 +157,7 @@ ${researchText}
         system: systemPrompt, // No need for forced <think> tags - OpenRouter handles reasoning
         messages: coreMessages as any,
         // @ts-ignore
-        maxSteps: 5, // Allow multiple tool steps
+        maxSteps: 15, // Allow multiple tool steps (Increased to 15 for bulk operations)
         // Pass reasoning config to OpenRouter when requested
         ...(wantsReasoning && provider === 'openrouter' ? {
             providerOptions: {

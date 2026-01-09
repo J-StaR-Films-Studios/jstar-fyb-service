@@ -204,8 +204,8 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                     if (res.ok) {
                         const data = await res.json();
                         if (data.messages) {
-                            console.log('[DEBUG] Loaded messages from DB:', data.messages.length,
-                                'Last message toolInvocations:', data.messages[data.messages.length - 1]?.toolInvocations);
+                            // console.log('[DEBUG] Loaded messages from DB:', data.messages.length,
+                            //     'Last message toolInvocations:', data.messages[data.messages.length - 1]?.toolInvocations);
                             setMessages(data.messages);
                         }
                     }
@@ -287,7 +287,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
 
     // Wrapper to maintain compatibility with existing 'sendMessage' calls while injecting dynamic body
     const sendMessage = async (payload: { text: string }) => {
-        console.log("[AcademicCopilot] Sending message with threadId:", activeThreadIdRef.current);
+        // console.log("[AcademicCopilot] Sending message with threadId:", activeThreadIdRef.current);
         const wasNewThread = !activeThreadIdRef.current;
 
         await chatSendMessage({
@@ -616,12 +616,17 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
 
                                                     // Try to parse JSON output for prettier display
                                                     let displayContent = part.output;
-                                                    let isJson = false;
-                                                    try {
-                                                        const parsed = JSON.parse(part.output);
-                                                        displayContent = JSON.stringify(parsed, null, 2);
-                                                        isJson = true;
-                                                    } catch (e) { }
+
+                                                    if (typeof displayContent === 'object' && displayContent !== null) {
+                                                        displayContent = JSON.stringify(displayContent, null, 2);
+                                                    } else if (typeof displayContent === 'string') {
+                                                        try {
+                                                            const parsed = JSON.parse(displayContent);
+                                                            displayContent = JSON.stringify(parsed, null, 2);
+                                                        } catch (e) {
+                                                            // Keep as string if not JSON
+                                                        }
+                                                    }
 
                                                     return (
                                                         <div key={i} className="bg-black/20 rounded-lg p-3 border border-white/5 text-xs font-mono overflow-x-auto">
