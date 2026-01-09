@@ -3,9 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { Chapter } from '@prisma/client';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { openai } from '@ai-sdk/openai'; // Or whichever default provider
+
 // We need to access the configured model, for now we can import selectModel or use a default
 import { selectModel } from '@/lib/ai';
+import { UNIVERSAL_ACADEMIC_RULES } from '@/features/bot/prompts/universalRules';
 
 export const ChapterService = {
     /**
@@ -98,7 +99,10 @@ export const ChapterService = {
         ${context.focus ? `Focus areas: ${context.focus}` : ''}
 
         Return a comprehensive list of chapters (at least 5) with titles and brief descriptions.
-        Standard academic structure (Introduction, Literature Review, Methodology, Implementation, Conclusion) is preferred but adapt to the topic.
+        
+        ## UNIVERSAL ACADEMIC GUIDELINES
+        Pay close attention to the Structure & Content Guidelines (e.g. Chapter 1 Introduction, References chapter at the end).
+        ${UNIVERSAL_ACADEMIC_RULES}
         `;
 
         const result = await generateObject({

@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth-server';
 import { BuilderAiService } from '@/features/builder/services/builderAiService';
 import { GeminiFileSearchService } from '@/lib/gemini-file-search';
 import { selectModel } from '@/lib/ai';
+import { getChapterSpecificPrompt, COMMON_ACADEMIC_RULES } from '@/features/bot/prompts/chapterPrompts';
 
 export const maxDuration = 300; // Increased duration for RAG
 
@@ -181,6 +182,36 @@ export async function POST(req: Request) {
             `Chapter ${chapterNumber}`
         );
 
+        // 4b. Format Project Outline for Context
+        // This ensures the AI knows the global structure (what came before, what comes after)
+        const outlineContext = Array.isArray(project.outline)
+            ? (project.outline as any[]).map((c: any) => `Chapter ${c.number}: ${c.title}`).join('\n')
+            : "No outline available.";
+
+        // 4c. Fetch Neighboring Chapters for "Vibe" Continuity
+        // We get the previous chapter (to flow from) and next chapter (to lead into)
+        const [prevChapter, nextChapter] = await Promise.all([
+            prisma.chapter.findFirst({
+                where: { projectId, number: chapterNumber - 1 },
+                select: { title: true, content: true }
+            }),
+            prisma.chapter.findFirst({
+                where: { projectId, number: chapterNumber + 1 },
+                select: { title: true, content: true }
+            })
+        ]);
+
+        let neighborContext = "";
+        if (prevChapter?.content) {
+            neighborContext += `\nPREVIOUS CHAPTER (${chapterNumber - 1}: ${prevChapter.title}) ENDING:\n" ...${prevChapter.content.slice(-1500)} "\n`;
+        }
+        if (nextChapter?.content) {
+            neighborContext += `\nNEXT CHAPTER (${chapterNumber + 1}: ${nextChapter.title}) BEGINNING:\n" ${nextChapter.content.slice(0, 1500)}... "\n`;
+        }
+
+        // 4d. Get Chapter Specific Rules
+        const chapterRules = getChapterSpecificPrompt(chapterNumber, project.topic);
+
         // 5. DETERMINE MODE: Standard or Grounded
         // Grounded mode requires BOTH a file search store AND active documents
         const fileSearchStoreId = project.fileSearchStoreId;
@@ -201,15 +232,18 @@ export async function POST(req: Request) {
                 model,
                 system: `You are an expert academic writer specializing in Final Year Project (FYP) documentation.
                 
-                STRICT ACADEMIC GUIDELINES:
-                1. TONE: Formal, objective, and analytical.
-                2. ENGLISH: Use British English (UK) spelling.
-                3. CITATIONS: Use APA 7th Edition format where necessary.
-                4. STRUCTURE: Use clear paragraphing.
-                5. FORMATTING: Use Markdown.
-                   - ## for Main Sections
-                   - ### for Sub-sections
-                   - **Bold** for key terms
+                ## COMMON ACADEMIC GUIDELINES
+                ${COMMON_ACADEMIC_RULES}
+
+                ## SPECIFIC CHAPTER INSTRUCTIONS
+                ${chapterRules}
+
+                ## PROJECT STRUCTURE (ROADMAP)
+                ${outlineContext}
+
+                ## NEIGHBORING CHAPTER CONTEXT (FLOW)
+                Use this text to ensure smooth transitions between chapters:
+                ${neighborContext || "No neighboring chapters written yet."}
                 
                 PROJECT CONTEXT & SUMMARIES:
                 ${aiGeneratedContext}`,
@@ -232,6 +266,18 @@ export async function POST(req: Request) {
         ROLE: Expert Academic Writer (PhD Level).
         TASK: Write Chapter ${chapterNumber} for a Final Year Project.
         
+        ## COMMON ACADEMIC GUIDELINES
+        ${COMMON_ACADEMIC_RULES}
+
+        ## SPECIFIC CHAPTER INSTRUCTIONS
+        ${chapterRules}
+
+        ## PROJECT STRUCTURE
+        ${outlineContext}
+
+        ## NEIGHBORING CHAPTER CONTEXT
+        ${neighborContext || "No neighboring chapters written yet."}
+
         CONTEXT:
         ${aiGeneratedContext}
 
@@ -241,7 +287,7 @@ export async function POST(req: Request) {
         3. Citation Style: APA 7th Edition (Author, Year).
         4. Length: Comprehensive (approx 1500-2000 words).
         5. Structure: Use standard academic headings (##, ###).
-        f. Tone: Formal, objective, British English.
+        6. Tone: Formal, objective, British English.
         
         Start writing now.
         `;
@@ -285,8 +331,9 @@ export async function POST(req: Request) {
                     }
 
                     // Build References section from grounding chunks
+                    // FIX: Only append References for the final chapter (Chapter 5)
                     let finalContent = fullText;
-                    if (groundingChunks.length > 0) {
+                    if (groundingChunks.length > 0 && chapterNumber >= 5) {
                         const references = buildReferencesSection(groundingChunks);
                         if (references) {
                             finalContent = fullText + '\n\n' + references;

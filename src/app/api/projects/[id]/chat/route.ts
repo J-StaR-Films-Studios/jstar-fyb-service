@@ -4,6 +4,7 @@ import { MONJI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
 import { ProjectContextService } from '@/features/builder/services/projectContextService';
 import { selectModel } from '@/lib/ai';
 import { createAcademicTools } from '@/lib/ai/academicTools';
+import { COMMON_ACADEMIC_RULES } from '@/features/bot/prompts/chapterPrompts';
 
 
 export const maxDuration = 300;
@@ -81,6 +82,10 @@ ${c.content ? c.content.slice(0, 3000) + (c.content.length > 3000 ? '...[truncat
     const progressCtx = `Completed ${context.currentProgress.completedChapters}/${context.currentProgress.totalChapters} chapters. Next step: ${context.currentProgress.nextRecommendedStep}`;
 
     const systemPrompt = `${MONJI_SYSTEM_PROMPT}
+
+## COMMON ACADEMIC GUIDELINES
+You must strictly adhere to the following rules for content generation, formatting, and structure:
+${COMMON_ACADEMIC_RULES}
 
 ## Project Context
 - **Topic:** ${context.topic}

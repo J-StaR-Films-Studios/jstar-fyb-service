@@ -6,6 +6,7 @@ import { ChapterService } from '@/features/builder/services/chapterService';
 import { ProjectContextService } from '@/features/builder/services/projectContextService';
 import { GeminiFileSearchService } from '@/lib/gemini-file-search';
 import { selectModel } from '@/lib/ai/router';
+import { COMMON_ACADEMIC_RULES, getChapterSpecificPrompt } from '@/features/bot/prompts/chapterPrompts';
 
 // Simple Mutex for Sequential Execution
 class SimpleMutex {
@@ -142,6 +143,17 @@ export const createAcademicTools = (
             }
         }),
 
+        getChapterGuidelines: tool({
+            description: `Get the specific writing rules, structure, and constraints for a given chapter number. Use this if you need to know what sections are required or what is forbidden in a specific chapter.`,
+            inputSchema: z.object({
+                chapterNumber: z.number()
+            }),
+            execute: async ({ chapterNumber }) => {
+                const rules = getChapterSpecificPrompt(chapterNumber, '');
+                return `[SYSTEM: execution complete] Here are the rules for Chapter ${chapterNumber}:\n${rules}\n\n[INSTRUCTION: Use these rules to guide your advice or content generation.]`;
+            }
+        }),
+
         // --- New Chapter Management Tools ---
 
         listChapters: tool({
@@ -233,15 +245,45 @@ export const createAcademicTools = (
                     let finalContent = content;
 
                     if (!finalContent && instructions) {
+                        // 1. Fetch Full Context (The "Brain Upgrade")
+                        const [existingChapter, allChapters] = await Promise.all([
+                            ChapterService.getChapter(projectId, chapterNumber),
+                            ChapterService.getChapters(projectId)
+                        ]);
+
+                        const existingContent = existingChapter?.content || "";
+                        const outlineContext = allChapters.map(c => `Chapter ${c.number}: ${c.title}`).join('\n');
+
                         // Agentic Mode: Generate content on the fly
                         console.log(`[Tool:Queue] Running generation for "${sectionTitle}"...`);
                         const { model } = selectModel({ quality: 'high' });
                         const result = await generateText({
                             model,
                             prompt: `
+                            You are an expert academic writer.
                             Write a section titled "${sectionTitle}" for Chapter ${chapterNumber}.
+                            
                             Instructions: ${instructions}
                             Context: ${context || 'None provided'}
+
+                            ## FULL CHAPTER CONTEXT (So Far)
+                            Below is the content written in this chapter. You must ensure your new section flows coherently with this text.
+                            If the chapter is empty, start fresh. if text exists, transition smoothly.
+                            
+                            '''
+                            ${existingContent}
+                            '''
+
+                            ## PROJECT STRUCTURE
+                            ${outlineContext}
+
+                            ## COMMON ACADEMIC GUIDELINES
+                            ${COMMON_ACADEMIC_RULES}
+
+                            ## SPECIFIC CHAPTER INSTRUCTIONS
+                            ${getChapterSpecificPrompt(chapterNumber, '')}
+
+                            ## UNIVERSAL ACADEMIC GUIDELINES (Deprecated placeholder, ensuring transition)
                             Keep it academic and professional.
                             `
                         });
