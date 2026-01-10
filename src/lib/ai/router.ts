@@ -44,6 +44,11 @@ export interface RouteConfig {
      * Does the request require reasoning/chain-of-thought?
      */
     reasoning?: boolean;
+
+    /**
+     * Force a specific model ID (bypasses other logic)
+     */
+    forceModel?: string;
 }
 
 export interface RouteResult {
@@ -98,7 +103,42 @@ export interface RouteResult {
  * ```
  */
 export function selectModel(config: RouteConfig = {}): RouteResult {
-    const { tools, grounding, quality = 'standard', vision, reasoning } = config;
+    const { tools, grounding, quality = 'standard', vision, reasoning, forceModel } = config;
+
+    // --------------------------------------------------------
+    // OVERRIDE: Force specific model
+    // --------------------------------------------------------
+    if (forceModel) {
+        // Detect provider based on known ID patterns or Models constants
+        if (forceModel.includes('gemini') && hasGemini()) {
+            return {
+                model: gemini!(forceModel),
+                provider: 'gemini',
+                modelId: forceModel,
+                isFree: false,
+                reason: 'Forced model override (Gemini)',
+            };
+        }
+        if ((Object.values(Models.GROQ) as string[]).includes(forceModel) && hasGroq()) {
+            return {
+                model: groq!(forceModel),
+                provider: 'groq',
+                modelId: forceModel,
+                isFree: false,
+                reason: 'Forced model override (Groq)',
+            };
+        }
+        // Default to OpenRouter for everything else (including Free tier)
+        if (hasOpenRouter()) {
+            return {
+                model: openrouter!(forceModel),
+                provider: 'openrouter',
+                modelId: forceModel,
+                isFree: true, // Assumption for overrides, but doesn't matter much for routing
+                reason: 'Forced model override (OpenRouter)',
+            };
+        }
+    }
 
     // --------------------------------------------------------
     // RULE 1: Grounding REQUIRES native Gemini

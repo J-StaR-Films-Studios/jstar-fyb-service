@@ -55,12 +55,12 @@ export const BillingService = {
             });
 
             if (!project) throw new Error(`Project not found: ${projectId}`);
-            userId = project.userId;
+            userId = project.userId || undefined;
 
             // Fallback to email lookup if project is anonymous
             if (!userId) {
                 const user = await prisma.user.findUnique({ where: { email: data.customer.email } });
-                userId = user?.id || null;
+                userId = user?.id || undefined;
             }
 
             if (!userId) throw new Error(`Could not determine User ID for payment: ${data.reference}`);

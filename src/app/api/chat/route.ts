@@ -5,25 +5,23 @@ import { SYSTEM_PROMPT } from '@/features/bot/prompts/system';
 import { validateService, getEnv } from '@/lib/env-validation';
 import { validateAndSanitizeMessage, MAX_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH as MAX_MSG_LEN_EXPORT } from '@/features/bot/utils/security';
 import { chatTools } from '@/features/bot/tools/definitions';
+import { selectModel } from '@/lib/ai/router';
 
 // Validate AI service configuration at startup
-if (!validateService('ai')) {
-    throw new Error('AI service configuration is missing. Please set GROQ_API_KEY environment variable.');
+// We keep this check but make it non-blocking if other providers are available
+// For now, we assume at least one provider is needed.
+try {
+    validateService('ai');
+} catch (e) {
+    console.warn('Groq AI service not fully configured, falling back to router logic.');
 }
 
 // Get validated environment variables
 const env = getEnv();
 
-// Create Groq provider
-const groq = createGroq({
-    apiKey: env.GROQ_API_KEY,
-});
-
 // Allow streaming responses up to 120 seconds
 export const maxDuration = 120;
 const MAX_MESSAGES = 50; // Limit history size per request
-
-// Retries handled by SDK
 
 // AI SDK v5 message format validation
 const chatSchema = z.object({
@@ -38,6 +36,8 @@ const chatSchema = z.object({
     userId: z.string().uuid().optional(),
     id: z.string().optional(),
     trigger: z.string().optional(),
+    modelOverride: z.string().optional(),
+    quality: z.string().optional(),
 }).passthrough();
 
 export async function POST(req: Request) {
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ error: 'Invalid input', details: validation.error }), { status: 400 });
         }
 
-        const { messages } = validation.data;
+        const { messages, modelOverride, quality } = validation.data;
 
         // Defensive check
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -69,13 +69,21 @@ export async function POST(req: Request) {
         // Debug Log
         console.log(`[Chat API] Processing ${modelMessages.length} messages. Last: "${modelMessages[modelMessages.length - 1]?.content?.slice(0, 50)}..."`);
 
+        // Select model using Router
+        const { model: selectedModel, modelId } = selectModel({
+            quality: (quality as any) || 'standard',
+            forceModel: modelOverride,
+            tools: true,
+        });
+
+        console.log(`[Chat API] Using model: ${modelId}`);
+
         const result = streamText({
-            model: groq('moonshotai/kimi-k2-instruct'), // Reliable agentic model
+            model: selectedModel,
             maxRetries: 3,
             stopWhen: stepCountIs(5),
             system: SYSTEM_PROMPT,
             messages: modelMessages as any,
-            // Use extracted tools
             tools: chatTools as any,
             onFinish: async ({ text, toolCalls }: { text: string; toolCalls: any[] }) => {
                 // Client-side persistence via useChatFlow

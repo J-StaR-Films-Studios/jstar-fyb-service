@@ -16,6 +16,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { saveLeadAction } from "../actions/chat";
+import { Models } from "@/lib/ai/providers";
 
 import { Message, ChatState, ConfirmedTopic } from "./types";
 import { useChatPersistence } from "./useChatPersistence";
@@ -35,6 +36,7 @@ export function useChatFlow(userId?: string) {
     const [conversationId, setConversationId] = useState<string | undefined>();
     const [confirmedTopic, setConfirmedTopic] = useState<ConfirmedTopic | null>(null);
     const [hasProvidedPhone, setHasProvidedPhone] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
 
     // specialized hooks
     const { anonymousId, persistChat } = useChatPersistence(userId);
@@ -55,7 +57,8 @@ export function useChatFlow(userId?: string) {
         sendMessage,
         status,
         error,
-        regenerate,
+        regenerate, // AI SDK default
+        reload,     // AI SDK reload
         setMessages
     } = useChat({
         // Custom fetch to inject identity headers
@@ -75,6 +78,38 @@ export function useChatFlow(userId?: string) {
             persistChat(message, messagesRef.current, conversationIdRef.current);
         },
     } as any) as any;
+
+    // ------------------------------------------------------------------
+    // AUTO-RETRY LOGIC
+    // ------------------------------------------------------------------
+    useEffect(() => {
+        if (error && retryCount === 0) {
+            console.log("⚠️ Auto-retrying with MIMO_V2_FLASH...");
+            setRetryCount(1);
+            // Retry with explicit model override
+            reload({
+                body: {
+                    modelOverride: Models.FREE.MIMO_V2_FLASH,
+                    quality: 'free'
+                }
+            });
+        }
+    }, [error, retryCount, reload]);
+
+    /**
+     * Manual Retry Handler (for UI button)
+     * Falls back to high-quality model if initial retry failed
+     */
+    const handleManualRetry = () => {
+        console.log("🔄 Manual retry triggered. Switching model...");
+        setRetryCount(prev => prev + 1);
+        reload({
+            body: {
+                modelOverride: Models.FREE.NVIDIA_3_NANO,
+                quality: 'high'
+            }
+        });
+    };
 
     // Track messages for persistence access
     const messagesRef = useRef(aiMessages);
@@ -291,7 +326,7 @@ export function useChatFlow(userId?: string) {
         confirmedTopic,
         hasProvidedPhone,
         error,
-        regenerate,
+        regenerate: handleManualRetry, // Override default regenerate
         handleUserMessage,
         handleAction,
         handleSelectTopic,

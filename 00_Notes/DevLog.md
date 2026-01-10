@@ -75,4 +75,6 @@ When I use it: When you need visual aids to explain concepts
 Perfect for: System architecture, workflows, or decision trees
 My workflow: I focus on one section at a time, ensuring everything is grounded in your research and flows logically. If you need me to work on a specific chapter section (like expanding your current intro or improving that flowchart text), just let me know, dear! 😊
 
+---
 
+Supporting Referrals with Google Auth
