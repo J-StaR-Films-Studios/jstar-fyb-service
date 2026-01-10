@@ -20,7 +20,8 @@ export async function GET(
                 fileData: true,
                 mimeType: true,
                 fileName: true,
-                fileType: true
+                fileType: true,
+                fileUrl: true
             }
         });
 
@@ -28,19 +29,35 @@ export async function GET(
             return NextResponse.json({ error: "Document not found" }, { status: 404 });
         }
 
-        if (!doc.fileData) {
-            return NextResponse.json({ error: "No file data available" }, { status: 400 });
-        }
-
-        // Set appropriate headers for file download/view
+        // Set appropriate headers
         const headers = new Headers();
         headers.set('Content-Type', doc.mimeType || 'application/octet-stream');
-        headers.set('Content-Disposition', `inline; filename="${doc.fileName}"`);
+        // Force download behavior to prevent "opens in new tab" effectively, and ensure correct filename
+        headers.set('Content-Disposition', `attachment; filename="${doc.fileName}"`);
         headers.set('Cache-Control', 'public, max-age=31536000');
 
-        return new NextResponse(new Uint8Array(doc.fileData), {
-            headers
-        });
+        // Case A: Serve from DB (Binary)
+        if (doc.fileData) {
+            return new NextResponse(new Uint8Array(doc.fileData), { headers });
+        }
+
+        // Case B: Serve from URL (Proxy)
+        // This fixes CORS issues and ensures correct filename references
+        if (doc.fileUrl) {
+            try {
+                const externalRes = await fetch(doc.fileUrl);
+                if (!externalRes.ok) throw new Error(`Failed to fetch external file: ${externalRes.statusText}`);
+
+                // Forward the stream
+                // @ts-ignore - ReadableStream is compatible
+                return new NextResponse(externalRes.body, { headers });
+            } catch (fetchError) {
+                console.error("[ServeDocument] Proxy error:", fetchError);
+                return NextResponse.json({ error: "Failed to retrieve external file" }, { status: 502 });
+            }
+        }
+
+        return NextResponse.json({ error: "No file data available" }, { status: 400 });
 
     } catch (error) {
         console.error("[ServeDocument] Error:", error);
