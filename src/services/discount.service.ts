@@ -10,7 +10,7 @@ export interface CreateDiscountCodeData {
 }
 
 export interface DiscountValidationResult {
-    isValid: boolean;
+    valid: boolean;
     discount?: {
         id: string;
         code: string;
@@ -33,28 +33,28 @@ export const DiscountService = {
 
         // Check if code exists
         if (!discountCode) {
-            return { isValid: false, error: "Invalid discount code" };
+            return { valid: false, error: "Invalid discount code" };
         }
 
         // Check if active
         if (!discountCode.isActive) {
-            return { isValid: false, error: "This discount code is no longer active" };
+            return { valid: false, error: "This discount code is no longer active" };
         }
 
         // Check expiry
         if (discountCode.expiresAt && discountCode.expiresAt < new Date()) {
-            return { isValid: false, error: "This discount code has expired" };
+            return { valid: false, error: "This discount code has expired" };
         }
 
         // Check usage limit
         if (discountCode.maxUses && discountCode.currentUses >= discountCode.maxUses) {
-            return { isValid: false, error: "This discount code has reached its usage limit" };
+            return { valid: false, error: "This discount code has reached its usage limit" };
         }
 
         // Check minimum amount
         if (discountCode.minAmount && amount < discountCode.minAmount) {
             return {
-                isValid: false,
+                valid: false,
                 error: `Minimum purchase of ₦${discountCode.minAmount.toLocaleString()} required`
             };
         }
@@ -64,7 +64,7 @@ export const DiscountService = {
         const finalAmount = amount - discountAmount;
 
         return {
-            isValid: true,
+            valid: true,
             discount: {
                 id: discountCode.id,
                 code: discountCode.code,

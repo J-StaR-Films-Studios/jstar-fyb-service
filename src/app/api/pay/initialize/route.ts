@@ -64,7 +64,7 @@ export async function POST(req: Request) {
 
             const discountResult = await DiscountService.validateCode(discountCode, PROJECT_UNLOCK_AMOUNT);
 
-            if (!discountResult.isValid) {
+            if (!discountResult.valid) {
                 return NextResponse.json({
                     error: discountResult.error || "Invalid discount code"
                 }, { status: 400 });

@@ -27,9 +27,12 @@ export function DiscountCodeInput({ onValidCode, onClear, originalAmount, disabl
 
             const data = await res.json();
 
-            if (data.valid) {
-                setAppliedDiscount({ code: data.code, amount: data.discountAmount });
-                onValidCode(data.code, data.discountAmount);
+            if (data.valid && data.discount) {
+                setAppliedDiscount({
+                    code: data.discount.code,
+                    amount: data.discount.discountAmount
+                });
+                onValidCode(data.discount.code, data.discount.discountAmount);
                 toast.success('Discount applied!');
             } else {
                 toast.error(data.error || 'Invalid discount code');

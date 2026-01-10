@@ -12,6 +12,8 @@ export interface PaymentData {
     paid_at: string;
     metadata?: {
         projectId?: string; // We expect projectId in metadata
+        discountCodeId?: string;
+        discountAmount?: number;
         [key: string]: any;
     };
     customer: {
@@ -99,31 +101,7 @@ export const BillingService = {
         await this.updateProjectUnlock(projectId, data.amount);
 
         // 5. Post-Payment Actions (Async/Non-blocking but awaited for safety)
-        try {
-            // A. Record Commission
-            const { ReferralService } = await import('@/services/referral.service');
-            await ReferralService.recordCommission(payment.id, payment.amount);
-
-            // B. increment Discount Usage
-            if (payment.discountCodeId && payment.discountAmount) {
-                const { DiscountService } = await import('@/services/discount.service');
-                // Note: applyToPayment updates usage count AND payment.discount fields.
-                // Since payment is already updated with discount info from init, we mainly need usage increment.
-                // But applyToPayment transaction does both. It's safe to re-run or we can just increment usage.
-                // Better: direct increment to avoid "Updating payment" redundancy or just ensure DiscountService has a usage-only method.
-                // Checking DiscountService... applyToPayment updates both.
-                // Let's manually increment to keep it simple and avoid circular updates on payment.
-                await prisma.discountCode.update({
-                    where: { id: payment.discountCodeId },
-                    data: { currentUses: { increment: 1 } }
-                });
-                console.log(`[BillingService] Incremented usage for discount ${payment.discountCodeId}`);
-            }
-
-        } catch (err) {
-            console.error('[BillingService] Failed to process post-payment actions:', err);
-            // Verify: Should we throw? No, payment is successful. User got value.
-        }
+        await this.processPostPaymentActions(payment.id, data.amount, payment.discountCodeId || undefined, payment.discountAmount || undefined);
 
         // 6. Send Receipt Email
         this.sendReceiptEmail(userId, payment.id).catch(e =>
@@ -132,6 +110,36 @@ export const BillingService = {
 
         return payment;
     },
+
+    /**
+     * Handle actions after a successful payment (Commissons, Discounts, etc.)
+     * Can be called by Webhook OR Verification route.
+     * Idempotent-safe (commission recorder checks for dupes somewhat, but we should rely on status checks before calling this).
+     */
+    async processPostPaymentActions(paymentId: string, amountKobo: number, discountCodeId?: string, discountAmount?: number) {
+        try {
+            // A. Record Commission
+            const { ReferralService } = await import('@/services/referral.service');
+            await ReferralService.recordCommission(paymentId, amountKobo / 100); // recordCommission expects main currency? Let's check. Yes, likely main currency as it calculates %. Wait, payment.amount is usually main currency.
+            // In recordPayment: amount: data.amount / 100.
+            // referralService.recordCommission(payment.id, payment.amount) passed the main currency amount.
+            // Here `amountKobo` is passed. So divide by 100.
+
+            // B. increment Discount Usage
+            if (discountCodeId && discountAmount) {
+                await prisma.discountCode.update({
+                    where: { id: discountCodeId },
+                    data: { currentUses: { increment: 1 } }
+                });
+                console.log(`[BillingService] Incremented usage for discount ${discountCodeId}`);
+            }
+
+        } catch (err) {
+            console.error('[BillingService] Failed to process post-payment actions:', err);
+        }
+    },
+
+
 
     /**
      * Unlock a project for full access

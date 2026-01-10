@@ -66,8 +66,11 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
     };
 
     // Step 2: Actually proceed to payment after confirmation
-    const proceedToPayment = async () => {
+    const proceedToPayment = async (modalDiscountCode?: string) => {
         setShowLockModal(false);
+
+        // Prefer code from modal, fall back to screen state
+        const effectiveDiscountCode = modalDiscountCode || discountCode;
 
         try {
             setIsLoading(true);
@@ -77,7 +80,7 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
                 body: JSON.stringify({
                     projectId,
                     callbackUrl: window.location.href, // Return to this page after payment
-                    discountCode: discountCode || undefined
+                    discountCode: effectiveDiscountCode || undefined
                 }),
             });
 

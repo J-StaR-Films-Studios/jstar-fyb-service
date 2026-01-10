@@ -12,7 +12,7 @@
 
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGroq } from '@ai-sdk/groq';
 
 // ============================================================
 // PROVIDER INSTANCES
@@ -42,8 +42,7 @@ export const openrouter = openrouterApiKey
  */
 const groqApiKey = process.env.GROQ_API_KEY;
 export const groq = groqApiKey
-    ? createOpenAI({
-        baseURL: 'https://api.groq.com/openai/v1',
+    ? createGroq({
         apiKey: groqApiKey
     })
     : null;
