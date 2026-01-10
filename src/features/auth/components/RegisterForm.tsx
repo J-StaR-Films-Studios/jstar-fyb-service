@@ -59,6 +59,9 @@ export function RegisterForm() {
 
     const handleGoogleLogin = async () => {
         setIsLoading(true);
+        if (referralCode.trim()) {
+            localStorage.setItem('jstar_pending_referral_code', referralCode.trim());
+        }
         await signIn.social({
             provider: 'google',
             callbackURL: callbackUrl,
@@ -100,6 +103,23 @@ export function RegisterForm() {
                 <p className="text-gray-400">
                     Join J-Star FYB to dominate your final year
                 </p>
+            </div>
+
+            {/* Referral Code - Placed top/visible for all users */}
+            <div className="mb-6">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+                    <label htmlFor="referralCode" className="block text-xs font-medium text-primary mb-1 uppercase tracking-wider">
+                        Have a Referral Code?
+                    </label>
+                    <input
+                        id="referralCode"
+                        type="text"
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                        className="w-full bg-transparent text-white placeholder-gray-600 focus:outline-none text-sm font-mono uppercase"
+                        placeholder="ENTER CODE HERE"
+                    />
+                </div>
             </div>
 
             {/* Google Login - Secondary Option for Signup too */}
@@ -193,26 +213,14 @@ export function RegisterForm() {
                 </div>
 
                 <div>
-                    <label htmlFor="referralCode" className="block text-sm font-medium text-gray-400 mb-1">
-                        Referral Code <span className="text-gray-600 font-normal">(Optional)</span>
-                    </label>
-                    <input
-                        id="referralCode"
-                        type="text"
-                        value={referralCode}
-                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all font-mono uppercase"
-                        placeholder="JSTAR123"
-                    />
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full px-4 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all disabled:opacity-50"
+                    >
+                        {isLoading ? 'Creating account...' : 'Create Account'}
+                    </button>
                 </div>
-
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full px-4 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all disabled:opacity-50"
-                >
-                    {isLoading ? 'Creating account...' : 'Create Account'}
-                </button>
             </form>
 
             <p className="mt-6 text-center text-gray-500 text-sm">
