@@ -6,6 +6,7 @@ import { validateService, getEnv } from '@/lib/env-validation';
 import { validateAndSanitizeMessage, MAX_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH as MAX_MSG_LEN_EXPORT } from '@/features/bot/utils/security';
 import { chatTools } from '@/features/bot/tools/definitions';
 import { selectModel } from '@/lib/ai/router';
+import { Models } from '@/lib/ai/providers';
 
 // Validate AI service configuration at startup
 // We keep this check but make it non-blocking if other providers are available
@@ -72,7 +73,8 @@ export async function POST(req: Request) {
         // Select model using Router
         const { model: selectedModel, modelId } = selectModel({
             quality: (quality as any) || 'standard',
-            forceModel: modelOverride,
+            // Default to Kimi K2 for Jay, unless override is present (Retry)
+            forceModel: modelOverride || Models.GROQ.KIMI_K2_0905,
             tools: true,
         });
 

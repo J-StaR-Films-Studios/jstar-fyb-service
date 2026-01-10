@@ -157,21 +157,10 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     }
 
     // --------------------------------------------------------
-    // RULE 2: Tools work best on native Gemini or Groq (Kimi), allow others as fallback
+    // RULE 2: Tools work best on native Gemini, but allow others if configured
     // --------------------------------------------------------
     if (tools) {
-        // Priority 1: Groq (Kimi K2) - User preferred default
-        if (hasGroq()) {
-            return {
-                model: groq!(Models.GROQ.KIMI_K2_0905),
-                provider: 'groq',
-                modelId: Models.GROQ.KIMI_K2_0905,
-                isFree: false,
-                reason: 'Tool calling using Kimi K2 (Groq)',
-            };
-        }
-
-        // Priority 2: Gemini
+        // Priority 1: Gemini (Native Tool Support)
         if (hasGemini()) {
             return {
                 model: gemini!(Models.GEMINI_FLASH),
@@ -182,7 +171,7 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
             };
         }
 
-        // Priority 3: OpenRouter Free Tier Fallback
+        // Priority 2: OpenRouter Free Tier (Nvidia/Others)
         // If specific low cost/free quality requested, try to use capable free models
         if ((quality === 'high' || quality === 'standard' || quality === 'free') && hasOpenRouter()) {
 
@@ -203,6 +192,17 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
                 modelId: Models.FREE.NVIDIA_3_NANO,
                 isFree: true,
                 reason: 'Tool calling using capable free model (Nvidia Nemotron 3 Nano)',
+            };
+        }
+
+        // Priority 3: Groq Fallback
+        if (hasGroq()) {
+            return {
+                model: groq!(Models.GROQ.KIMI_K2_0905),
+                provider: 'groq',
+                modelId: Models.GROQ.KIMI_K2_0905,
+                isFree: false,
+                reason: 'Tool calling fallback to Groq',
             };
         }
     }
