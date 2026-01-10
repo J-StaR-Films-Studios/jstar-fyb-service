@@ -22,6 +22,9 @@ model User {
   projects               Project[]
   sessions               Session[]
   notificationPreference UserNotificationPreference?
+  // Referral tracking
+  referredById           String?
+  referredBy             Influencer?                 @relation("ReferredUsers", fields: [referredById], references: [id])
 }
 
 model Session {
@@ -141,18 +144,24 @@ model Project {
 }
 
 model Payment {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   amount          Float
-  currency        String   @default("NGN")
-  status          String   @default("PENDING")
-  reference       String   @unique
+  currency        String        @default("NGN")
+  status          String        @default("PENDING")
+  reference       String        @unique
   gatewayResponse String?
   userId          String
   projectId       String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  project         Project  @relation(fields: [projectId], references: [id])
-  user            User     @relation(fields: [userId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  project         Project       @relation(fields: [projectId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
+  // Discount tracking
+  discountCodeId  String?
+  discountAmount  Float         @default(0)
+  discountCode    DiscountCode? @relation(fields: [discountCodeId], references: [id])
+  // Commission tracking
+  commission      Commission?
 
   @@index([userId])
 }
@@ -344,4 +353,54 @@ model SystemSetting {
   value       String
   description String?
   updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// INFLUENCER REFERRAL & DISCOUNT SYSTEM
+// ============================================
+
+model Influencer {
+  id             String       @id @default(cuid())
+  name           String
+  email          String       @unique
+  phone          String?
+  referralCode   String       @unique  // e.g., "JOHNGPT", "TECHBRO"
+  isActive       Boolean      @default(true)
+  commissionRate Float        @default(0.10)  // 10% default
+  totalEarnings  Float        @default(0)
+  pendingPayout  Float        @default(0)
+  // Admin-controlled demo credits (in Naira)
+  freeCredits    Float        @default(0)     // e.g., 50000 = ₦50k worth of free usage
+  creditsUsed    Float        @default(0)     // Track how much they've used
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  referredUsers  User[]       @relation("ReferredUsers")
+  commissions    Commission[]
+}
+
+model Commission {
+  id           String     @id @default(cuid())
+  influencerId String
+  paymentId    String     @unique
+  amount       Float      // Commission amount in Naira
+  status       String     @default("PENDING")  // PENDING, PAID
+  paidAt       DateTime?
+  createdAt    DateTime   @default(now())
+  influencer   Influencer @relation(fields: [influencerId], references: [id])
+  payment      Payment    @relation(fields: [paymentId], references: [id])
+}
+
+model DiscountCode {
+  id            String    @id @default(cuid())
+  code          String    @unique  // e.g., "NEWYEAR25"
+  discountType  String    @default("PERCENTAGE")  // PERCENTAGE, FIXED
+  discountValue Float     // 15 = 15% or ₦15 fixed
+  maxUses       Int?      // null = unlimited
+  currentUses   Int       @default(0)
+  minAmount     Float?    // Minimum payment to qualify
+  expiresAt     DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  payments      Payment[]
 }

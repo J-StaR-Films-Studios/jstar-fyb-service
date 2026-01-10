@@ -18,9 +18,10 @@ import { usePaymentVerification } from "@/features/builder/hooks/usePaymentVerif
 interface BuilderClientProps {
     serverProject?: Partial<ProjectData> | null;
     serverIsPaid?: boolean;
+    serverIsReferred?: boolean;
 }
 
-export function BuilderClient({ serverProject, serverIsPaid = false }: BuilderClientProps) {
+export function BuilderClient({ serverProject, serverIsPaid = false, serverIsReferred = false }: BuilderClientProps) {
     const { data: session, isPending } = useSession();
     const router = useRouter();
     const { step, updateData, syncWithUser, hydrateFromChat, loadProject, isPaid, unlockPaywall } = useBuilderStore();
@@ -193,7 +194,7 @@ export function BuilderClient({ serverProject, serverIsPaid = false }: BuilderCl
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                         >
-                            <ChapterOutliner />
+                            <ChapterOutliner isReferred={serverIsReferred} />
                         </motion.div>
                     )}
                 </AnimatePresence>

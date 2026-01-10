@@ -1,24 +1,28 @@
 "use client";
 
 import React, { useState } from "react";
-import { Lock, ArrowLeft, Sparkles, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
+import { Lock, ArrowLeft, Sparkles, CheckCircle2, ShieldCheck, Loader2, HeartHandshake } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { TopicLockModal } from "@/features/billing/components/TopicLockModal";
 import { useSupport } from "@/features/support/context/SupportContext";
+import { DiscountCodeInput } from "@/features/billing/components/DiscountCodeInput";
 
 interface WorkspaceLockScreenProps {
     projectId: string;
     requiredAmount: number;
     paymentReference?: string;
     projectTopic?: string;
+    isReferred?: boolean;
 }
 
-export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReference, projectTopic }: WorkspaceLockScreenProps) {
+export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReference, projectTopic, isReferred }: WorkspaceLockScreenProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [showLockModal, setShowLockModal] = useState(false);
+    const [finalAmount, setFinalAmount] = useState(requiredAmount);
+    const [discountCode, setDiscountCode] = useState<string | null>(null);
     const router = useRouter();
     const { openSupport } = useSupport();
 
@@ -72,7 +76,8 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     projectId,
-                    callbackUrl: window.location.href // Return to this page after payment
+                    callbackUrl: window.location.href, // Return to this page after payment
+                    discountCode: discountCode || undefined
                 }),
             });
 
@@ -146,12 +151,42 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
                     </ul>
                 </div>
 
-                {/* Price Display */}
-                <div className="flex items-baseline justify-center gap-2 mb-8">
-                    <span className="text-sm text-gray-500 line-through">₦25,000</span>
-                    <span className="text-4xl font-bold font-display text-white">
-                        ₦{requiredAmount.toLocaleString()}
-                    </span>
+                {/* Price Display and Discount Code */}
+                <div className="flex flex-col items-center gap-4 mb-8">
+                    <div className="flex items-baseline justify-center gap-2">
+                        <span className="text-sm text-gray-500 line-through">
+                            ₦{discountCode ? requiredAmount.toLocaleString() : '25,000'}
+                        </span>
+                        <span className="text-4xl font-bold font-display text-white">
+                            ₦{finalAmount.toLocaleString()}
+                        </span>
+                    </div>
+
+                    <div className="w-full max-w-sm">
+                        {isReferred ? (
+                            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                                <div className="p-2 bg-purple-500/20 rounded-full text-purple-400">
+                                    <HeartHandshake className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-bold text-purple-400">Influencer Support Active</div>
+                                    <div className="text-xs text-purple-300/60">Discount codes are disabled while supporting a creator.</div>
+                                </div>
+                            </div>
+                        ) : (
+                            <DiscountCodeInput
+                                originalAmount={requiredAmount}
+                                onValidCode={(code, amount) => {
+                                    setDiscountCode(code);
+                                    setFinalAmount(requiredAmount - amount);
+                                }}
+                                onClear={() => {
+                                    setDiscountCode(null);
+                                    setFinalAmount(requiredAmount);
+                                }}
+                            />
+                        )}
+                    </div>
                 </div>
 
                 {/* Actions */}

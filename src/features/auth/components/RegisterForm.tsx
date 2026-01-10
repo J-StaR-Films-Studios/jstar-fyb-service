@@ -14,6 +14,7 @@ export function RegisterForm() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [referralCode, setReferralCode] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -32,6 +33,21 @@ export function RegisterForm() {
             if (result.error) {
                 setError(result.error.message || 'Registration failed');
             } else {
+                // Determine user ID (hacky since auth-client might not return it directly, but signIn usually auto-logs in)
+                // We'll rely on the server session.
+                // Try to link referral code if present
+                if (referralCode.trim()) {
+                    try {
+                        await fetch('/api/referral/link', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ code: referralCode.trim() })
+                        });
+                        // We don't block registration on referral failure, but maybe log it
+                    } catch (refError) {
+                        console.error('Referral link error:', refError);
+                    }
+                }
                 router.push(callbackUrl);
             }
         } catch (err) {
@@ -174,6 +190,20 @@ export function RegisterForm() {
                         placeholder="••••••••"
                     />
                     <p className="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
+                </div>
+
+                <div>
+                    <label htmlFor="referralCode" className="block text-sm font-medium text-gray-400 mb-1">
+                        Referral Code <span className="text-gray-600 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                        id="referralCode"
+                        type="text"
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all font-mono uppercase"
+                        placeholder="JSTAR123"
+                    />
                 </div>
 
                 <button

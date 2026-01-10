@@ -1,6 +1,6 @@
 
 import Link from 'next/link';
-import { LayoutDashboard, Users, FileText, BadgeDollarSign, Home } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BadgeDollarSign, Home, Megaphone, Percent } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth-server';
 import { redirect } from 'next/navigation';
 
@@ -19,8 +19,10 @@ export default async function AdminLayout({
         { href: '/admin', label: 'Overview', icon: Home },
         { href: '/admin/projects', label: 'Projects', icon: LayoutDashboard },
         { href: '/admin/leads', label: 'Leads', icon: Users },
+        { href: '/admin/influencers', label: 'Influencers', icon: Megaphone },
+        { href: '/admin/discounts', label: 'Discounts', icon: Percent },
         { href: '/admin/requests', label: 'Switch Requests', icon: FileText },
-        { href: '/admin/settings', label: 'Settings', icon: BadgeDollarSign }, // Using BadgeDollarSign as a placeholder or import Settings icon if available
+        { href: '/admin/settings', label: 'Settings', icon: BadgeDollarSign },
     ];
 
     return (

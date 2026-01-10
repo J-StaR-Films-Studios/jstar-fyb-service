@@ -35,66 +35,97 @@ export const BillingService = {
             throw new Error(`Missing projectId in metadata for reference: ${data.reference}`);
         }
 
-        // 1. Check if payment already exists (Idempotency)
-        const existingPayment = await prisma.payment.findUnique({
+        // 1. Check for existing payment
+        let payment = await prisma.payment.findUnique({
             where: { reference: data.reference }
         });
 
-        if (existingPayment) {
-            console.log(`[BillingService] Payment already recorded: ${data.reference}`);
-            return existingPayment;
+        // Idempotency: If already success, return immediately
+        if (payment && payment.status === 'SUCCESS') {
+            console.log(`[BillingService] Payment already processed: ${data.reference}`);
+            return payment;
         }
 
-        // 2. Find the user (or effectively rely on the one linked to the project if strictly needed, 
-        // but Paystack gives us the email. Safe to use the user from the project/email).
-        // Best to fetch the project first to ensure it exists and get the userId if needed.
-        const project = await prisma.project.findUnique({
-            where: { id: projectId },
-            include: { user: true }
-        });
-
-        if (!project) {
-            throw new Error(`Project not found for ID: ${projectId}`);
-        }
-
-        // If the project has no user assigned yet (e.g. anonymous), we might want to attach this user?
-        // For now, assume the user exists or is handled. The Payment model requires userId.
-        // If project.userId is null (anonymous), we need a userId.
-        // We can try to find user by email from Paystack data.
-        let userId = project.userId;
-
+        // 2. Identify User (if creating new)
+        let userId = payment?.userId;
         if (!userId) {
-            const user = await prisma.user.findUnique({
-                where: { email: data.customer.email }
+            const project = await prisma.project.findUnique({
+                where: { id: projectId },
+                include: { user: true }
             });
-            userId = user?.id || null;
-        }
 
-        if (!userId) {
-            // If we still don't have a user, we can't create the Payment record due to schema constraints.
-            // Urgent TODO: Handle anonymous payments or create a shadow user?
-            // For this specific 'Agent Webhooks' task, we assume authenticated or identifiable users for paid features usually.
-            // But let's fail gracefully or throw.
-            throw new Error(`Could not determine User ID for payment: ${data.reference}`);
-        }
+            if (!project) throw new Error(`Project not found: ${projectId}`);
+            userId = project.userId;
 
-        // 3. Create Payment Record
-        const payment = await prisma.payment.create({
-            data: {
-                amount: data.amount / 100, // Convert kobo to actual currency units if schema expects float standard units
-                currency: data.currency,
-                status: 'SUCCESS',
-                reference: data.reference,
-                gatewayResponse: JSON.stringify(data),
-                userId: userId,
-                projectId: projectId,
+            // Fallback to email lookup if project is anonymous
+            if (!userId) {
+                const user = await prisma.user.findUnique({ where: { email: data.customer.email } });
+                userId = user?.id || null;
             }
-        });
+
+            if (!userId) throw new Error(`Could not determine User ID for payment: ${data.reference}`);
+        }
+
+        // 3. Update or Create Payment Record
+        if (payment) {
+            // Update existing pending payment
+            payment = await prisma.payment.update({
+                where: { id: payment.id },
+                data: {
+                    status: 'SUCCESS',
+                    gatewayResponse: JSON.stringify(data),
+                    // Ensure amount is accurate from gateway
+                    amount: data.amount / 100
+                }
+            });
+        } else {
+            // Fallback: Create new record
+            payment = await prisma.payment.create({
+                data: {
+                    amount: data.amount / 100,
+                    currency: data.currency,
+                    status: 'SUCCESS',
+                    reference: data.reference,
+                    gatewayResponse: JSON.stringify(data),
+                    userId: userId,
+                    projectId: projectId,
+                    // Note: If creating new, we might miss discountCodeId unless passed in metadata
+                    // which isn't currently standard, but this is a fallback path.
+                }
+            });
+        }
 
         // 4. Unlock Project
         await this.updateProjectUnlock(projectId, data.amount);
 
-        // 5. Send Receipt Email (Async, don't block)
+        // 5. Post-Payment Actions (Async/Non-blocking but awaited for safety)
+        try {
+            // A. Record Commission
+            const { ReferralService } = await import('@/services/referral.service');
+            await ReferralService.recordCommission(payment.id, payment.amount);
+
+            // B. increment Discount Usage
+            if (payment.discountCodeId && payment.discountAmount) {
+                const { DiscountService } = await import('@/services/discount.service');
+                // Note: applyToPayment updates usage count AND payment.discount fields.
+                // Since payment is already updated with discount info from init, we mainly need usage increment.
+                // But applyToPayment transaction does both. It's safe to re-run or we can just increment usage.
+                // Better: direct increment to avoid "Updating payment" redundancy or just ensure DiscountService has a usage-only method.
+                // Checking DiscountService... applyToPayment updates both.
+                // Let's manually increment to keep it simple and avoid circular updates on payment.
+                await prisma.discountCode.update({
+                    where: { id: payment.discountCodeId },
+                    data: { currentUses: { increment: 1 } }
+                });
+                console.log(`[BillingService] Incremented usage for discount ${payment.discountCodeId}`);
+            }
+
+        } catch (err) {
+            console.error('[BillingService] Failed to process post-payment actions:', err);
+            // Verify: Should we throw? No, payment is successful. User got value.
+        }
+
+        // 6. Send Receipt Email
         this.sendReceiptEmail(userId, payment.id).catch(e =>
             console.error('[BillingService] Background email failed:', e)
         );

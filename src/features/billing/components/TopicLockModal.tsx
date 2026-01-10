@@ -1,18 +1,31 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, Lock, X } from "lucide-react";
+import { AlertTriangle, Lock, X, HeartHandshake } from "lucide-react";
 import { createPortal } from "react-dom";
+import { DiscountCodeInput } from "@/features/billing/components/DiscountCodeInput";
 
 interface TopicLockModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: () => void;
+    onConfirm: (discountCode?: string) => void;
     topic: string;
+    isReferred?: boolean;
+    amount?: number;
 }
 
-export function TopicLockModal({ isOpen, onClose, onConfirm, topic }: TopicLockModalProps) {
+export function TopicLockModal({ isOpen, onClose, onConfirm, topic, isReferred, amount = 15000 }: TopicLockModalProps) {
     const [acknowledged, setAcknowledged] = useState(false);
+    const [discountCode, setDiscountCode] = useState<string | null>(null);
+    const [currentAmount, setCurrentAmount] = useState(amount);
+
+    useEffect(() => {
+        if (isOpen) {
+            setCurrentAmount(amount);
+            setDiscountCode(null);
+            setAcknowledged(false);
+        }
+    }, [isOpen, amount]);
 
     if (!isOpen) return null;
 
@@ -56,9 +69,33 @@ export function TopicLockModal({ isOpen, onClose, onConfirm, topic }: TopicLockM
                                 <div className="space-y-2 text-gray-400">
                                     <p>Once paid, you <span className="text-white font-medium">cannot change your topic</span> essentially.</p>
                                     <p>One payment covers <strong>one approved topic</strong>.</p>
-                                    <p>If your supervisor rejects this topic later, you will need to submit proof to request a switch.</p>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Discount Code Section */}
+                        <div className="pt-1">
+                            {isReferred ? (
+                                <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 flex items-center gap-3">
+                                    <HeartHandshake className="w-4 h-4 text-purple-400" />
+                                    <div className="text-xs text-purple-300">
+                                        <span className="font-bold block text-purple-400">Influencer Support Active</span>
+                                        Discount codes valid only for non-referred users.
+                                    </div>
+                                </div>
+                            ) : (
+                                <DiscountCodeInput
+                                    originalAmount={amount}
+                                    onValidCode={(code, val) => {
+                                        setDiscountCode(code);
+                                        setCurrentAmount(amount - val);
+                                    }}
+                                    onClear={() => {
+                                        setDiscountCode(null);
+                                        setCurrentAmount(amount);
+                                    }}
+                                />
+                            )}
                         </div>
 
                         <label className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/10">
@@ -84,11 +121,11 @@ export function TopicLockModal({ isOpen, onClose, onConfirm, topic }: TopicLockM
                                 Cancel
                             </button>
                             <button
-                                onClick={onConfirm}
+                                onClick={() => onConfirm(discountCode || undefined)}
                                 disabled={!acknowledged}
-                                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition-all"
+                                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition-all font-display"
                             >
-                                Confirm & Pay
+                                Pay ₦{currentAmount.toLocaleString()}
                             </button>
                         </div>
                     </div>

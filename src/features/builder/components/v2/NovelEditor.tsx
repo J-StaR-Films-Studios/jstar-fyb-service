@@ -126,9 +126,13 @@ export function NovelEditor({ content, onUpdate, projectId, className, onEditorR
     // Set initial content when editor is ready
     useEffect(() => {
         if (editorInstance && !hasInitialized.current && content) {
-            // Use the markdown extension to parse content
-            editorInstance.commands.setContent(content);
-            hasInitialized.current = true;
+            // Use setTimeout to avoid flushSync errors during initial render
+            setTimeout(() => {
+                if (!editorInstance.isDestroyed) {
+                    editorInstance.commands.setContent(content);
+                    hasInitialized.current = true;
+                }
+            }, 0);
         }
     }, [editorInstance, content]);
 
@@ -147,8 +151,13 @@ export function NovelEditor({ content, onUpdate, projectId, className, onEditorR
                 }
 
                 // If content is truly different (external switch), update editor
-                editorInstance.commands.setContent(content);
-                initialContentRef.current = content;
+                // Use setTimeout to avoid flushSync errors
+                setTimeout(() => {
+                    if (!editorInstance.isDestroyed) {
+                        editorInstance.commands.setContent(content);
+                        initialContentRef.current = content;
+                    }
+                }, 0);
             }
         }
     }, [content, editorInstance]);
