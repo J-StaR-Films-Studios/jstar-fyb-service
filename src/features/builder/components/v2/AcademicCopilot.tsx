@@ -462,12 +462,15 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
         <div className="flex flex-col h-full bg-dark/20 overflow-hidden relative">
 
             {/* Header with Thread Selector */}
-            <div className="flex items-center justify-between p-4 border-b border-white/5 shrink-0 z-30 bg-black/20 backdrop-blur-sm">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0 z-30 bg-zinc-950/95 backdrop-blur-md shadow-sm pointer-events-auto">
                 <div className="flex items-center gap-3">
                     {onClose ? (
                         <button
-                            onClick={onClose}
-                            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onClose();
+                            }}
+                            className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-all z-50 shadow-sm"
                         >
                             <ChevronLeft className="w-4 h-4 text-white" />
                         </button>
@@ -487,9 +490,9 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                 </div>
 
                 {/* Context Indicator */}
-                <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] uppercase font-bold text-gray-400">
-                    <Layout className="w-3 h-3" />
-                    {activeChapterNumber ? `Chapter ${activeChapterNumber}` : 'Full Project (DEBUG)'}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-medium text-gray-400 shadow-sm">
+                    <Layout className="w-3 h-3 text-primary/70" />
+                    {activeChapterNumber ? `Ch ${activeChapterNumber}` : 'Full Project'}
                 </div>
             </div>
 

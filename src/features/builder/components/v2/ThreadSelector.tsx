@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     ChevronDown,
     Plus,
@@ -7,7 +8,8 @@ import {
     Search,
     Clock,
     Check,
-    Trash2
+    Trash2,
+    Sparkles
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -95,25 +97,25 @@ export function ThreadSelector({
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="ghost"
-                        className="h-auto py-2 px-3 -ml-2 text-left hover:bg-white/5 data-[state=open]:bg-white/5 border border-transparent hover:border-white/10 rounded-lg transition-all"
+                        className="h-auto py-2 px-3 text-left hover:bg-white/5 data-[state=open]:bg-white/5 border border-transparent hover:border-white/10 rounded-lg transition-all"
                     >
-                        <div className="flex flex-col items-start gap-1">
-                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1.5">
+                        <div className="flex flex-col items-start gap-0.5">
+                            <span className="text-[10px] font-medium text-primary flex items-center gap-1">
                                 {activeThreadId ? (
                                     <>
-                                        <MessageSquare className="w-3 h-3" />
-                                        {activeThread?.threadType === 'general' ? 'General Chat' : 'Scoped Session'}
+                                        {activeThread?.threadType === 'general' ? <MessageSquare className="w-3 h-3" /> : <BookOpen className="w-3 h-3" />}
+                                        {activeThread?.threadType === 'general' ? 'Chat' : 'Focused'}
                                     </>
                                 ) : (
                                     <>
-                                        <MessageSquare className="w-3 h-3 text-primary" />
-                                        Global Context
+                                        <Sparkles className="w-3 h-3" />
+                                        Copilot
                                     </>
                                 )}
-                                <ChevronDown className="w-3 h-3 opacity-50" />
+                                <ChevronDown className="w-3 h-3 opacity-50 ml-0.5" />
                             </span>
-                            <span className="text-sm font-medium text-white max-w-[180px] truncate">
-                                {activeThreadId ? (activeThread?.threadTitle || 'Untitled Thread') : 'Main Copilot Chat'}
+                            <span className="text-sm font-semibold text-white max-w-[200px] truncate leading-tight">
+                                {activeThreadId ? (activeThread?.threadTitle || 'Untitled Thread') : 'Global Context'}
                             </span>
                         </div>
                     </Button>
@@ -176,7 +178,7 @@ export function ThreadSelector({
                                 <DropdownMenuItem
                                     key={thread.id}
                                     className={cn(
-                                        "px-3 py-3 cursor-pointer focus:bg-white/10 border-l-2 border-transparent group relative pr-9",
+                                        "px-3 py-3 cursor-pointer focus:bg-white/10 border-l-2 border-transparent group flex items-start gap-2",
                                         activeThreadId === thread.id && "bg-white/5 border-primary"
                                     )}
                                     // Make sure main click closes dropdown too? default behavior.
@@ -205,16 +207,14 @@ export function ThreadSelector({
                                     <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 transition-all z-10"
+                                        className="h-8 w-8 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            // Close dropdown FIRST, then show modal? 
-                                            // Trigger state update
                                             setIsOpen(false);
                                             setThreadToDelete(thread.id);
                                         }}
                                     >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-4 h-4" />
                                     </Button>
                                 </DropdownMenuItem>
                             ))
@@ -241,36 +241,39 @@ export function ThreadSelector({
 
             {/* Scoped Delete Confirmation Modal */}
             {threadToDelete && (
-                <div
-                    className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-                    onClick={() => setThreadToDelete(null)}
-                >
+                typeof document !== 'undefined' ? createPortal(
                     <div
-                        className="bg-zinc-900 border border-white/10 rounded-xl p-6 max-w-sm w-full shadow-2xl scale-100 animate-in zoom-in-95 duration-200"
-                        onClick={e => e.stopPropagation()}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+                        onClick={() => setThreadToDelete(null)}
                     >
-                        <h3 className="text-lg font-bold text-white mb-2">Delete Conversation?</h3>
-                        <p className="text-sm text-gray-400 mb-6">
-                            This will permanently delete this thread and all its messages. This action cannot be undone.
-                        </p>
-                        <div className="flex gap-3 justify-end">
-                            <Button
-                                variant="ghost"
-                                onClick={() => setThreadToDelete(null)}
-                                className="text-gray-400 hover:text-white hover:bg-white/10"
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={confirmDelete}
-                                className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
-                            >
-                                Delete Thread
-                            </Button>
+                        <div
+                            className="bg-zinc-900 border border-white/10 rounded-xl p-6 max-w-sm w-full shadow-2xl scale-100 animate-in zoom-in-95 duration-200"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <h3 className="text-lg font-bold text-white mb-2">Delete Conversation?</h3>
+                            <p className="text-sm text-gray-400 mb-6">
+                                This will permanently delete this thread and all its messages. This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3 justify-end">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setThreadToDelete(null)}
+                                    className="text-gray-400 hover:text-white hover:bg-white/10"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={confirmDelete}
+                                    className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                                >
+                                    Delete Thread
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </div>,
+                    document.body
+                ) : null
             )}
         </>
     );

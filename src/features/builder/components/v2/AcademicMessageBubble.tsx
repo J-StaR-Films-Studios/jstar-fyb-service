@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -81,7 +81,7 @@ function ReasoningAccordion({ reasoning, hasContent }: { reasoning: string; hasC
 
 // --- Main Component ---
 
-export const AcademicMessageBubble = memo(function AcademicMessageBubble({ message: m }: AcademicMessageBubbleProps) {
+export function AcademicMessageBubble({ message: m }: AcademicMessageBubbleProps) {
     // Extract reasoning from either:
     // 1. SDK v6 parts array (during streaming)
     // 2. Database reasoning field (after reload)
@@ -187,20 +187,4 @@ export const AcademicMessageBubble = memo(function AcademicMessageBubble({ messa
             </div>
         </motion.div>
     );
-}, (prevProps, nextProps) => {
-    // Custom comparison function for React.memo
-    // Return true if props are equal (no re-render needed)
-
-    // Performance optimization: 
-    // If the message ID is different, it's a different message -> re-render
-    if (prevProps.message.id !== nextProps.message.id) return false;
-
-    // If it's the specific message being updated (streaming), we usually rely on object reference change
-    // BUT we want to prevent Deep Equal checks on large content if possible.
-    // However, since useChat updates the object reference on every chunk, 
-    // strict reference equality (prevProps.message === nextProps.message) is the fastest check.
-    // If the reference is different, it means the content/status changed.
-
-    // NOTE: This assumes 'message' is immutable and replaced on update (which useChat does)
-    return prevProps.message === nextProps.message;
-});
+}
