@@ -27,12 +27,14 @@ export async function smartDownload(url: string): Promise<Buffer> {
             hooks: {
                 beforeRequest: [
                     async (options) => {
+                        if (!options.url) return;
                         const urlToCheck = options.url.toString();
                         await validateUrlSecurity(urlToCheck);
                     }
                 ],
                 beforeRedirect: [
                     async (options, _response) => {
+                        if (!options.url) return;
                         const urlToCheck = options.url.toString();
                         await validateUrlSecurity(urlToCheck);
                     }
