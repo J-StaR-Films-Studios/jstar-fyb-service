@@ -135,17 +135,21 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: "Invalid URL provided" }, { status: 400 });
             }
 
-            const doc = await prisma.researchDocument.create({
-                data: {
-                    projectId,
-                    fileName: "External Link",
-                    fileType: "link",
-                    fileUrl: link,
-                    status: "PENDING"
-                }
-            });
+            // CRITICAL: Actually download the file using ResearchService
+            // This ensures we get the PDF buffer/content for extraction, not just a link string
+            try {
+                const { ResearchService } = await import('@/features/research/services/researchService');
+                const doc = await ResearchService.downloadAndSaveSource(projectId, link, link); // Use link as title initially
 
-            return NextResponse.json({ success: true, doc });
+                if (!doc) {
+                    throw new Error("Failed to download or save document");
+                }
+
+                return NextResponse.json({ success: true, doc });
+            } catch (error: any) {
+                console.error("Link processing failed:", error);
+                return NextResponse.json({ error: "Failed to download content from link" }, { status: 500 });
+            }
         }
 
         // Case 2: File Upload
@@ -270,12 +274,43 @@ export async function POST(req: Request) {
 
                     // 2. Upload file to FileSearchStore
                     if (storeId) {
-                        const result = await GeminiFileSearchService.uploadDocument(
+                        let result = await GeminiFileSearchService.uploadDocument(
                             storeId,
                             buffer,
                             sanitizedFileName,
                             file.type
                         );
+
+                        // CRITICAL FIX: Handle 403 Permission Denied / Invalid Store
+                        // If the API key changed or store was deleted, we need to self-heal
+                        if (!result.success && result.error && (
+                            result.error.includes('PERMISSION_DENIED') ||
+                            result.error.includes('403') ||
+                            result.error.includes('not exist')
+                        )) {
+                            console.warn('[DocumentUpload] Store permission denied or missing. Recreating store for project:', projectId);
+
+                            // 2a. Recreate Store
+                            const newStoreId = await GeminiFileSearchService.createStore(projectId);
+
+                            // 2b. Update DB
+                            await prisma.project.update({
+                                where: { id: projectId },
+                                data: {
+                                    fileSearchStoreId: newStoreId,
+                                    fileSearchStoreCreatedAt: new Date()
+                                }
+                            });
+
+                            // 2c. Retry Upload
+                            console.log(`[DocumentUpload] Retrying upload to new store: ${newStoreId}`);
+                            result = await GeminiFileSearchService.uploadDocument(
+                                newStoreId,
+                                buffer,
+                                sanitizedFileName,
+                                file.type
+                            );
+                        }
 
                         // 3. Update ResearchDocument status
                         if (result.success) {

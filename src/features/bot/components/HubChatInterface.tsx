@@ -183,16 +183,7 @@ export function HubChatInterface({ userName, immersiveMode = false }: { userName
                 )}
             </AnimatePresence>
 
-            {/* Trash Button - Fixed in corner */}
-            <div className="absolute top-2 right-2 z-20">
-                <button
-                    onClick={() => setShowClearConfirm(true)}
-                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-red-400 transition-colors"
-                    title="Clear Chat"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
-            </div>
+
 
             {/* Chat Area - Adjusted padding for immersive mode */}
             <main className={cn(

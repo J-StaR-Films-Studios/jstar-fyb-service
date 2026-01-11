@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Download, DownloadCloud, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,6 +13,34 @@ interface ResourceCardProps {
 }
 
 const ResourceCard = ({ type, filename, size, status, downloadUrl }: ResourceCardProps) => {
+    const [isDownloading, setIsDownloading] = React.useState(false);
+
+    const handleDownload = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (!downloadUrl) return;
+
+        try {
+            setIsDownloading(true);
+            const response = await fetch(downloadUrl);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename; // Force download with correct filename
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Download failed", error);
+            // Fallback: Open in new tab if blob fetch fails
+            window.open(downloadUrl, '_blank');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     return (
         <div
             className={cn(
@@ -29,21 +59,24 @@ const ResourceCard = ({ type, filename, size, status, downloadUrl }: ResourceCar
                     {type}
                 </div>
                 <div>
-                    <p className="font-bold text-sm">{filename}</p>
+                    <p className="font-bold text-sm text-gray-200">{filename}</p>
                     <p className="text-xs text-gray-500">
                         {status === "ready" ? `${size} • Ready` : "Compiling..."}
                     </p>
                 </div>
             </div>
             {status === "ready" && downloadUrl ? (
-                <a
-                    href={downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
+                <button
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors disabled:opacity-50"
                 >
-                    <Download className="w-4 h-4 text-gray-400" />
-                </a>
+                    {isDownloading ? (
+                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                    ) : (
+                        <Download className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
+                    )}
+                </button>
             ) : (
                 <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
             )}
@@ -71,7 +104,7 @@ export const ResourceDownloads = ({ documents }: { documents: DashboardDocument[
                             filename={doc.fileName}
                             size="N/A" // Size not in schema yet
                             status={doc.status === "PROCESSED" ? "ready" : "compiling"}
-                            downloadUrl={doc.fileUrl || "#"}
+                            downloadUrl={`/api/documents/${doc.id}/serve`}
                         />
                     ))
                 ) : (

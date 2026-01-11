@@ -95,9 +95,20 @@ export default async function BuilderPage({ searchParams }: PageProps) {
         }
     }
 
+    // Check referral status for discount exclusivity
+    let isReferred = false;
+    if (user) {
+        // We explicitly fetch this to be sure
+        const userData = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { referredById: true }
+        });
+        isReferred = !!userData?.referredById;
+    }
+
     return (
         <Suspense fallback={<div className="min-h-screen bg-dark flex items-center justify-center text-white/50">Loading Builder...</div>}>
-            <BuilderClient serverProject={serverProject} serverIsPaid={isUnlocked} />
+            <BuilderClient serverProject={serverProject} serverIsPaid={isUnlocked} serverIsReferred={isReferred} />
         </Suspense>
     );
 }

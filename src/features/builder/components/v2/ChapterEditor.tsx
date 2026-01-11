@@ -174,90 +174,108 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         }
     }, [saveStatus]);
 
-    // Fetch Data
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await fetch(`/api/projects/${projectId}/chapters`);
-                const data = await response.json();
+    // Fetch Logic
+    const fetchData = useCallback(async (isPolling = false) => {
+        try {
+            if (!isPolling) setIsLoading(true);
+            const response = await fetch(`/api/projects/${projectId}/chapters`);
+            const data = await response.json();
 
-                if (data.success && data.chapters) {
-                    const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
-                    let mappedChapters: Chapter[] = [];
+            if (data.success && data.chapters) {
+                const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
+                let mappedChapters: Chapter[] = [];
 
-                    if (Array.isArray(data.chapters) && data.chapters.length > 0) {
-                        const existingChapters = new Map(
-                            data.chapters.map((c: any) => [c.number, {
-                                id: c.id,
-                                number: c.number,
-                                title: c.title,
-                                content: c.content,
-                                status: c.status?.toLowerCase() || 'draft',
-                                wordCount: c.wordCount || 0,
-                                subsections: parseSubsections(c.content),
-                                version: c.version || 1
-                            }])
-                        );
+                if (Array.isArray(data.chapters) && data.chapters.length > 0) {
+                    const existingChapters = new Map(
+                        data.chapters.map((c: any) => [c.number, {
+                            id: c.id,
+                            number: c.number,
+                            title: c.title,
+                            content: c.content,
+                            status: c.status?.toLowerCase() || 'draft',
+                            wordCount: c.wordCount || 0,
+                            subsections: parseSubsections(c.content),
+                            version: c.version || 1
+                        }])
+                    );
 
-                        mappedChapters = Array.from({ length: 5 }, (_, i) => {
-                            const num = i + 1;
-                            const existing = existingChapters.get(num);
-                            if (existing) {
-                                return existing as Chapter;
-                            }
-                            return {
-                                id: `chapter-${num}`,
-                                number: num,
-                                title: CHAPTER_TITLES[i],
-                                content: '',
-                                status: 'draft' as const,
-                                wordCount: 0,
-                                subsections: [],
-                                version: 1
-                            };
-                        });
-                    } else {
-                        mappedChapters = Array.from({ length: 5 }, (_, i) => {
-                            const num = i + 1;
-                            const content = data.chapters?.[`chapter_${num}`] || '';
-                            return {
-                                id: `chapter-${num}`,
-                                number: num,
-                                title: CHAPTER_TITLES[i],
-                                content: content,
-                                status: 'draft' as const,
-                                wordCount: content ? content.split(/\s+/).length : 0,
-                                subsections: parseSubsections(content),
-                                version: 1
-                            };
-                        });
-                    }
-
-                    if (data.topic) setProjectTitle(data.topic);
-                    setChapters(mappedChapters);
+                    mappedChapters = Array.from({ length: 5 }, (_, i) => {
+                        const num = i + 1;
+                        const existing = existingChapters.get(num);
+                        if (existing) {
+                            return existing as Chapter;
+                        }
+                        return {
+                            id: `chapter-${num}`,
+                            number: num,
+                            title: CHAPTER_TITLES[i],
+                            content: '',
+                            status: 'draft' as const,
+                            wordCount: 0,
+                            subsections: [],
+                            version: 1
+                        };
+                    });
                 } else {
-                    const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
-                    const emptyChapters: Chapter[] = Array.from({ length: 5 }, (_, i) => ({
-                        id: `chapter-${i + 1}`,
-                        number: i + 1,
-                        title: CHAPTER_TITLES[i],
-                        content: '',
-                        status: 'draft' as const,
-                        wordCount: 0,
-                        subsections: [],
-                        version: 1
-                    }));
-                    setChapters(emptyChapters);
+                    mappedChapters = Array.from({ length: 5 }, (_, i) => {
+                        const num = i + 1;
+                        const content = data.chapters?.[`chapter_${num}`] || '';
+                        return {
+                            id: `chapter-${num}`,
+                            number: num,
+                            title: CHAPTER_TITLES[i],
+                            content: content,
+                            status: 'draft' as const,
+                            wordCount: content ? content.split(/\s+/).length : 0,
+                            subsections: parseSubsections(content),
+                            version: 1
+                        };
+                    });
                 }
-            } catch (error) {
-                console.error('Failed to load chapters', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
 
-        fetchData();
+                if (data.topic) setProjectTitle(data.topic);
+
+                // Only update state if different to prevent re-renders/cursor jumps? 
+                // React handles this usually, but strictly speaking deep comparison would be better.
+                // For now, straight set is safely handled by React batching.
+                setChapters(mappedChapters);
+            } else {
+                // ... (Empty logic same as before)
+                const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
+                const emptyChapters: Chapter[] = Array.from({ length: 5 }, (_, i) => ({
+                    id: `chapter-${i + 1}`,
+                    number: i + 1,
+                    title: CHAPTER_TITLES[i],
+                    content: '',
+                    status: 'draft' as const,
+                    wordCount: 0,
+                    subsections: [],
+                    version: 1
+                }));
+                setChapters(emptyChapters);
+            }
+        } catch (error) {
+            console.error('Failed to load chapters', error);
+        } finally {
+            if (!isPolling) setIsLoading(false);
+        }
     }, [projectId]);
+
+    // Initial Load
+    useEffect(() => {
+        fetchData(false);
+    }, [fetchData]);
+
+    // Polling Interval (every 30 seconds)
+    useEffect(() => {
+        // Only poll if tab is visible to save resources
+        const interval = setInterval(() => {
+            if (!document.hidden) {
+                fetchData(true);
+            }
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [fetchData]);
 
     // Helpers
     const parseSubsections = (content: string) => {
@@ -544,6 +562,8 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 activeChapterId={activeChapter?.id}
                                 activeChapterNumber={activeChapter?.number}
                                 onApplyEdit={handleApplyAiEdit}
+                                onInsertDiagram={handleInsertDiagram}
+                                onToolCompleted={() => fetchData(true)}
                             />
                         ) : (
                             <div className="p-4 h-full flex flex-col">
@@ -676,6 +696,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                 activeChapterNumber={activeChapter?.number}
                                 onClose={() => setMobileView('timeline')}
                                 onApplyEdit={handleApplyAiEdit}
+                                onToolCompleted={() => fetchData(true)}
                             />
                         ) : (
                             <div className="p-6">

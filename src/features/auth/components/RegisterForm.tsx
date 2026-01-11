@@ -14,6 +14,7 @@ export function RegisterForm() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [referralCode, setReferralCode] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -32,6 +33,21 @@ export function RegisterForm() {
             if (result.error) {
                 setError(result.error.message || 'Registration failed');
             } else {
+                // Determine user ID (hacky since auth-client might not return it directly, but signIn usually auto-logs in)
+                // We'll rely on the server session.
+                // Try to link referral code if present
+                if (referralCode.trim()) {
+                    try {
+                        await fetch('/api/referral/link', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ code: referralCode.trim() })
+                        });
+                        // We don't block registration on referral failure, but maybe log it
+                    } catch (refError) {
+                        console.error('Referral link error:', refError);
+                    }
+                }
                 router.push(callbackUrl);
             }
         } catch (err) {
@@ -43,6 +59,9 @@ export function RegisterForm() {
 
     const handleGoogleLogin = async () => {
         setIsLoading(true);
+        if (referralCode.trim()) {
+            localStorage.setItem('jstar_pending_referral_code', referralCode.trim());
+        }
         await signIn.social({
             provider: 'google',
             callbackURL: callbackUrl,
@@ -84,6 +103,23 @@ export function RegisterForm() {
                 <p className="text-gray-400">
                     Join J-Star FYB to dominate your final year
                 </p>
+            </div>
+
+            {/* Referral Code - Placed top/visible for all users */}
+            <div className="mb-6">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+                    <label htmlFor="referralCode" className="block text-xs font-medium text-primary mb-1 uppercase tracking-wider">
+                        Have a Referral Code?
+                    </label>
+                    <input
+                        id="referralCode"
+                        type="text"
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                        className="w-full bg-transparent text-white placeholder-gray-600 focus:outline-none text-sm font-mono uppercase"
+                        placeholder="ENTER CODE HERE"
+                    />
+                </div>
             </div>
 
             {/* Google Login - Secondary Option for Signup too */}
@@ -176,13 +212,15 @@ export function RegisterForm() {
                     <p className="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
                 </div>
 
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full px-4 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all disabled:opacity-50"
-                >
-                    {isLoading ? 'Creating account...' : 'Create Account'}
-                </button>
+                <div>
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full px-4 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all disabled:opacity-50"
+                    >
+                        {isLoading ? 'Creating account...' : 'Create Account'}
+                    </button>
+                </div>
             </form>
 
             <p className="mt-6 text-center text-gray-500 text-sm">

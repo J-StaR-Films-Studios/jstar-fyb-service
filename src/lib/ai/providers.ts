@@ -12,7 +12,7 @@
 
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGroq } from '@ai-sdk/groq';
 
 // ============================================================
 // PROVIDER INSTANCES
@@ -33,7 +33,13 @@ export const gemini = geminiApiKey
  */
 const openrouterApiKey = process.env.OPENROUTER_API_KEY;
 export const openrouter = openrouterApiKey
-    ? createOpenRouter({ apiKey: openrouterApiKey })
+    ? createOpenRouter({
+        apiKey: openrouterApiKey,
+        headers: {
+            'HTTP-Referer': 'https://fyb.jstarstudios.com/', // Site URL for rankings
+            'X-Title': 'JStar FYB', // App name in dashboard
+        }
+    })
     : null;
 
 /**
@@ -42,8 +48,7 @@ export const openrouter = openrouterApiKey
  */
 const groqApiKey = process.env.GROQ_API_KEY;
 export const groq = groqApiKey
-    ? createOpenAI({
-        baseURL: 'https://api.groq.com/openai/v1',
+    ? createGroq({
         apiKey: groqApiKey
     })
     : null;
@@ -63,7 +68,7 @@ export const Models = {
     FREE: {
         // TIER 1: Primary Workhorses (Tool Calling + Reasoning)
         MIMO_V2_FLASH: 'xiaomi/mimo-v2-flash:free', // #1 Weekly Usage - Academia/Science GOAT, 262k context
-        DEEPSEEK_V3: 'nex-agi/deepseek-v3.1-nex-n1:free', // Solid tool-use, 131k context
+        NVIDIA_3_NANO: 'nvidia/nemotron-3-nano-30b-a3b:free', // Solid tool-use, 131k context
 
         // TIER 2: Reasoning-Focused (use with OpenRouter reasoning param)
         REASONING: 'tngtech/tng-r1t-chimera:free', // DeepSeek R1 derivative, FREE

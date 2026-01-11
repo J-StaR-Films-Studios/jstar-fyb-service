@@ -65,17 +65,30 @@ If you made a mistake:
 4. **Identify the EXACT problem** (duplicate line? missing import? wrong scope?)
 5. **Fix ONE thing at a time**
 
-### 5. Completion Checklist
+### 5. Verified Completion Protocol (The "Vibe Check")
 
-Before saying "I'm done":
+Before saying "I'm done", you MUST run this final audit:
 
+#### A. The "Anti-Slop" Syntax Check
+If the project uses TypeScript, you **MUST** run the compiler. Do not guess.
+```bash
+npx tsc --noEmit
 ```
-□ All lint errors resolved (check @[current_problems])
-□ All files I edited still parse correctly
-□ I verified the code with my own eyes, not assumed
-□ Build/dev server is not throwing errors
-□ I documented what I changed
-```
+*If this command fails, you are NOT done. Fix the errors.*
+
+#### B. The "Double Vision" Check
+Re-read the files you just edited (`view_file`).
+- [ ] Are there duplicate variable declarations? (e.g., `const prompt` defined twice?)
+- [ ] Did I accidentally paste the same code block twice?
+- [ ] Are there unused imports or missing imports?
+
+#### C. The "Task Alignment" Check
+Scroll up to the user's original request.
+- [ ] Did I actually solve the core problem?
+- [ ] Did I introduce any regressions?
+- [ ] **Lint Free?** -> `tsc` said 0 errors.
+
+Only when all 3 checks pass can you call `notify_user`.
 
 ---
 

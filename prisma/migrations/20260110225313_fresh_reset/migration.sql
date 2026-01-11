@@ -8,6 +8,7 @@ CREATE TABLE "User" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'USER',
+    "referredById" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -147,6 +148,8 @@ CREATE TABLE "Payment" (
     "projectId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "discountCodeId" TEXT,
+    "discountAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
 
     CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
 );
@@ -231,11 +234,31 @@ CREATE TABLE "ProjectMessage" (
 );
 
 -- CreateTable
+CREATE TABLE "ProjectDiagram" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "diagramType" TEXT NOT NULL,
+    "mermaidCode" TEXT NOT NULL,
+    "description" TEXT,
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "isArchived" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ProjectDiagram_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ProjectConversation" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "threadType" TEXT NOT NULL DEFAULT 'general',
+    "threadTitle" TEXT,
+    "contextScope" JSONB,
+    "isArchived" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "ProjectConversation_pkey" PRIMARY KEY ("id")
 );
@@ -246,6 +269,7 @@ CREATE TABLE "ProjectChatMessage" (
     "conversationId" TEXT NOT NULL,
     "role" TEXT NOT NULL,
     "content" TEXT NOT NULL,
+    "reasoning" TEXT,
     "toolInvocations" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -317,6 +341,65 @@ CREATE TABLE "UserNotificationPreference" (
     CONSTRAINT "UserNotificationPreference_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "SystemSetting" (
+    "key" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "description" TEXT,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SystemSetting_pkey" PRIMARY KEY ("key")
+);
+
+-- CreateTable
+CREATE TABLE "Influencer" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "phone" TEXT,
+    "referralCode" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "commissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10,
+    "totalEarnings" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "pendingPayout" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "freeCredits" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "creditsUsed" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Influencer_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Commission" (
+    "id" TEXT NOT NULL,
+    "influencerId" TEXT NOT NULL,
+    "paymentId" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "paidAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Commission_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "DiscountCode" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "discountType" TEXT NOT NULL DEFAULT 'PERCENTAGE',
+    "discountValue" DOUBLE PRECISION NOT NULL,
+    "maxUses" INTEGER,
+    "currentUses" INTEGER NOT NULL DEFAULT 0,
+    "minAmount" DOUBLE PRECISION,
+    "expiresAt" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "DiscountCode_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -327,7 +410,13 @@ CREATE UNIQUE INDEX "Session_token_key" ON "Session"("token");
 CREATE UNIQUE INDEX "Lead_whatsapp_key" ON "Lead"("whatsapp");
 
 -- CreateIndex
+CREATE INDEX "Project_userId_idx" ON "Project"("userId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Payment_reference_key" ON "Payment"("reference");
+
+-- CreateIndex
+CREATE INDEX "Payment_userId_idx" ON "Payment"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ChapterOutline_projectId_key" ON "ChapterOutline"("projectId");
@@ -337,6 +426,12 @@ CREATE INDEX "Chapter_projectId_idx" ON "Chapter"("projectId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Chapter_projectId_number_key" ON "Chapter"("projectId", "number");
+
+-- CreateIndex
+CREATE INDEX "ProjectDiagram_projectId_idx" ON "ProjectDiagram"("projectId");
+
+-- CreateIndex
+CREATE INDEX "ProjectConversation_projectId_threadType_idx" ON "ProjectConversation"("projectId", "threadType");
 
 -- CreateIndex
 CREATE INDEX "TopicSwitchArchive_projectId_idx" ON "TopicSwitchArchive"("projectId");
@@ -349,6 +444,21 @@ CREATE INDEX "InAppNotification_userId_createdAt_idx" ON "InAppNotification"("us
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UserNotificationPreference_userId_key" ON "UserNotificationPreference"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Influencer_email_key" ON "Influencer"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Influencer_referralCode_key" ON "Influencer"("referralCode");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Commission_paymentId_key" ON "Commission"("paymentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DiscountCode_code_key" ON "DiscountCode"("code");
+
+-- AddForeignKey
+ALTER TABLE "User" ADD CONSTRAINT "User_referredById_fkey" FOREIGN KEY ("referredById") REFERENCES "Influencer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -369,6 +479,9 @@ ALTER TABLE "Payment" ADD CONSTRAINT "Payment_projectId_fkey" FOREIGN KEY ("proj
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_discountCodeId_fkey" FOREIGN KEY ("discountCodeId") REFERENCES "DiscountCode"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ResearchDocument" ADD CONSTRAINT "ResearchDocument_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -381,6 +494,9 @@ ALTER TABLE "Chapter" ADD CONSTRAINT "Chapter_projectId_fkey" FOREIGN KEY ("proj
 ALTER TABLE "ProjectMessage" ADD CONSTRAINT "ProjectMessage_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "ProjectDiagram" ADD CONSTRAINT "ProjectDiagram_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ProjectConversation" ADD CONSTRAINT "ProjectConversation_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -391,3 +507,9 @@ ALTER TABLE "InAppNotification" ADD CONSTRAINT "InAppNotification_userId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "UserNotificationPreference" ADD CONSTRAINT "UserNotificationPreference_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Commission" ADD CONSTRAINT "Commission_influencerId_fkey" FOREIGN KEY ("influencerId") REFERENCES "Influencer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Commission" ADD CONSTRAINT "Commission_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "Payment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

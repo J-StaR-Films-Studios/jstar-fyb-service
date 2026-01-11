@@ -23,7 +23,7 @@ import { TopicChangeWarningModal } from "./TopicChangeWarningModal";
 import { AbstractEditorModal } from "./AbstractEditorModal";
 import { TopicResetWarningModal } from "./TopicResetWarningModal";
 
-export function ChapterOutliner() {
+export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
     const { data, isPaid, unlockPaywall, updateData, setMode } = useBuilderStore();
     const hasSubmittedRef = useRef(false);
     const { data: session } = useSession();
@@ -63,7 +63,7 @@ export function ChapterOutliner() {
     };
 
     // Actual Payment (after confirmation)
-    const proceedToPayment = async () => {
+    const proceedToPayment = async (discountCode?: string) => {
         setIsLockModalOpen(false); // Close modal
 
         if (!data.projectId) {
@@ -81,7 +81,10 @@ export function ChapterOutliner() {
             const res = await fetch('/api/pay/initialize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId: data.projectId })
+                body: JSON.stringify({
+                    projectId: data.projectId,
+                    discountCode: typeof discountCode === 'string' ? discountCode : undefined
+                })
             });
 
             const result = await res.json();
@@ -293,6 +296,12 @@ export function ChapterOutliner() {
 
                             {data.projectId && (
                                 <div className="mt-16">
+                                    <DocumentUpload projectId={data.projectId} />
+                                </div>
+                            )}
+
+                            {data.projectId && (
+                                <div className="mt-16">
                                     <ChapterGenerator projectId={data.projectId} />
                                 </div>
                             )}
@@ -300,12 +309,6 @@ export function ChapterOutliner() {
                             <div className="mt-20 mb-10">
                                 <UpsellBridge projectId={data.projectId} />
                             </div>
-
-                            {data.projectId && (
-                                <div className="mt-16">
-                                    <DocumentUpload projectId={data.projectId} />
-                                </div>
-                            )}
                         </>
                     )
                 }
@@ -317,6 +320,7 @@ export function ChapterOutliner() {
                 onClose={() => setIsLockModalOpen(false)}
                 onConfirm={proceedToPayment}
                 topic={data.topic || "Your Project"}
+                isReferred={isReferred}
             />
 
             {/* Topic Change Warning Modal - shown when project was unlocked for topic switch */}

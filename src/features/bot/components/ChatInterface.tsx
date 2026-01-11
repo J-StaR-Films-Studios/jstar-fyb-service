@@ -107,15 +107,6 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
                             <ComplexityMeter score={complexity} />
                         </div>
 
-                        {/* Clear Chat Button */}
-                        <button
-                            onClick={() => setShowClearConfirm(true)}
-                            className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-red-400 transition-colors"
-                            title="Clear Chat"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-
                         {/* Auth Button */}
                         {user ? (
                             <div className="flex items-center gap-3 pl-3 border-l border-white/10">

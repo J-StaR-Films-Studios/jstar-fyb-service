@@ -5,6 +5,7 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { SupportProviderClient } from "@/features/support/components/SupportProviderClient";
 import { Toaster } from "sonner";
+import { ReferralListener } from "@/features/referral/components/ReferralListener";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -58,6 +59,7 @@ export default function RootLayout({
           </SupportProviderClient>
         </ErrorBoundary>
         <OfflineIndicator />
+        <ReferralListener />
         <Toaster position="top-center" richColors />
         <script
           type="application/ld+json"

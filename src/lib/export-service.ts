@@ -1,5 +1,6 @@
 
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, LevelFormat, convertInchesToTwip, Table, TableRow, TableCell, BorderStyle, WidthType, ImageRun } from "docx";
+import mermaid from "mermaid";
 
 // Image cache to avoid re-fetching the same image
 const imageCache = new Map<string, { data: ArrayBuffer; type: string; width: number; height: number }>();
@@ -149,6 +150,82 @@ const createImageParagraph = async (
         });
     } catch (error) {
         console.warn(`Error creating image paragraph for ${url}:`, error);
+        return null;
+    }
+};
+
+/**
+ * Renders a Mermaid diagram to a PNG ArrayBuffer using an off-screen canvas.
+ */
+const renderMermaidToImage = async (code: string): Promise<{ data: ArrayBuffer; width: number; height: number } | null> => {
+    if (typeof window === 'undefined') return null;
+
+    try {
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'default',
+            securityLevel: 'strict', // Strict prevents foreignObject (HTML) usage
+            flowchart: { htmlLabels: false }, // Force SVG text instead of HTML
+        });
+
+        const id = 'mermaid-export-' + Math.random().toString(36).substr(2, 9);
+
+        // rendering returns an SVG string
+        const { svg } = await mermaid.render(id, code);
+
+        // Use Base64 encoding instead of Blob URL to avoid "tainted canvas" security errors
+        const base64Svg = btoa(unescape(encodeURIComponent(svg)));
+        const dataUrl = `data:image/svg+xml;base64,${base64Svg}`;
+
+        // Create an image from the SVG
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        // const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        // const url = URL.createObjectURL(svgBlob);
+
+        return new Promise((resolve) => {
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                // Scale up for better quality in Word
+                const scale = 2;
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    resolve(null);
+                    return;
+                }
+
+                // White background (Word doesn't like transparent PNGs sometimes, or they look bad)
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                canvas.toBlob(async (blob) => {
+                    if (blob) {
+                        const buffer = await blob.arrayBuffer();
+                        resolve({
+                            data: buffer,
+                            width: img.width,  // Pass original logical size to docx
+                            height: img.height
+                        });
+                    } else {
+                        resolve(null);
+                    }
+                }, 'image/png');
+            };
+
+            img.onerror = () => {
+                console.warn('Failed to load mermaid SVG into image');
+                resolve(null);
+            };
+
+            img.src = dataUrl;
+        });
+
+    } catch (error) {
+        console.warn('Error rendering mermaid diagram:', error);
         return null;
     }
 };
@@ -431,6 +508,88 @@ export const generateDocxBlob = async (content: string, title?: string, userOpti
             inList = false;
             lastWasHeader = false;
             continue;
+        }
+
+        // Mermaid Block Detection
+        // ```mermaid ... ```
+        if (trimmed.startsWith('```mermaid')) {
+            const mermaidLines: string[] = [];
+            // Look ahead to consume all mermaid lines
+            let j = i + 1;
+            let finished = false;
+            while (j < lines.length) {
+                const nextLine = lines[j];
+                // Check for closing block
+                if (nextLine.trim().startsWith('```')) {
+                    finished = true;
+                    j++; // consume closing backticks
+                    break;
+                }
+                mermaidLines.push(nextLine);
+                j++;
+            }
+
+            if (finished && mermaidLines.length > 0) {
+                const code = mermaidLines.join('\n');
+                const imageData = await renderMermaidToImage(code);
+
+                if (imageData) {
+                    // Create ImageRun manually here since we have the buffer directly
+                    // and createImageParagraph expects a URL usually (though we could overload it, let's just inline logic for safety)
+
+                    // Logic from createImageParagraph adapted:
+                    const MAX_WIDTH = 500;
+                    const MAX_HEIGHT = 600;
+
+                    let width = imageData.width;
+                    let height = imageData.height;
+
+                    // Scale to fit
+                    if (width > MAX_WIDTH) {
+                        const ratio = MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                        height = Math.round(height * ratio);
+                    }
+                    if (height > MAX_HEIGHT) {
+                        const ratio = MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                        width = Math.round(width * ratio);
+                    }
+
+                    children.push(new Paragraph({
+                        children: [
+                            new ImageRun({
+                                data: imageData.data,
+                                type: 'png',
+                                transformation: { width, height },
+                                altText: {
+                                    title: 'Diagram',
+                                    description: 'Mermaid Diagram',
+                                    name: 'diagram'
+                                }
+                            })
+                        ],
+                        alignment: AlignmentType.CENTER,
+                        spacing: { before: 120, after: 120 }
+                    }));
+                } else {
+                    // Fallback if rendering fails
+                    children.push(new Paragraph({
+                        children: [new TextRun({
+                            text: "[Diagram: Rendering failed]",
+                            italics: true,
+                            color: "FF0000",
+                            font: options.font,
+                            size: (options.fontSize || 12) * 2,
+                        })],
+                        alignment: AlignmentType.CENTER
+                    }));
+                }
+
+                i = j - 1; // Update outer loop index
+                lastWasHeader = false;
+                continue;
+            }
         }
 
         // Table Detection

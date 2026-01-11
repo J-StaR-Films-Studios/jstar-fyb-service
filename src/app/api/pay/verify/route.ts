@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PaystackService } from "@/services/paystack.service";
+import { BillingService } from "@/services/billing.service";
 import { z } from "zod";
 
 // Input validation schema
@@ -134,12 +135,17 @@ const processPaymentVerification = async (reference: string) => {
                             isUnlocked: true
                         }
                     });
+                } else {
+                    console.error('[PaymentVerify] Link target not found:', payment.projectId);
                 }
-                projectId = project.id;
-            } else {
-                console.error('[PaymentVerify] Link target not found:', payment.projectId);
             }
         }
+
+        // At this point status is SUCCESS (from Paystack verification check) or we set it manually below?
+        // Wait, line 87 checks status !== 'success' and throws. So status IS success.
+        // We need to MARK it as success in our DB if it wasn't already.
+        // The reservedPayment set it to PROCESSING.
+        // We must update it to SUCCESS.
 
         // 3. Update Statuses
         const metadata = typeof data.metadata === 'string'
@@ -148,7 +154,6 @@ const processPaymentVerification = async (reference: string) => {
 
         // TOPIC SWITCH PAYMENT: Handle separately
         if (metadata?.type === 'topic_switch' && metadata?.requestId) {
-            const { TopicSwitchService } = await import('@/services/topic-switch.service');
 
             // Update payment status first
             const updatedPayment = await tx.payment.update({
@@ -270,6 +275,26 @@ export async function POST(req: Request) {
                 projectId: result.payment.projectId,
                 isTopicSwitch: true
             });
+        }
+
+        // CRITICAL FIX: Ensure commissions and discount usage are recorded
+        // logic moved from BillingService.recordPayment to be shared
+        try {
+            await BillingService.processPostPaymentActions(
+                result.payment.id,
+                result.payment.amount * 100, // Pass in Kobo (payment.amount is in Naira/Main unit from update logic?)
+                // Verify: line 156 set amount: data.amount / 100. So payment.amount is Naira.
+                // processPostPaymentActions expects Kobo? 
+                // Let's check definition: "amountKobo: number" -> "recordCommission(paymentId, amountKobo / 100)"
+                // So if we pass valid Kobo, it divides by 100 to get Naira for commission.
+                // yes: result.payment.amount * 100 is Kobo.
+                result.payment.discountCodeId || undefined,
+                result.payment.discountAmount || undefined
+            );
+            console.log('[Verify] Post-payment actions (commission/discount) processed');
+        } catch (err) {
+            console.error('[Verify] Failed to process post-payment actions:', err);
+            // Don't fail the response, just log it.
         }
 
         // Send email receipt (outside transaction to avoid blocking)

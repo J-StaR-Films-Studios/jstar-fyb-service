@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -76,14 +77,26 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
             // For now, we rely on the session if available, or anonymousId
 
             if (currentBot === 'nengi') {
-                await fetch('/api/hub/chat', { method: 'DELETE' });
+                const res = await fetch('/api/hub/chat', { method: 'DELETE' });
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    console.error('[BotSwitcher] Nengi clear failed:', res.status, errorText);
+                    alert(`Failed to clear chat: ${res.status === 401 ? 'You must be logged in.' : 'Server error. Try again.'}`);
+                    return; // Don't reload on failure
+                }
             } else if (currentBot === 'jay') {
                 // Use server action for proper deletion from DB
-                await clearAllConversations({
+                const result = await clearAllConversations({
                     anonymousId,
                     userId: session?.user?.id,
                     botType: currentBot
                 });
+
+                if (!result.success) {
+                    console.error('[BotSwitcher] Jay clear failed:', result.error);
+                    alert(`Failed to clear chat: ${result.error || 'Unknown error'}`);
+                    return; // Don't reload on failure
+                }
 
                 // Also clear localStorage
                 localStorage.removeItem('jstar_confirmed_topic');
@@ -95,6 +108,7 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
             window.location.reload();
         } catch (err) {
             console.error('[BotSwitcher] Clear failed:', err);
+            alert('Failed to clear chat. Please try again.');
         } finally {
             setIsClearing(false);
             setShowClearConfirm(false);
@@ -197,51 +211,83 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
                 </button>
             )}
 
-            {/* Clear Chat Confirmation Modal */}
-            <AnimatePresence>
-                {showClearConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-                        onClick={() => setShowClearConfirm(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-dark border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
-                        >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
-                                    <Trash2 className="w-5 h-5 text-red-400" />
-                                </div>
-                                <h3 className="font-display font-bold text-lg">Clear Chat?</h3>
-                            </div>
-                            <p className="text-sm text-gray-400 mb-6">
-                                This will delete all messages with {activeBot.name} and start fresh. This action cannot be undone.
-                            </p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowClearConfirm(false)}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleClearChat}
-                                    disabled={isClearing}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-bold transition-colors disabled:opacity-50"
-                                >
-                                    {isClearing ? 'Clearing...' : 'Clear All'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Clear Chat Confirmation Modal - Portal directly, no AnimatePresence wrapper around createPortal */}
+            {showClearConfirm && (
+                <ConfirmModal
+                    isOpen={showClearConfirm}
+                    onClose={() => setShowClearConfirm(false)}
+                    onConfirm={handleClearChat}
+                    isLoading={isClearing}
+                    botName={activeBot.name}
+                />
+            )}
         </div>
+    );
+}
+
+// Separate component to handle portal mounting correctly
+function ConfirmModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    isLoading,
+    botName
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    isLoading: boolean;
+    botName: string;
+}) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted || !isOpen) return null;
+
+    return createPortal(
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-dark border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            >
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <Trash2 className="w-5 h-5 text-red-400" />
+                    </div>
+                    <h3 className="font-display font-bold text-lg">Clear Chat?</h3>
+                </div>
+                <p className="text-sm text-gray-400 mb-6">
+                    This will delete all messages with {botName} and start fresh. This action cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isLoading}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-bold transition-colors disabled:opacity-50"
+                    >
+                        {isLoading ? 'Clearing...' : 'Clear All'}
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>,
+        document.body
     );
 }

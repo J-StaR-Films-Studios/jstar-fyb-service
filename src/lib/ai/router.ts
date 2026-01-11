@@ -44,6 +44,11 @@ export interface RouteConfig {
      * Does the request require reasoning/chain-of-thought?
      */
     reasoning?: boolean;
+
+    /**
+     * Force a specific model ID (bypasses other logic)
+     */
+    forceModel?: string;
 }
 
 export interface RouteResult {
@@ -98,7 +103,42 @@ export interface RouteResult {
  * ```
  */
 export function selectModel(config: RouteConfig = {}): RouteResult {
-    const { tools, grounding, quality = 'standard', vision, reasoning } = config;
+    const { tools, grounding, quality = 'standard', vision, reasoning, forceModel } = config;
+
+    // --------------------------------------------------------
+    // OVERRIDE: Force specific model
+    // --------------------------------------------------------
+    if (forceModel) {
+        // Detect provider based on known ID patterns or Models constants
+        if (forceModel.includes('gemini') && hasGemini()) {
+            return {
+                model: gemini!(forceModel),
+                provider: 'gemini',
+                modelId: forceModel,
+                isFree: false,
+                reason: 'Forced model override (Gemini)',
+            };
+        }
+        if ((Object.values(Models.GROQ) as string[]).includes(forceModel) && hasGroq()) {
+            return {
+                model: groq!(forceModel),
+                provider: 'groq',
+                modelId: forceModel,
+                isFree: false,
+                reason: 'Forced model override (Groq)',
+            };
+        }
+        // Default to OpenRouter for everything else (including Free tier)
+        if (hasOpenRouter()) {
+            return {
+                model: openrouter!(forceModel),
+                provider: 'openrouter',
+                modelId: forceModel,
+                isFree: true, // Assumption for overrides, but doesn't matter much for routing
+                reason: 'Forced model override (OpenRouter)',
+            };
+        }
+    }
 
     // --------------------------------------------------------
     // RULE 1: Grounding REQUIRES native Gemini
@@ -117,13 +157,31 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     }
 
     // --------------------------------------------------------
-    // RULE 2: Tools work best on native Gemini, but allow others if configured
+    // RULE 2: Reasoning tasks prefer models with thinking traces
+    // (Check this BEFORE tools to prioritize reasoning models that support tools)
+    // --------------------------------------------------------
+    if (reasoning) {
+        if (hasOpenRouter()) {
+            return {
+                model: openrouter!(Models.FREE.REASONING),
+                provider: 'openrouter',
+                modelId: Models.FREE.REASONING,
+                isFree: true,
+                reason: 'Reasoning task using TNG Chimera (free R1 derivative)',
+            };
+        }
+        // Fallback if no OpenRouter but reasoning requested
+    }
+
+    // --------------------------------------------------------
+    // RULE 3: Tools work best on native Gemini, but allow others if configured
     // --------------------------------------------------------
     if (tools) {
-        // If specific low cost/free quality requested, try to use capable free models
-        if ((quality === 'high' || quality === 'standard' || quality === 'free') && hasOpenRouter()) {
+        // Priority 1: OpenRouter Free Tier (Cost Savings)
+        // Use if quality is NOT premium
+        if (quality !== 'premium' && hasOpenRouter()) {
 
-            // Sub-rule: If Reasoning is ALSO requested, prioritize reasoning model
+            // Sub-rule: If Reasoning is ALSO requested (redundant if caught by Rule 2, but safe)
             if (reasoning) {
                 return {
                     model: openrouter!(Models.FREE.REASONING),
@@ -135,14 +193,15 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
             }
 
             return {
-                model: openrouter!(Models.FREE.DEEPSEEK_V3), // DeepSeek V3 supports tools
+                model: openrouter!(Models.FREE.NVIDIA_3_NANO), // Nvidia Nemotron 3 Nano
                 provider: 'openrouter',
-                modelId: Models.FREE.DEEPSEEK_V3,
+                modelId: Models.FREE.NVIDIA_3_NANO,
                 isFree: true,
-                reason: 'Tool calling using capable free model (DeepSeek V3)',
+                reason: 'Tool calling using capable free model (Nvidia Nemotron 3 Nano)',
             };
         }
 
+        // Priority 2: Gemini (Native Tool Support - Premium/Fallback)
         if (hasGemini()) {
             return {
                 model: gemini!(Models.GEMINI_FLASH),
@@ -152,14 +211,15 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
                 reason: 'Tool calling optimized for native Gemini',
             };
         }
-        // Fallback: Groq also supports tools
+
+        // Priority 3: Groq Fallback
         if (hasGroq()) {
             return {
                 model: groq!(Models.GROQ.KIMI_K2_0905),
                 provider: 'groq',
                 modelId: Models.GROQ.KIMI_K2_0905,
                 isFree: false,
-                reason: 'Tool calling fallback to Groq (Gemini unavailable)',
+                reason: 'Tool calling fallback to Groq',
             };
         }
     }
@@ -188,21 +248,7 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
         }
     }
 
-    // --------------------------------------------------------
-    // RULE 4: Reasoning tasks prefer models with thinking traces
-    // --------------------------------------------------------
-    if (reasoning) {
-        if (hasOpenRouter()) {
-            return {
-                model: openrouter!(Models.FREE.REASONING),
-                provider: 'openrouter',
-                modelId: Models.FREE.REASONING,
-                isFree: true,
-                reason: 'Reasoning task using TNG Chimera (free R1 derivative)',
-            };
-        }
-        // Fallback if no OpenRouter but reasoning requested
-    }
+    // (Reasoning rule moved up)
 
     // --------------------------------------------------------
     // RULE 5: Quality-based routing (FREE TIER PRIORITY)
@@ -226,11 +272,11 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     if (quality === 'high') {
         if (hasOpenRouter()) {
             return {
-                model: openrouter!(Models.FREE.DEEPSEEK_V3),
+                model: openrouter!(Models.FREE.NVIDIA_3_NANO),
                 provider: 'openrouter',
-                modelId: Models.FREE.DEEPSEEK_V3,
+                modelId: Models.FREE.NVIDIA_3_NANO,
                 isFree: true,
-                reason: 'High quality using free DeepSeek V3',
+                reason: 'High quality using free Nvidia Nemotron 3 Nano',
             };
         }
         // Fallback to Groq
