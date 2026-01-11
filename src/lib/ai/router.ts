@@ -157,25 +157,31 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     }
 
     // --------------------------------------------------------
-    // RULE 2: Tools work best on native Gemini, but allow others if configured
+    // RULE 2: Reasoning tasks prefer models with thinking traces
+    // (Check this BEFORE tools to prioritize reasoning models that support tools)
     // --------------------------------------------------------
-    if (tools) {
-        // Priority 1: Gemini (Native Tool Support)
-        if (hasGemini()) {
+    if (reasoning) {
+        if (hasOpenRouter()) {
             return {
-                model: gemini!(Models.GEMINI_FLASH),
-                provider: 'gemini',
-                modelId: Models.GEMINI_FLASH,
-                isFree: false,
-                reason: 'Tool calling optimized for native Gemini',
+                model: openrouter!(Models.FREE.REASONING),
+                provider: 'openrouter',
+                modelId: Models.FREE.REASONING,
+                isFree: true,
+                reason: 'Reasoning task using TNG Chimera (free R1 derivative)',
             };
         }
+        // Fallback if no OpenRouter but reasoning requested
+    }
 
-        // Priority 2: OpenRouter Free Tier (Nvidia/Others)
-        // If specific low cost/free quality requested, try to use capable free models
-        if ((quality === 'high' || quality === 'standard' || quality === 'free') && hasOpenRouter()) {
+    // --------------------------------------------------------
+    // RULE 3: Tools work best on native Gemini, but allow others if configured
+    // --------------------------------------------------------
+    if (tools) {
+        // Priority 1: OpenRouter Free Tier (Cost Savings)
+        // Use if quality is NOT premium
+        if (quality !== 'premium' && hasOpenRouter()) {
 
-            // Sub-rule: If Reasoning is ALSO requested, prioritize reasoning model
+            // Sub-rule: If Reasoning is ALSO requested (redundant if caught by Rule 2, but safe)
             if (reasoning) {
                 return {
                     model: openrouter!(Models.FREE.REASONING),
@@ -192,6 +198,17 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
                 modelId: Models.FREE.NVIDIA_3_NANO,
                 isFree: true,
                 reason: 'Tool calling using capable free model (Nvidia Nemotron 3 Nano)',
+            };
+        }
+
+        // Priority 2: Gemini (Native Tool Support - Premium/Fallback)
+        if (hasGemini()) {
+            return {
+                model: gemini!(Models.GEMINI_FLASH),
+                provider: 'gemini',
+                modelId: Models.GEMINI_FLASH,
+                isFree: false,
+                reason: 'Tool calling optimized for native Gemini',
             };
         }
 
@@ -231,21 +248,7 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
         }
     }
 
-    // --------------------------------------------------------
-    // RULE 4: Reasoning tasks prefer models with thinking traces
-    // --------------------------------------------------------
-    if (reasoning) {
-        if (hasOpenRouter()) {
-            return {
-                model: openrouter!(Models.FREE.REASONING),
-                provider: 'openrouter',
-                modelId: Models.FREE.REASONING,
-                isFree: true,
-                reason: 'Reasoning task using TNG Chimera (free R1 derivative)',
-            };
-        }
-        // Fallback if no OpenRouter but reasoning requested
-    }
+    // (Reasoning rule moved up)
 
     // --------------------------------------------------------
     // RULE 5: Quality-based routing (FREE TIER PRIORITY)

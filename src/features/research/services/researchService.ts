@@ -1,38 +1,3 @@
-# Escalation Handoff Report
-
-**Generated:** 2026-01-11T05:25:00+01:00
-**Original Issue:** OpenRouter Web Search Plugin not triggering/billing correctly.
-
----
-
-## PART 1: THE DAMAGE REPORT
-
-### 1.1 Original Goal
-Enable "Standard Research" mode to use OpenRouter's "Web Search" capability (via Exa) to find academic papers. The goal was to ensure the AI *actually* searches the web and that OpenRouter billing reflects "Search" tool usage.
-
-### 1.2 Observed Failure / Error
-*   **Symptom:** The user reports "still no billing on the open router side" and "it's not using the search tool".
-*   **Ambiguity:** The user also says "we got results back though", but implies they might be hallucinated or the links are unclickable (though `DocumentUpload.tsx` links were fixed, the "results" in the modal might use a different component or the links returned are garbage/hallucinated).
-*   **Root Cause Suspect:** The manual fetch implementation for OpenRouter might still not be correctly formatted for their specific "plugin" architecture, OR the model `gpt-4o-mini` (mapped to `Models.FREE.GPT_OSS_120B` or similar) doesn't support the `plugins` parameter as expected in this context, even though documentation suggests it does.
-
-### 1.3 Failed Approach
-1.  **Vercel AI SDK (`generateObject`):** Tried using `useChat` and `generateObject` with `:online` suffix. Result: Unreliable plugin activation.
-2.  **Manual Fetch:** Reverted to a direct `fetch` call to `https://openrouter.ai/api/v1/chat/completions` with explicit `plugins: [{ id: "web", engine: "exa" }]` in the body. Result: User still reports no billing/tool usage.
-
-### 1.4 Key Files Involved
-- `src/features/research/services/researchService.ts` (Core logic for search)
-- `src/features/research/components/ResearchModal.tsx` (UI for triggering search)
-- `src/app/api/documents/upload/route.ts` (Fixed: Link downloading works here)
-
-### 1.5 Best-Guess Diagnosis
-OpenRouter's "Web Search" plugin might require a specific model class or a different API structure than the standard OpenAI-compatible chat completion body we are sending. Alternatively, the "Results" the user sees are just the model's training data (hallucinations), explaining why the plugin isn't billed.
-
----
-
-## PART 2: FULL FILE CONTENTS (Self-Contained)
-
-### File: `src/features/research/services/researchService.ts`
-```typescript
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
@@ -206,6 +171,9 @@ export class ResearchService {
     /**
      * Helper: Download content and save to DB
      */
+    /**
+     * Helper: Download content and save to DB
+     */
     public static async downloadAndSaveSource(projectId: string, url: string, title: string) {
         // Validation
         if (!url || !url.startsWith('http')) return null;
@@ -298,39 +266,3 @@ export class ResearchService {
         return cleanUrl;
     }
 }
-```
-
-### File: `src/features/research/components/ResearchModal.tsx`
-```tsx
-"use client";
-
-import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Bot, Zap, Globe, FileText, Check, ArrowRight, Loader2, Sparkles, X, Terminal } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ResearchClient, ResearchPlan } from '@/services/researchClient';
-import { ResearchProgress as ProgressType } from '../services/researchService';
-import { ResearchProgress } from './ResearchProgress';
-
-// ... (Rest of UI Component Code)
-// See codebase for full UI logic.
-```
-
----
-
-## PART 3: DIRECTIVE FOR ORCHESTRATOR
-
-**Attention: Senior AI Orchestrator**
-
-You have received this Escalation Handoff Report. A local agent has failed to solve the "OpenRouter Plugin Activation" problem.
-
-**Your Directive:**
-1.  **Analyze the Failure:** The goal is to make OpenRouter *actually* perform a web search via the Exa plugin. The current implementation uses a direct `fetch` with `plugins: [{ id: "web", engine: "exa" }]`. The user reports this does not trigger billing/usage, implying it's not working and the model is hallucinating results.
-2.  **Verify Plugin Config:** Confirm if the `model` (Models.FREE.GPT_OSS_120B) supports this plugin parameter, or if a specific model (like `google/gemini-pro-1.5` or `perplexity` models) should be used instead.
-3.  **Investigate Link Clickability:** The user mentioned "results back... but not the type I can click". Check where `searchWeb` returns data and how `ResearchModal` (or its child `ResearchProgress`) renders it. Ensure the `url` field from the search results is actually being passed and rendered as an `<a>` tag.
-4.  **Execute Fix:**
-    *   Find the correct API/Model configuration for OpenRouter Web Search.
-    *   Ensure the JSON parsing of search results is robust (currently using regex).
-    *   Verify the UI renders clickable links for the search results.
-
-**Begin your analysis now.**

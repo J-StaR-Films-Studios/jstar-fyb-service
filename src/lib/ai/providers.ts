@@ -33,7 +33,13 @@ export const gemini = geminiApiKey
  */
 const openrouterApiKey = process.env.OPENROUTER_API_KEY;
 export const openrouter = openrouterApiKey
-    ? createOpenRouter({ apiKey: openrouterApiKey })
+    ? createOpenRouter({
+        apiKey: openrouterApiKey,
+        headers: {
+            'HTTP-Referer': 'https://fyb.jstarstudios.com/', // Site URL for rankings
+            'X-Title': 'JStar FYB', // App name in dashboard
+        }
+    })
     : null;
 
 /**

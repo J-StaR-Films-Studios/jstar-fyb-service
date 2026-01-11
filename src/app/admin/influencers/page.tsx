@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Megaphone, Plus, CreditCard, ToggleLeft, ToggleRight, Gift, DollarSign } from 'lucide-react';
+import { Megaphone, Plus, CreditCard, ToggleLeft, ToggleRight, Gift, DollarSign, Key, Link as LinkIcon } from 'lucide-react';
 
 interface Influencer {
     id: string;
@@ -20,6 +20,9 @@ interface Influencer {
         referredUsers: number;
         commissions: number;
     };
+    bankName?: string | null;
+    accountNumber?: string | null;
+    accountName?: string | null;
 }
 
 export default function AdminInfluencersPage() {
@@ -27,6 +30,7 @@ export default function AdminInfluencersPage() {
     const [loading, setLoading] = useState(true);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [showCreditsModal, setShowCreditsModal] = useState<string | null>(null);
+    const [viewBankDetails, setViewBankDetails] = useState<Influencer | null>(null);
     const [creditsAmount, setCreditsAmount] = useState('');
     const [formData, setFormData] = useState({
         name: '',
@@ -127,6 +131,30 @@ export default function AdminInfluencersPage() {
         }
     };
 
+    const resetPassword = async (id: string, name: string) => {
+        if (!confirm(`Reset password for ${name} to "ChangeMe123!"?`)) return;
+
+        try {
+            const res = await fetch('/api/admin/influencers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reset_password', influencerId: id })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+            }
+        } catch (err) {
+            console.error('Reset password error:', err);
+        }
+    };
+
+    const copyLoginLink = () => {
+        const url = `${window.location.origin}/partner/login`;
+        navigator.clipboard.writeText(url);
+        alert('Partner Login Link copied to clipboard!');
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-dark text-white p-8 flex items-center justify-center">
@@ -211,6 +239,27 @@ export default function AdminInfluencersPage() {
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => copyLoginLink()}
+                                                    className="p-2 hover:bg-white/10 rounded-lg transition-colors text-blue-400"
+                                                    title="Copy Login Link"
+                                                >
+                                                    <LinkIcon className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setViewBankDetails(inf)}
+                                                    className="p-2 hover:bg-white/10 rounded-lg transition-colors text-cyan-400"
+                                                    title="View Payout Details"
+                                                >
+                                                    <CreditCard className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => resetPassword(inf.id, inf.name)}
+                                                    className="p-2 hover:bg-white/10 rounded-lg transition-colors text-purple-400"
+                                                    title="Reset Password"
+                                                >
+                                                    <Key className="w-4 h-4" />
+                                                </button>
                                                 <button
                                                     onClick={() => setShowCreditsModal(inf.id)}
                                                     className="p-2 hover:bg-white/10 rounded-lg transition-colors text-green-400"
@@ -344,6 +393,50 @@ export default function AdminInfluencersPage() {
                                     Grant Credits
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* View Bank Details Modal */}
+                {viewBankDetails && (
+                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                        <div className="bg-[#1a1a1f] border border-white/10 rounded-xl p-6 w-full max-w-sm">
+                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                <CreditCard className="w-5 h-5 text-cyan-400" />
+                                Payout Details
+                            </h2>
+                            <div className="space-y-4 bg-white/5 p-4 rounded-lg">
+                                <div>
+                                    <div className="text-xs text-gray-400 uppercase mb-1">Bank Name</div>
+                                    <div className="font-medium text-lg">{viewBankDetails.bankName || 'Not Provided'}</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-gray-400 uppercase mb-1">Account Number</div>
+                                    <div className="font-mono text-xl tracking-wider">{viewBankDetails.accountNumber || '---'}</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-gray-400 uppercase mb-1">Account Name</div>
+                                    <div className="font-medium text-lg">{viewBankDetails.accountName || '---'}</div>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex gap-3">
+                                <button
+                                    onClick={() => markPaid(viewBankDetails.id)}
+                                    className="flex-1 py-2 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-400 flex items-center justify-center gap-2"
+                                    disabled={viewBankDetails.pendingPayout === 0}
+                                >
+                                    <DollarSign className="w-4 h-4" />
+                                    Mark ₦{viewBankDetails.pendingPayout.toLocaleString()} Paid
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => setViewBankDetails(null)}
+                                className="mt-3 w-full py-2 border border-white/10 rounded-lg hover:bg-white/5"
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 )}

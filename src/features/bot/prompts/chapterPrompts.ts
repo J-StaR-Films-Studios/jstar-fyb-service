@@ -12,6 +12,16 @@ export const COMMON_ACADEMIC_RULES = `
 2.  **Structure:**
     *   Use Markdown headings (\`##\`, \`###\`) for sections.
     *   Ensure logical flow between paragraphs.
+
+3.  **Visuals & Diagrams (CRITICAL):**
+    *   When a section requires a diagram (e.g., Architecture, Flowchart, Use Case), you have **TWO OPTIONS**:
+        *   **OPTION A (Preferred):** Generate valid **Mermaid.js** code block.
+            \`\`\`mermaid
+            graph TD; A[Input] --> B[Process];
+            \`\`\`
+        *   **OPTION B (Fallback):** If you cannot generate the code, use this **EXACT** placeholder format:
+            \`[Figure X.X: <Title> - <Detailed Description of exactly what should be drawn here using what tools>]\`
+    *   **NEVER** refuse to generate a diagram. **NEVER** just describe it in a paragraph without using one of the above formats.
 `;
 
 export const getChapterSpecificPrompt = (chapterNumber: number, topic: string): string => {
@@ -28,7 +38,9 @@ export const getChapterSpecificPrompt = (chapterNumber: number, topic: string): 
 3.  **1.3 AIM AND OBJECTIVES:**
     *   **Aim:** One concise sentence stating the primary goal.
     *   **Objectives:** A numbered list of SMART objectives (e.g., "To develop...", "To evaluate...").
-4.  **1.4 METHODOLOGY (OVERVIEW):** Brief summary of the approach (save details for Ch3).
+4.  **1.4 METHODOLOGY (OVERVIEW):** Brief summary of the approach.
+    *   **RECOMMENDED:** Include a **Methodology Flowchart** here to visualize the steps.
+    *   *Format:* Use a \`mermaid\` flowchart OR the \`[Figure 1.1: Methodology Flowchart - ...]\` placeholder.
 5.  **1.5 CONTRIBUTION TO KNOWLEDGE:** How this advances the field.
 
 **RESTRICTIONS:**
@@ -62,7 +74,10 @@ export const getChapterSpecificPrompt = (chapterNumber: number, topic: string): 
 
 **REQUIRED SECTIONS:**
 1.  **3.1 OVERVIEW:** High-level description of the system/approach.
-2.  **3.2 ARCHITECTURE/DESIGN:** System architecture, block diagrams, or research framework. **(DIAGRAMS REQUIRED)**.
+2.  **3.2 ARCHITECTURE/DESIGN:** System architecture, block diagrams, or research framework.
+    *   **MANDATORY:** You **MUST** include a System Block Diagram or Architecture Diagram here.
+    *   **USE MERMAID:** Generate a \`mermaid\` code block for the system architecture.
+    *   *Alternative:* If complex to generate, use the \`[Figure 3.1: ...]\` placeholder format described in standard rules.
 3.  **3.3 COMPONENTS/MODULES:** Detailed breakdown of specific modules (e.g., "Data Collection", "Algorithm Design").
 4.  **3.4 TOOLS & TECHNOLOGIES:** Justify the choice of tools (e.g., React, Python, etc.).
 
@@ -80,7 +95,10 @@ export const getChapterSpecificPrompt = (chapterNumber: number, topic: string): 
 
 **REQUIRED SECTIONS:**
 1.  **4.1 IMPLEMENTATION DETAILS:** Specifics of the development environment and setup.
-2.  **4.2 RESULTS/FINDINGS:** Present data, screenshots, or system outputs. **(VISUALS REQUIRED)**.
+2.  **4.2 RESULTS/FINDINGS:** Present data, screenshots, or system outputs.
+    *   **VISUALS REQUIRED:** You must include figures/tables.
+    *   **SCREENSHOTS:** Since you cannot take screenshots, you **MUST** use the placeholder format: e.g., \`[Figure 4.1: Screenshot of Login Page - showing fields for email and password]\`.
+    *   **CHARTS:** For data results (e.g., accuracy comparison), use **Mermaid** pie/bar charts or meaningful tables.
 3.  **4.3 EVALUATION/DISCUSSION:** Analyze the performance (Accuracy, Usability, etc.).
 4.  **4.4 COMPARISON:** Compare findings with objectives/literatre.
 

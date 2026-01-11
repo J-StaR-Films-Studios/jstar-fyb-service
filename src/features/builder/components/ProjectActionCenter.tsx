@@ -24,14 +24,15 @@ export function ProjectActionCenter({ projectId }: ProjectActionCenterProps) {
 
                 <div className="grid md:grid-cols-2 gap-4 mb-8">
                     {/* Action Card 1: Deep Research */}
-                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 sm:p-5 hover:border-primary/50 transition-colors group cursor-pointer">
+                    {/* Action Card 1: Deep Research */}
+                    <div className="bg-black/40 border border-white/10 rounded-xl p-4 sm:p-5 opacity-60">
                         <div className="flex items-start justify-between mb-4">
                             <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg">
                                 <Bot className="w-5 h-5" />
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full">Next Step</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/5 text-gray-500 px-2 py-1 rounded-full">Coming Soon</span>
                         </div>
-                        <h4 className="font-bold text-lg text-gray-200 group-hover:text-blue-400 transition-colors mb-2">Deep Research</h4>
+                        <h4 className="font-bold text-lg text-gray-200 mb-2">Deep Research</h4>
                         <p className="text-xs text-gray-500 leading-relaxed">
                             Analyze your abstract and uploaded documents to find relevant citations and data points.
                         </p>
@@ -43,7 +44,7 @@ export function ProjectActionCenter({ projectId }: ProjectActionCenterProps) {
                             <div className="p-2 bg-purple-500/20 text-purple-400 rounded-lg">
                                 <FileText className="w-5 h-5" />
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/5 text-gray-500 px-2 py-1 rounded-full">Queued</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/5 text-gray-500 px-2 py-1 rounded-full">Coming Soon</span>
                         </div>
                         <h4 className="font-bold text-lg text-gray-400 mb-2">Chapter Writing</h4>
                         <p className="text-xs text-gray-600 leading-relaxed">

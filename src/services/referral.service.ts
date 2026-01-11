@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { hashPassword } from "@/lib/partner-auth";
 
 export interface CreateInfluencerData {
     name: string;
@@ -159,8 +160,10 @@ export const ReferralService = {
                 email: data.email,
                 phone: data.phone,
                 referralCode,
+
                 commissionRate: data.commissionRate ?? 0.10,
-                freeCredits: data.freeCredits ?? 0
+                freeCredits: data.freeCredits ?? 0,
+                password: await hashPassword("ChangeMe123!") // Default password for new partners
             }
         });
 
@@ -253,5 +256,16 @@ export const ReferralService = {
             },
             orderBy: { createdAt: 'desc' }
         });
+    },
+
+    /**
+     * Admin: Reset password
+     */
+    async adminResetPassword(influencerId: string, hashedPassword: string) {
+        await prisma.influencer.update({
+            where: { id: influencerId },
+            data: { password: hashedPassword }
+        });
     }
 };
+

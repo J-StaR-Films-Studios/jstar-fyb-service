@@ -296,6 +296,12 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
 
                             {data.projectId && (
                                 <div className="mt-16">
+                                    <DocumentUpload projectId={data.projectId} />
+                                </div>
+                            )}
+
+                            {data.projectId && (
+                                <div className="mt-16">
                                     <ChapterGenerator projectId={data.projectId} />
                                 </div>
                             )}
@@ -303,12 +309,6 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
                             <div className="mt-20 mb-10">
                                 <UpsellBridge projectId={data.projectId} />
                             </div>
-
-                            {data.projectId && (
-                                <div className="mt-16">
-                                    <DocumentUpload projectId={data.projectId} />
-                                </div>
-                            )}
                         </>
                     )
                 }

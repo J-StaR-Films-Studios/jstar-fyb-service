@@ -7,6 +7,7 @@ import { DocumentViewerModal } from "./DocumentViewerModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ResearchDocument } from "@prisma/client";
 import { cn } from "@/lib/utils";
+import { ResearchModal } from "@/features/research/components/ResearchModal";
 
 export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: string, searchQuery?: string }) {
     const [mode, setMode] = useState<"upload" | "link">("upload");
@@ -19,6 +20,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
     const [syncingDocs, setSyncingDocs] = useState<Record<string, boolean>>({});
     const [selectedDocument, setSelectedDocument] = useState<ResearchDocument | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isResearchModalOpen, setIsResearchModalOpen] = useState(false);
 
     // Modal states
     const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; docId: string | null }>({ isOpen: false, docId: null });
@@ -188,6 +190,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
             case "PROCESSED": return { icon: <CheckCircle className="w-3.5 h-3.5" />, text: "Ready", className: "text-green-400" };
             case "COMPLETED": return { icon: <CheckCircle className="w-3.5 h-3.5" />, text: "Ready", className: "text-green-400" };
             case "FAILED": return { icon: <XCircle className="w-3.5 h-3.5" />, text: "Failed", className: "text-red-400" };
+            case "ERROR": return { icon: <XCircle className="w-3.5 h-3.5" />, text: "Download Failed", className: "text-rose-400" }; // New Error State
             case "EXTRACTION_FAILED": return { icon: <XCircle className="w-3.5 h-3.5" />, text: "Failed", className: "text-orange-400" };
             case "PROCESSING": return { icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />, text: "Processing", className: "text-yellow-400" };
             case "PENDING": return { icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />, text: "Extracting", className: "text-blue-400" };
@@ -214,17 +217,29 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                         </span>
                     )}
                 </h3>
-                <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className={cn(
-                        "p-1.5 rounded-lg transition-all duration-200",
-                        isExpanded
-                            ? "bg-primary/20 text-primary rotate-45"
-                            : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                    )}
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* HIDDEN: Deep Research Button as per request */}
+                    {/*
+                    <button
+                        onClick={() => setIsResearchModalOpen(true)}
+                        className="text-[10px] flex items-center gap-1.5 px-2 py-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 transition-colors border border-purple-500/20"
+                    >
+                        <Sparkles className="w-3 h-3" />
+                        Deep Research
+                    </button>
+                    */}
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className={cn(
+                            "p-1.5 rounded-lg transition-all duration-200",
+                            isExpanded
+                                ? "bg-primary/20 text-primary rotate-45"
+                                : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+                        )}
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
 
             {/* Collapsible Upload Section */}
@@ -362,9 +377,23 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
 
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-200 truncate leading-tight" title={doc.fileName}>
-                                        {doc.fileName}
-                                    </p>
+                                    {/* Link to source if available */}
+                                    {doc.fileUrl ? (
+                                        <a
+                                            href={doc.fileUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-sm font-medium text-gray-200 hover:text-primary truncate leading-tight block transition-colors"
+                                            title={doc.fileName}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {doc.fileName}
+                                        </a>
+                                    ) : (
+                                        <p className="text-sm font-medium text-gray-200 truncate leading-tight" title={doc.fileName}>
+                                            {doc.fileName}
+                                        </p>
+                                    )}
                                     <div className={cn("flex items-center gap-1.5 mt-0.5", status.className)}>
                                         {status.icon}
                                         <span className="text-[11px] font-medium">{status.text}</span>
@@ -373,6 +402,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
 
                                 {/* Actions - Hover Reveal */}
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {/* Status: PROCESSED -> View in Modal */}
                                     {isProcessed && (
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setSelectedDocument(doc); }}
@@ -382,7 +412,23 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                                             <Eye className="w-3.5 h-3.5" />
                                         </button>
                                     )}
-                                    {isFailed && (
+
+                                    {/* ALWAYS Show Link options if fileUrl exists */}
+                                    {doc.fileUrl && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                window.open(doc.fileUrl, '_blank', 'noopener,noreferrer');
+                                            }}
+                                            className="p-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition-colors"
+                                            title="Open Original Source"
+                                        >
+                                            <LinkIcon className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+
+                                    {/* Retry Logic for extraction failures */}
+                                    {(doc.status === 'FAILED' || doc.status === 'EXTRACTION_FAILED') && (
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleExtract(doc.id); }}
                                             disabled={isExtracting}
@@ -468,6 +514,15 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                 confirmText="OK"
                 cancelText=""
                 type={syncModal.result === 'success' ? 'success' : 'danger'}
+            />
+
+            <ResearchModal
+                isOpen={isResearchModalOpen}
+                onClose={() => setIsResearchModalOpen(false)}
+                projectId={projectId}
+                onComplete={() => {
+                    fetchDocuments();
+                }}
             />
         </div>
     );

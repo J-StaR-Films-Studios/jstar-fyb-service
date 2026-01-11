@@ -376,6 +376,17 @@ model Influencer {
   updatedAt      DateTime     @updatedAt
   referredUsers  User[]       @relation("ReferredUsers")
   commissions    Commission[]
+
+  // Payout Details
+  bankName       String?
+  accountNumber  String?
+  accountName    String?
+
+  // Authentication & Security
+  password       String?      // Hashed password (bcrypt) - Optional initially for existing users
+  lastLogin      DateTime?    // Track engagement
+  resetToken     String?      // For password recovery
+  resetExpires   DateTime?    // Expiry for token
 }
 
 model Commission {

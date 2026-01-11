@@ -139,21 +139,19 @@ ${researchText}
     });
 
     // Detect if user wants reasoning
-    // Detect if user wants reasoning OR if the request implies complex tool usage that benefits from reasoning
-    const lastUserMessage = coreMessages
-        .slice().reverse().find((m: any) => m.role === 'user')?.content || '';
-
-    // Expanded trigger words to include tool actions which need diligent output processing
-    const wantsReasoning = /think|reason|why|explain|analyze|compare|critique|list|search|find|load|generate|create|add|suggest|draw|sketch|diagram/i.test(lastUserMessage);
+    // DEFAULT: We now default to reasoning model for Academic Copilot as requested
+    const wantsReasoning = true;
+    const useGrounding = contextScope?.grounding === true;
 
     // Use smart routing to pick the best model
     const { model, modelId, provider, isFree, reason } = selectModel({
         tools: true,
-        reasoning: wantsReasoning, // Dynamic switching
+        reasoning: wantsReasoning, // Force default true
+        grounding: useGrounding, // Respect user preference for grounding
         quality: 'high'
     });
 
-    console.log(`[Chat API] Using model: ${modelId} via ${provider} (Free: ${isFree}) - ${reason} (Reasoning Requested: ${wantsReasoning})`);
+    console.log(`[Chat API] Using model: ${modelId} via ${provider} (Free: ${isFree}) - ${reason} (Reasoning: ${wantsReasoning}, Grounding: ${useGrounding})`);
 
     // For OpenRouter reasoning models, we pass the reasoning config via providerOptions
     // The reasoning content comes back in a separate 'reasoning' field on the response

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-server";
 import { ReferralService } from "@/services/referral.service";
+import { hashPassword } from "@/lib/partner-auth";
 
 const createInfluencerSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -78,7 +79,16 @@ export async function POST(req: Request) {
             const amount = await ReferralService.markCommissionsPaid(body.influencerId);
             return NextResponse.json({
                 success: true,
-                message: `Marked ₦${amount.toLocaleString()} as paid`
+            });
+        }
+
+        if (body.action === "reset_password") {
+            const DEFAULT_PASSWORD = "ChangeMe123!";
+            const hashed = await hashPassword(DEFAULT_PASSWORD);
+            await ReferralService.adminResetPassword(body.influencerId, hashed);
+            return NextResponse.json({
+                success: true,
+                message: `Password reset to: ${DEFAULT_PASSWORD}`
             });
         }
 
