@@ -166,6 +166,8 @@ model Payment {
   commission      Commission?
 
   @@index([userId])
+  // Bolt: Add index for frequent queries by projectId
+  @@index([projectId])
 }
 
 model ResearchDocument {
@@ -242,6 +244,9 @@ model ProjectMessage {
   content   String
   createdAt DateTime @default(now())
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Bolt: Add index for frequent queries by projectId
+  @@index([projectId])
 }
 
 model ProjectDiagram {
@@ -308,6 +313,10 @@ model TopicSwitchRequest {
   resolvedAt  DateTime?
   resolvedBy  String?
   explanation String?
+
+  // Bolt: Add indexes for frequent lookups
+  @@index([userId])
+  @@index([projectId])
 }
 
 model TopicSwitchArchive {
