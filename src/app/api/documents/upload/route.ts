@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { getCurrentUser } from "@/lib/auth-server";
 import { GeminiFileSearchService } from "@/lib/gemini-file-search";
 import { extractPdfText } from "@/lib/pdf-parser";
 import mammoth from "mammoth";
@@ -108,13 +108,19 @@ export async function POST(req: Request) {
         }
 
         // CRITICAL SECURITY FIX: Check if user is authenticated and has access to the project
-        // Note: This requires implementing getCurrentUser() function
-        // For now, we'll add a placeholder for authentication check
-        // TODO: Implement proper authentication check here
-        // const user = await getCurrentUser();
-        // if (!user || project.userId !== user.id) {
-        //     return NextResponse.json({ error: "Access denied" }, { status: 403 });
-        // }
+        const user = await getCurrentUser();
+
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Allow Admins or Project Owners
+        const isOwner = project.userId === user.id;
+        const isAdmin = (user as { role?: string }).role === 'ADMIN';
+
+        if (!isOwner && !isAdmin) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        }
 
         // Case 1: External Link
         if (link) {
@@ -329,12 +335,12 @@ export async function POST(req: Request) {
                             });
                         }
                     }
-                } catch (error: any) {
+                } catch (error) {
                     console.error('[DocumentUpload] Async File Search sync error:', error);
                     // Update document with error
                     await prisma.researchDocument.update({
                         where: { id: doc.id },
-                        data: { importError: error.message || 'Async sync failed' }
+                        data: { importError: (error as Error).message || 'Async sync failed' }
                     });
                 }
             })();
