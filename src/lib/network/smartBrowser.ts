@@ -1,4 +1,5 @@
 import { gotScraping } from 'got-scraping';
+import { validateUrlSecurity } from '@/lib/security';
 
 /**
  * A High-Trust downloader that mimics a real browser (Chrome/Windows)
@@ -22,7 +23,23 @@ export async function smartDownload(url: string): Promise<Buffer> {
             followRedirect: true,
             retry: { limit: 2 },
             // Timeout to prevent hanging lambda
-            timeout: { request: 60000 }
+            timeout: { request: 60000 },
+            hooks: {
+                beforeRequest: [
+                    async (options) => {
+                        if (!options.url) return;
+                        const urlToCheck = options.url.toString();
+                        await validateUrlSecurity(urlToCheck);
+                    }
+                ],
+                beforeRedirect: [
+                    async (options, _response) => {
+                        if (!options.url) return;
+                        const urlToCheck = options.url.toString();
+                        await validateUrlSecurity(urlToCheck);
+                    }
+                ]
+            }
         });
 
         // Check if we actually got a PDF or a "You are blocked" HTML page
@@ -39,7 +56,7 @@ export async function smartDownload(url: string): Promise<Buffer> {
 
         return response.body;
 
-    } catch (error: any) {
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         // Log detailed error for debugging
         console.warn(`[SmartDownload] Failed for ${url}: ${error.message}`);
 
@@ -47,6 +64,11 @@ export async function smartDownload(url: string): Promise<Buffer> {
         if (error.message === 'BLOCKED_BY_WAF' || error.response?.statusCode === 403 || error.response?.statusCode === 429) {
             throw new Error('BLOCKED_ACCESS');
         }
+        // Handle security errors specifically
+        if (error.message && (error.message.includes('Blocked private IP') || error.message.includes('Blocked domain'))) {
+             throw new Error('SECURITY_BLOCK: ' + error.message);
+        }
+
         throw error;
     }
 }
