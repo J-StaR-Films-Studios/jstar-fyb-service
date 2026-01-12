@@ -38,6 +38,7 @@ export default function AdminInfluencersPage() {
         phone: '',
         referralCode: '',
         commissionRate: '0.10',
+        referralDiscount: '0.00',
         freeCredits: '0'
     });
 
@@ -66,13 +67,14 @@ export default function AdminInfluencersPage() {
                 body: JSON.stringify({
                     ...formData,
                     commissionRate: parseFloat(formData.commissionRate),
+                    referralDiscount: parseFloat(formData.referralDiscount),
                     freeCredits: parseFloat(formData.freeCredits)
                 })
             });
             const data = await res.json();
             if (data.success) {
                 setShowCreateForm(false);
-                setFormData({ name: '', email: '', phone: '', referralCode: '', commissionRate: '0.10', freeCredits: '0' });
+                setFormData({ name: '', email: '', phone: '', referralCode: '', commissionRate: '0.10', referralDiscount: '0.00', freeCredits: '0' });
                 fetchInfluencers();
             } else {
                 alert(data.error || 'Failed to create influencer');
@@ -348,15 +350,27 @@ export default function AdminInfluencersPage() {
                                         <p className="text-xs text-gray-500 mt-1">0.10 = 10%</p>
                                     </div>
                                     <div>
-                                        <label className="block text-sm text-gray-400 mb-1">Free Credits (₦)</label>
+                                        <label className="block text-sm text-gray-400 mb-1">Referral Discount</label>
                                         <input
                                             type="number"
-                                            value={formData.freeCredits}
-                                            onChange={(e) => setFormData({ ...formData, freeCredits: e.target.value })}
+                                            step="0.01"
+                                            value={formData.referralDiscount}
+                                            onChange={(e) => setFormData({ ...formData, referralDiscount: e.target.value })}
                                             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:border-primary"
                                         />
+                                        <p className="text-xs text-gray-500 mt-1">0.05 = 5%</p>
                                     </div>
                                 </div>
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Free Credits (₦)</label>
+                                    <input
+                                        type="number"
+                                        value={formData.freeCredits}
+                                        onChange={(e) => setFormData({ ...formData, freeCredits: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:border-primary"
+                                    />
+                                </div>
+
                                 <div className="flex gap-3 pt-4">
                                     <button type="button" onClick={() => setShowCreateForm(false)} className="flex-1 py-2 border border-white/10 rounded-lg hover:bg-white/5">
                                         Cancel

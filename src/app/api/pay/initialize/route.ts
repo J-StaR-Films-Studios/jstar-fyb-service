@@ -18,7 +18,14 @@ export async function POST(req: Request) {
         // Fetch full user to check referral status
         const userData = await prisma.user.findUnique({
             where: { id: user.id },
-            select: { referredById: true }
+            select: { 
+                referredById: true,
+                referredBy: {
+                    select: {
+                        referralDiscount: true
+                    }
+                }
+            }
         });
 
         // Use userData.referredById for checking exclusivity
@@ -51,12 +58,23 @@ export async function POST(req: Request) {
         // Calculate final amount (with potential discount)
         let finalAmount = PROJECT_UNLOCK_AMOUNT;
         let discountAmount = 0;
+        // Check for automatic referral discount
+        const referralDiscountRate = userData?.referredBy?.referralDiscount || 0;
+        
+        if (isReferred && referralDiscountRate > 0) {
+            discountAmount = PROJECT_UNLOCK_AMOUNT * referralDiscountRate;
+            finalAmount = PROJECT_UNLOCK_AMOUNT - discountAmount;
+            // distinct from discountCodeId, we might want to log this differently later
+        }
+
         let discountCodeId: string | undefined;
 
         // Validate and apply discount code if provided
         if (discountCode) {
             // MUTUAL EXCLUSIVITY RULE: Referred users cannot use discount codes
             if (isReferred) {
+                // Determine if the referrer has a discount configured
+                // Note: We need to fetch this above, let's restructure the check slightly.
                 return NextResponse.json({
                     error: "Discount codes cannot be used while supporting a creator."
                 }, { status: 400 });

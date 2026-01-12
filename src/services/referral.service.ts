@@ -7,6 +7,7 @@ export interface CreateInfluencerData {
     phone?: string;
     referralCode: string;
     commissionRate?: number;
+    referralDiscount?: number;
     freeCredits?: number;
 }
 
@@ -162,6 +163,7 @@ export const ReferralService = {
                 referralCode,
 
                 commissionRate: data.commissionRate ?? 0.10,
+                referralDiscount: data.referralDiscount ?? 0.0,
                 freeCredits: data.freeCredits ?? 0,
                 password: await hashPassword("ChangeMe123!") // Default password for new partners
             }

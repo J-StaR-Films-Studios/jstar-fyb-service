@@ -10,6 +10,7 @@ const createInfluencerSchema = z.object({
     phone: z.string().optional(),
     referralCode: z.string().min(2, "Referral code must be at least 2 characters"),
     commissionRate: z.number().min(0).max(1).optional(),
+    referralDiscount: z.number().min(0).max(1).optional(),
     freeCredits: z.number().min(0).optional()
 });
 

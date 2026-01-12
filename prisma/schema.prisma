@@ -383,6 +383,7 @@ model Influencer {
   referralCode   String       @unique  // e.g., "JOHNGPT", "TECHBRO"
   isActive       Boolean      @default(true)
   commissionRate Float        @default(0.10)  // 10% default
+  referralDiscount Float      @default(0.0)   // Discount for referred users (0-1.0)
   totalEarnings  Float        @default(0)
   pendingPayout  Float        @default(0)
   // Admin-controlled demo credits (in Naira)
