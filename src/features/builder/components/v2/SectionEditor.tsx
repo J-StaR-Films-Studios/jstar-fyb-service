@@ -70,7 +70,15 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
     const handleDone = () => {
         // Force immediate save on Done and cancel pending debounced saves
         debouncedSave.cancel();
-        onSave(latestContentRef.current);
+
+        // Get the absolute latest content from the editor instance if available
+        // This ensures that even if onUpdate is debounced in NovelEditor, we get the current state
+        let content = latestContentRef.current;
+        if (editor) {
+            content = editor.storage.markdown?.getMarkdown?.() || editor.getText();
+        }
+
+        onSave(content);
         onClose();
     };
 
