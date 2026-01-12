@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
 import StarterKit from '@tiptap/starter-kit';
 import {
     EditorRoot,
@@ -162,15 +163,23 @@ export function NovelEditor({ content, onUpdate, projectId, className, onEditorR
         }
     }, [content, editorInstance]);
 
+    // Debounce the update callback to avoid expensive markdown serialization on every keystroke
+    // This significantly improves performance for large documents
+    const debouncedOnUpdate = useDebouncedCallback(
+        (editor: EditorInstance) => {
+            const markdown = editor.storage.markdown?.getMarkdown?.() || editor.getText();
+            onUpdate(markdown);
+        },
+        500
+    );
+
     const handleUpdate = ({ editor }: { editor: EditorInstance }) => {
         if (!editorInstance) {
             setEditorInstance(editor);
             onEditorReady?.(editor);
         }
 
-        // Get markdown from the editor using the markdown extension
-        const markdown = editor.storage.markdown?.getMarkdown?.() || editor.getText();
-        onUpdate(markdown);
+        debouncedOnUpdate(editor);
     };
 
     const handleCreate = ({ editor }: { editor: EditorInstance }) => {
