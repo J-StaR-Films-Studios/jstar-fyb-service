@@ -22,7 +22,7 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
     mermaid.initialize({
       startOnLoad: false,
       theme: theme,
-      securityLevel: 'loose',
+      securityLevel: 'strict', // Security: Prevent XSS by disabling HTML in diagrams
     });
   }, [theme]);
 
