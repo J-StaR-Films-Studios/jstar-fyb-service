@@ -6,6 +6,7 @@ import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { SupportProviderClient } from "@/features/support/components/SupportProviderClient";
 import { Toaster } from "sonner";
 import { ReferralListener } from "@/features/referral/components/ReferralListener";
+import { MetaPixel } from "@/components/analytics/MetaPixel";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -52,6 +53,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <MetaPixel />
+      </head>
       <body className={`${outfit.variable} ${spaceGrotesk.variable} font-sans antialiased bg-dark`} suppressHydrationWarning>
         <ErrorBoundary>
           <SupportProviderClient>
