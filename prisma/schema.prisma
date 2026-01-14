@@ -80,6 +80,10 @@ model Lead {
   status      String   @default("NEW")
   userId      String?
   anonymousId String?
+
+  // Bolt: Add indexes for frequent lookups
+  @@index([userId])
+  @@index([anonymousId])
 }
 
 model Conversation {
@@ -90,6 +94,10 @@ model Conversation {
   updatedAt   DateTime  @updatedAt
   title       String?
   messages    Message[]
+
+  // Bolt: Add indexes for frequent lookups
+  @@index([userId])
+  @@index([anonymousId])
 }
 
 model Message {
@@ -147,6 +155,8 @@ model Project {
   diagrams                 ProjectDiagram[]
 
   @@index([userId])
+  // Bolt: Add index for frequent queries by anonymousId
+  @@index([anonymousId])
 }
 
 model Payment {
