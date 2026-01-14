@@ -25,6 +25,9 @@ model User {
   // Referral tracking
   referredById           String?
   referredBy             Influencer?                 @relation("ReferredUsers", fields: [referredById], references: [id])
+
+  // Bolt: Add index for frequent queries by referredById
+  @@index([referredById])
 }
 
 model Session {
