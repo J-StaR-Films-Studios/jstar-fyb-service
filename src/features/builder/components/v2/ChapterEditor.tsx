@@ -7,7 +7,7 @@ import { MobileTimelineView } from './MobileTimelineView';
 import { SectionEditor } from './SectionEditor';
 import { MobileFloatingNav } from './MobileFloatingNav';
 import { useMediaQuery } from '../../../../hooks/use-media-query';
-import { Search, BrainCircuit, ArrowRight, FileText, Globe, Cloud, Loader2, Check, CloudOff, MessageSquare, Layout, ChevronLeft, BookOpen, Save, Undo, Redo, Sparkles, Download } from 'lucide-react';
+import { Search, ChevronLeft, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { DocumentUpload } from '../DocumentUpload';
@@ -15,10 +15,11 @@ import { ResearchStatus } from '../ResearchStatus';
 import { AcademicCopilot } from './AcademicCopilot';
 import { DiagramGenerator } from './DiagramGenerator';
 import { DiagramsList } from './DiagramsList';
+import { SaveStatusBadge } from './SaveStatusBadge';
 import { VersionHistoryDropdown } from './VersionHistoryDropdown';
 import { EnhanceOptionsPopover } from './EnhanceOptionsPopover';
 import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
-import { generateMarkdownBlob, generateDocxBlob, downloadFile, sanitizeFilename, ExportOptions } from '@/lib/export-service';
+import { generateMarkdownBlob, downloadFile, sanitizeFilename, ExportOptions } from '@/lib/export-service';
 import { type Editor as TipTapEditor } from '@tiptap/core';
 import { toast } from 'sonner';
 
@@ -362,35 +363,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         }
     }, [mobileView]);
 
-    const SaveStatusBadge = ({ showText = true }: { showText?: boolean }) => {
-        const config = {
-            idle: { icon: <Cloud className="w-4 h-4" />, text: lastSavedAt ? 'Saved' : 'Ready', className: 'text-gray-400 bg-white/5' },
-            saving: { icon: <Loader2 className="w-4 h-4 animate-spin" />, text: 'Saving...', className: 'text-primary bg-primary/20' },
-            saved: { icon: <Check className="w-4 h-4" />, text: 'Saved!', className: 'text-green-400 bg-green-500/20' },
-            error: { icon: <CloudOff className="w-4 h-4" />, text: 'Failed', className: 'text-red-400 bg-red-500/20' },
-        }[saveStatus];
-
-        return (
-            <button
-                onClick={triggerManualSave}
-                disabled={saveStatus === 'saving'}
-                className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 transition-all duration-300',
-                    'hover:scale-105 active:scale-95 disabled:hover:scale-100',
-                    config.className
-                )}
-                title={saveStatus === 'error' ? 'Click to retry' : 'Click to save now'}
-            >
-                {config.icon}
-                {showText && (
-                    <span className="text-[10px] font-bold uppercase tracking-wider">
-                        {config.text}
-                    </span>
-                )}
-            </button>
-        );
-    };
-
     const activeChapter = chapters.find(c => c.number === activeChapterNumber);
 
     const handleMobileTabChange = (tab: 'write' | 'research' | 'chat' | 'diagrams' | 'settings') => {
@@ -497,7 +469,11 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                                     <Download className="w-4 h-4" />
                                     <span>Export</span>
                                 </button>
-                                <SaveStatusBadge />
+                                <SaveStatusBadge
+                                    saveStatus={saveStatus}
+                                    lastSavedAt={lastSavedAt}
+                                    onSave={triggerManualSave}
+                                />
                             </div>
                         }
                     />
@@ -622,7 +598,11 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     <h1 className="font-display font-bold text-2xl leading-tight text-white line-clamp-2 max-w-[200px]">{projectTitle || "Workspace"}</h1>
                 </div>
                 <div className="pointer-events-auto mt-2 shrink-0">
-                    <SaveStatusBadge />
+                    <SaveStatusBadge
+                        saveStatus={saveStatus}
+                        lastSavedAt={lastSavedAt}
+                        onSave={triggerManualSave}
+                    />
                 </div>
             </header>
 

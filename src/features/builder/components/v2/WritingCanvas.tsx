@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { useState, useCallback, ReactNode } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { Bold, Italic, List, Image as ImageIcon, Heading, Sparkles, Table as TableIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { ImagePickerDialog } from './ImagePickerDialog';
 import { NovelEditor } from './NovelEditor';
 import { type Editor as TipTapEditor } from '@tiptap/core';
@@ -47,9 +46,14 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
         1500
     );
 
-    const handleContentUpdate = (newContent: string) => {
+    const handleContentUpdate = useCallback((newContent: string) => {
         debouncedSave(newContent);
-    };
+    }, [debouncedSave]);
+
+    const handleEditorReady = useCallback((e: any) => {
+        setEditor(e);
+        onEditorReady?.(e);
+    }, [onEditorReady]);
 
     // Rich text formatting helper - mapped to Novel/TipTap commands
     const toggleFormatting = (format: 'bold' | 'italic' | 'list' | 'heading' | 'image' | 'table') => {
@@ -160,10 +164,7 @@ export function WritingCanvas({ title, content, onValidChange, headerRight, save
                         content={content || ''}
                         onUpdate={handleContentUpdate}
                         projectId={projectId}
-                        onEditorReady={(e) => {
-                            setEditor(e as any);
-                            onEditorReady?.(e as any);
-                        }}
+                        onEditorReady={handleEditorReady}
                     />
                 </div>
             </div>

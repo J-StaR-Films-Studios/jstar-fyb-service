@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import StarterKit from '@tiptap/starter-kit';
 import {
@@ -119,7 +119,7 @@ const extensions = [
     MermaidExtension,
 ];
 
-export function NovelEditor({ content, onUpdate, projectId, className, onEditorReady }: NovelEditorProps) {
+export const NovelEditor = memo(({ content, onUpdate, className, onEditorReady }: NovelEditorProps) => {
     const [editorInstance, setEditorInstance] = useState<EditorInstance | null>(null);
     const initialContentRef = useRef<string>(content);
     const hasInitialized = useRef(false);
@@ -215,4 +215,6 @@ export function NovelEditor({ content, onUpdate, projectId, className, onEditorR
             </EditorRoot>
         </div>
     );
-}
+});
+
+NovelEditor.displayName = 'NovelEditor';
