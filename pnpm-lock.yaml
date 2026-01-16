@@ -98,6 +98,9 @@ importers:
       docx:
         specifier: ^9.5.1
         version: 9.5.1
+      dompurify:
+        specifier: ^3.3.1
+        version: 3.3.1
       framer-motion:
         specifier: ^12.23.26
         version: 12.24.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
