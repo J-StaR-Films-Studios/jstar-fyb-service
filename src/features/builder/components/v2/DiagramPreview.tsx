@@ -11,6 +11,8 @@ interface DiagramPreviewProps {
   onClick?: () => void;
 }
 
+import DOMPurify from 'dompurify';
+
 export function DiagramPreview({ code, theme = 'default', className, onClick }: DiagramPreviewProps) {
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,11 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
         // Mermaid render returns { svg }
         const { svg } = await mermaid.render(id, code);
         if (mounted) {
-          setSvg(svg);
+          // Sanitize SVG to prevent XSS
+          const cleanSvg = DOMPurify.sanitize(svg, {
+            USE_PROFILES: { svg: true, svgFilters: true },
+          });
+          setSvg(cleanSvg);
         }
       } catch (err: any) {
         console.error('Mermaid render error:', err);
@@ -78,8 +84,8 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
         </div>
       ) : (
         <div
-            dangerouslySetInnerHTML={{ __html: svg }}
-            className="w-full flex justify-center"
+          dangerouslySetInnerHTML={{ __html: svg }}
+          className="w-full flex justify-center"
         />
       )}
     </div>

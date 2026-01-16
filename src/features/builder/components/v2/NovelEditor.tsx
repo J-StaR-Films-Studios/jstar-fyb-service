@@ -2,29 +2,13 @@
 
 import { useEffect, useState, useRef, memo } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
-import StarterKit from '@tiptap/starter-kit';
 import {
     EditorRoot,
     EditorContent,
     type EditorInstance,
-    Placeholder,
-    TiptapLink,
-    TiptapUnderline,
-    TextStyle,
-    Color,
-    TaskItem,
-    TaskList,
-    HighlightExtension,
-    TiptapImage,
 } from 'novel';
-import { Table } from '@tiptap/extension-table';
-import { TableRow } from '@tiptap/extension-table-row';
-import { TableHeader } from '@tiptap/extension-table-header';
-import { TableCell } from '@tiptap/extension-table-cell';
-import { Markdown } from 'tiptap-markdown';
-import BubbleMenu from '@tiptap/extension-bubble-menu';
 import { TableBubbleMenu } from './TableBubbleMenu';
-import { MermaidExtension } from './editor/extensions/MermaidExtension';
+import { defaultExtensions } from './editor/extensions/defaultExtensions';
 
 interface NovelEditorProps {
     content: string; // Markdown string
@@ -35,91 +19,9 @@ interface NovelEditorProps {
 }
 
 // Extensions with Markdown support
-const extensions = [
-    StarterKit.configure({
-        bulletList: {
-            HTMLAttributes: {
-                class: 'list-disc list-outside ml-4',
-            },
-        },
-        orderedList: {
-            HTMLAttributes: {
-                class: 'list-decimal list-outside ml-4',
-            },
-        },
-        heading: {
-            levels: [1, 2, 3, 4, 5, 6],
-            HTMLAttributes: {
-                class: 'font-bold',
-            },
-        },
-        bold: {
-            HTMLAttributes: {
-                class: 'font-bold',
-            },
-        },
-        italic: {
-            HTMLAttributes: {
-                class: 'italic',
-            },
-        },
-    }),
-    Placeholder.configure({
-        placeholder: 'Start writing your chapter...',
-        emptyNodeClass: 'text-gray-600',
-    }),
-    TiptapLink.configure({
-        HTMLAttributes: {
-            class: 'text-primary underline',
-        },
-    }),
-    TiptapUnderline,
-    TextStyle,
-    Color,
-    TaskItem.configure({
-        nested: true,
-    }),
-    TaskList,
-    HighlightExtension,
-    TiptapImage.configure({
-        HTMLAttributes: {
-            class: 'rounded-lg max-w-full',
-        },
-    }),
-    Table.configure({
-        resizable: true,
-        HTMLAttributes: {
-            class: 'border-collapse table-auto w-full my-4 border border-gray-700 rounded-lg overflow-hidden',
-        },
-    }),
-    TableRow.configure({
-        HTMLAttributes: {
-            class: 'border-b border-gray-700',
-        },
-    }),
-    TableHeader.configure({
-        HTMLAttributes: {
-            class: 'bg-white/5 font-bold p-3 text-left border-r border-gray-700 last:border-0',
-        },
-    }),
-    TableCell.configure({
-        HTMLAttributes: {
-            class: 'p-3 border-r border-gray-700 last:border-0',
-        },
-    }),
-    // Markdown extension for parsing and serializing
-    Markdown.configure({
-        html: true,
-        transformCopiedText: true,
-        transformPastedText: true,
-    }),
-    BubbleMenu.configure({
-        pluginKey: 'table-bubble-menu',
-    }),
-    MermaidExtension,
-];
+const extensions = defaultExtensions;
 
-export const NovelEditor = memo(({ content, onUpdate, className, onEditorReady }: NovelEditorProps) => {
+export const NovelEditor = memo(({ content, onUpdate, projectId, className, onEditorReady }: NovelEditorProps) => {
     const [editorInstance, setEditorInstance] = useState<EditorInstance | null>(null);
     const initialContentRef = useRef<string>(content);
     const hasInitialized = useRef(false);
@@ -135,7 +37,7 @@ export const NovelEditor = memo(({ content, onUpdate, className, onEditorReady }
                 }
             }, 0);
         }
-    }, [editorInstance, content]);
+    }, [editorInstance, content, projectId]);
 
     // Sync content when it changes externally (e.g., chapter switching)
     useEffect(() => {
@@ -161,7 +63,7 @@ export const NovelEditor = memo(({ content, onUpdate, className, onEditorReady }
                 }, 0);
             }
         }
-    }, [content, editorInstance]);
+    }, [content, editorInstance, projectId]);
 
     // Debounce the update callback to avoid expensive markdown serialization on every keystroke
     // This significantly improves performance for large documents
