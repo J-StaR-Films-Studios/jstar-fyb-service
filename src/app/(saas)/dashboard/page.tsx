@@ -11,8 +11,10 @@ export const revalidate = 0;
 export default async function DashboardPage() {
     const user = await getCurrentUser();
 
-    const projects = await prisma.project.findMany({
-        where: { userId: user?.id },
+    // Bolt optimization: Use findFirst to avoid fetching all projects (and their documents/chapters)
+    // when we only show the most recent one. Also safeguards against undefined userId.
+    const activeProject = user ? await prisma.project.findFirst({
+        where: { userId: user.id },
         orderBy: { updatedAt: 'desc' },
         include: {
             documents: {
@@ -39,15 +41,11 @@ export default async function DashboardPage() {
                 orderBy: { number: 'asc' }
             }
         }
-    });
-
-    const hasProjects = projects.length > 0;
-    // For now, we take the most recent project as the active one
-    const activeProject = projects[0];
+    }) : null;
 
     return (
         <>
-            {hasProjects ? (
+            {activeProject ? (
                 <>
                     <ProjectCard project={activeProject} />
                     <ResourceDownloads documents={activeProject.documents} />

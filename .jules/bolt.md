@@ -5,3 +5,7 @@
 ## 2025-01-29 - [Dual-Identification Indexing]
 **Learning:** Models like `Lead` and `Conversation` use both `userId` and `anonymousId` for tracking. Both fields are frequently queried (often in `OR` clauses or separately) and must be indexed to avoid table scans, especially during session merging.
 **Action:** When adding models with dual-identification (auth + anonymous), always index both fields.
+
+## 2026-01-16 - [Prisma Undefined Filter Risk]
+**Learning:** In Prisma, passing `undefined` to a `where` clause field (e.g., `where: { userId: undefined }`) causes the filter to be ignored, potentially returning all records in the table. This is a critical security and performance risk when using optional chaining like `user?.id` without checking existence.
+**Action:** Always guard Prisma queries with explicit checks (e.g., `if (!user) return null`) or ensure values are never undefined (e.g. `userId: user.id` after a check). Prefer `findFirst` over `findMany` when only one record is needed to avoid over-fetching.
