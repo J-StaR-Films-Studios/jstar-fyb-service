@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
 import { PaystackService } from "@/services/paystack.service";
 import { DiscountService } from "@/services/discount.service";
+import { BillingService } from "@/services/billing.service";
 import { randomUUID } from "crypto";
 
 // Constant for now, can be moved to env/db later
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
         // Fetch full user to check referral status
         const userData = await prisma.user.findUnique({
             where: { id: user.id },
-            select: { 
+            select: {
                 referredById: true,
                 referredBy: {
                     select: {
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
         let discountAmount = 0;
         // Check for automatic referral discount
         const referralDiscountRate = userData?.referredBy?.referralDiscount || 0;
-        
+
         if (isReferred && referralDiscountRate > 0) {
             discountAmount = PROJECT_UNLOCK_AMOUNT * referralDiscountRate;
             finalAmount = PROJECT_UNLOCK_AMOUNT - discountAmount;
@@ -110,6 +111,41 @@ export async function POST(req: Request) {
         });
 
         // Initialize Paystack with final amount
+        // HANDLE 100% DISCOUNT (Use "Free Pass" Logic)
+        if (finalAmount <= 0) {
+            console.log(`[PaymentInit] 100% Discount detected for user ${user.id}. Bypassing Paystack.`);
+
+            // 1. Update Payment to SUCCESS immediately
+            const successPayment = await prisma.payment.update({
+                where: { reference: reference }, // reference comes from the create above which returned void? No, prisma.payment.create returns the object.
+                // Wait, line 100 implies `prisma.payment.create`. I need to capture the result of that create call first to use its ID or use the reference in the where clause.
+                // The previous code didn't capture the variable `payment`.
+                // Let's look at lines 99-110 in the original file.
+                // It used `await prisma.payment.create({...})` without assigning to a variable.
+                // But we generated `reference` at line 97. So we can use `where: { reference }`.
+                data: {
+                    status: 'SUCCESS',
+                    // channel not in schema
+                    currency: 'NGN',
+                    // paidAt not in schema, reliable on updatedAt/status
+                    gatewayResponse: JSON.stringify({ message: '100% Discount Applied', discountCode })
+                }
+            });
+
+            // 2. Unlock Project & Trigger Post-Payment Actions
+            // Import dynamically or usage of imported services
+            await BillingService.updateProjectUnlock(project.id, 0);
+            await BillingService.processPostPaymentActions(successPayment.id, 0, discountCodeId, discountAmount);
+
+            // 3. Return Success URL immediately
+            return NextResponse.json({
+                url: callbackUrl || `/project/${project.id}/workspace?payment=success`,
+                originalAmount: PROJECT_UNLOCK_AMOUNT,
+                finalAmount: 0,
+                discountApplied: discountAmount
+            });
+        }
+
         const paystackRes = await PaystackService.initializePayment({
             email: user.email,
             amount: finalAmount,
