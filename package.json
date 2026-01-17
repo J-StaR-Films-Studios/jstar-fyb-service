@@ -2,6 +2,8 @@
   "name": "temp-scaffold",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
+  "author": "J StaR Films Studios",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && prisma migrate deploy && next build",

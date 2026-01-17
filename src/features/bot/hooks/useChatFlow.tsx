@@ -58,7 +58,6 @@ export function useChatFlow(userId?: string) {
         status,
         error,
         regenerate, // AI SDK default
-        reload,     // AI SDK reload
         setMessages
     } = useChat({
         // Custom fetch to inject identity headers
@@ -87,14 +86,14 @@ export function useChatFlow(userId?: string) {
             console.log("⚠️ Auto-retrying with MIMO_V2_FLASH...");
             setRetryCount(1);
             // Retry with explicit model override
-            reload({
+            regenerate({
                 body: {
                     modelOverride: Models.FREE.MIMO_V2_FLASH,
                     quality: 'free'
                 }
             });
         }
-    }, [error, retryCount, reload]);
+    }, [error, retryCount, regenerate]);
 
     /**
      * Manual Retry Handler (for UI button)
@@ -103,7 +102,7 @@ export function useChatFlow(userId?: string) {
     const handleManualRetry = () => {
         console.log("🔄 Manual retry triggered. Switching model...");
         setRetryCount(prev => prev + 1);
-        reload({
+        regenerate({
             body: {
                 modelOverride: Models.FREE.NVIDIA_3_NANO,
                 quality: 'high'

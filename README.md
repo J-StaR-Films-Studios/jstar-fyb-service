@@ -4,6 +4,16 @@
   # J-Star FYB Service
   
   **🎓 AI-Powered Final Year Project Builder for Nigerian University Students**
+
+## License
+**Copyright (c) 2026 J StaR Films Studios. All Rights Reserved.**
+
+This project is **proprietary software** belonging to J StaR Films Studios.
+- You are free to **read and inspect** the code for educational purposes.
+- You **may not** use it for commercial purposes, redistribute it, or modify it without permission.
+- Please contact the author if you wish to negotiate a license for use.
+
+---
   
   [![Next.js](https://img.shields.io/badge/Next.js-16.0.10-black?logo=next.js)](https://nextjs.org/)
   [![React](https://img.shields.io/badge/React-19.2.1-blue?logo=react)](https://react.dev/)
@@ -408,7 +418,7 @@ This project is proprietary software owned by J-Star Films.
 
 ## 👨‍💻 Author
 
-**John Okechukwu** - [@JStaRFilms](https://github.com/JStaRFilms)
+**John Oluleke-Oke** - [@JStaRFilms](https://github.com/JStaRFilms)
 
 ---
 
