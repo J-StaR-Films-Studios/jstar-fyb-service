@@ -24,15 +24,22 @@ export function Footer() {
                         Full Agency Service
                     </Link>
                 </div>
-                <div className="flex justify-center gap-6 mb-8">
+                <div className="flex justify-center gap-6 mb-8 items-center">
                     <button
                         onClick={() => openSupport()}
                         className="text-gray-500 hover:text-white transition-colors text-sm"
                     >
                         Contact Support
                     </button>
+                    <span className="text-gray-700 select-none">•</span>
+                    <a
+                        href="mailto:hey@jstarstudios.com"
+                        className="text-gray-500 hover:text-white transition-colors text-sm"
+                    >
+                        hey@jstarstudios.com
+                    </a>
                 </div>
-                <p className="text-gray-500">J Star FYB Service © 2026. All rights reserved.</p>
+                <p className="text-gray-500">J StaR Films Studios © 2026. All rights reserved.</p>
             </div>
         </footer>
     );
