@@ -42,6 +42,7 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
             id: 'nengi',
             name: PERSONALITIES.nengi.name,
             role: 'Creative Hub',
+            description: "Your creative partner for brainstorming and deep work.",
             href: '/hub',
             icon: Sparkles,
             avatar: PERSONALITIES.nengi.avatar
@@ -50,6 +51,7 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
             id: 'jay',
             name: PERSONALITIES.jay.name,
             role: 'Sales & Onboarding',
+            description: "Helps you get started, find services, and navigate J-Star.",
             href: '/chat',
             icon: MessageSquare,
             avatar: PERSONALITIES.jay.avatar
@@ -58,6 +60,7 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
             id: 'monji',
             name: PERSONALITIES.monji.name,
             role: 'Academic Workspace',
+            description: "Your academic research assistant and project workspace.",
             // If we have a project ID, go to workspace. Else, dashboard to pick one.
             href: latestProjectId ? `/project/${latestProjectId}/workspace` : '/dashboard',
             icon: Briefcase,
@@ -167,13 +170,13 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
                                         href={bot.href}
                                         onClick={() => setIsOpen(false)}
                                         className={cn(
-                                            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
+                                            "flex items-start gap-3 px-3 py-2.5 rounded-lg transition-all",
                                             currentBot === bot.id
-                                                ? "bg-primary/20 text-white"
-                                                : "hover:bg-white/5 text-gray-400 hover:text-gray-200"
+                                                ? "bg-primary/10 border border-primary/20"
+                                                : "hover:bg-white/5 border border-transparent"
                                         )}
                                     >
-                                        <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/10 shrink-0">
+                                        <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/10 shrink-0 mt-0.5">
                                             <Image
                                                 src={bot.avatar}
                                                 alt={bot.name}
@@ -181,17 +184,22 @@ export function BotSwitcher({ currentBot, latestProjectId }: BotSwitcherProps) {
                                                 className="object-cover"
                                             />
                                         </div>
-                                        <div>
-                                            <p className={cn("text-sm font-bold", currentBot === bot.id && "text-teal-400")}>
-                                                {bot.name}
-                                            </p>
-                                            <p className="text-[10px] opacity-70">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-0.5">
+                                                <p className={cn("text-sm font-bold", currentBot === bot.id ? "text-primary" : "text-gray-200")}>
+                                                    {bot.name}
+                                                </p>
+                                                {currentBot === bot.id && (
+                                                    <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Active</span>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1">
                                                 {bot.role}
                                             </p>
+                                            <p className="text-[11px] text-gray-400 leading-snug">
+                                                {bot.description}
+                                            </p>
                                         </div>
-                                        {currentBot === bot.id && (
-                                            <div className="ml-auto w-2 h-2 rounded-full bg-teal-500" />
-                                        )}
                                     </Link>
                                 ))}
                             </div>

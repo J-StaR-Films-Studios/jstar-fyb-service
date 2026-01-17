@@ -46,6 +46,8 @@ interface BuilderState {
     isPaid: boolean;
     isFromChat: boolean;
     hasServerHydrated: boolean; // Prevents localStorage from overwriting server data
+    lastSavedAt: Date | null;
+    saveStatus: 'saved' | 'saving' | 'error';
 
     setStep: (step: BuilderStep) => void;
     updateData: (data: Partial<ProjectData>) => void;
@@ -56,6 +58,7 @@ interface BuilderState {
     clearChatData: () => void;
     syncWithUser: (userId: string | null) => void;
     loadProject: (data: Partial<ProjectData>, isPaid?: boolean) => void;
+    setSaveStatus: (status: 'saved' | 'saving' | 'error') => void;
 }
 
 const CHAT_HANDOFF_KEY = 'jstar_confirmed_topic';
@@ -79,16 +82,21 @@ export const useBuilderStore = create<BuilderState>()(
             isPaid: false,
             isFromChat: false,
             hasServerHydrated: false,
+            lastSavedAt: null,
+            saveStatus: 'saved',
 
             setStep: (step) => set({ step }),
             updateData: (newData) => set((state) => ({
-                data: { ...state.data, ...newData }
+                data: { ...state.data, ...newData },
+                lastSavedAt: new Date(),
+                saveStatus: 'saved'
             })),
             setGenerating: (isGenerating) => set({ isGenerating }),
             unlockPaywall: () => set({ isPaid: true }),
             setMode: (mode) => set((state) => ({
                 data: { ...state.data, mode }
             })),
+            setSaveStatus: (status) => set({ saveStatus: status }),
 
             // Hydrate topic/twist from localStorage (set by chat handoff)
             hydrateFromChat: (currentUserId, existingProject, existingIsPaid) => {

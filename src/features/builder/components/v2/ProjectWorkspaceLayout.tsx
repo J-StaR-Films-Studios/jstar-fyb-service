@@ -1,12 +1,16 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { useBuilderStore } from "@/features/builder/store/useBuilderStore";
+import { SaveIndicator } from "@/components/feedback/SaveIndicator";
 
 interface ProjectWorkspaceLayoutProps {
     children: ReactNode;
 }
 
 export function ProjectWorkspaceLayout({ children }: ProjectWorkspaceLayoutProps) {
+    const { data, saveStatus, lastSavedAt } = useBuilderStore();
+
     return (
         <div className="flex h-screen w-full bg-dark text-gray-300 overflow-hidden font-sans">
 
@@ -21,12 +25,13 @@ export function ProjectWorkspaceLayout({ children }: ProjectWorkspaceLayoutProps
                 {/* Mobile Header: Hidden on desktop */}
                 <header className="md:hidden fixed top-0 w-full z-40 px-6 py-4 flex justify-between items-center bg-gradient-to-b from-dark to-transparent pointer-events-none">
                     <div className="flex flex-col pointer-events-auto">
-                        <span className="text-xs text-gray-400 font-medium">B.Sc Project</span>
-                        <h1 className="font-display font-bold text-lg leading-tight text-white">Waste Mgmt. AI</h1>
+                        <span className="text-xs text-gray-400 font-medium">Project Workspace</span>
+                        <h1 className="font-display font-bold text-lg leading-tight text-white line-clamp-1">
+                            {data.topic || "New Project"}
+                        </h1>
                     </div>
-                    <div className="glass-panel rounded-full px-3 py-1 flex items-center gap-2 pointer-events-auto">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white">Online</span>
+                    <div className="pointer-events-auto">
+                        <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt && new Date(lastSavedAt)} className="glass-panel rounded-full px-3 py-1" />
                     </div>
                 </header>
 

@@ -8,8 +8,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TopicSelector } from "@/features/builder/components/TopicSelector";
 import { AbstractGenerator } from "@/features/builder/components/AbstractGenerator";
 import { ChapterOutliner } from "@/features/builder/components/ChapterOutliner";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Check } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 import { useSession } from "@/lib/auth-client";
 import { mergeAnonymousData } from "@/features/bot/actions/chat";
@@ -20,6 +21,12 @@ interface BuilderClientProps {
     serverIsPaid?: boolean;
     serverIsReferred?: boolean;
 }
+
+const STEPS = [
+    { id: 'TOPIC', label: 'Concept' },
+    { id: 'ABSTRACT', label: 'Strategy' },
+    { id: 'OUTLINE', label: 'Blueprint' }
+];
 
 export function BuilderClient({ serverProject, serverIsPaid = false, serverIsReferred = false }: BuilderClientProps) {
     const { data: session, isPending } = useSession();
@@ -133,32 +140,45 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
             )}
             {/* Progress Toolbar */}
             <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-8">
                     <h2 className="font-display font-bold text-2xl text-white">Project Builder</h2>
                 </div>
 
                 {/* Steps Progress */}
-                <div className="flex items-center gap-2">
-                    {['TOPIC', 'ABSTRACT', 'OUTLINE'].map((s, i) => {
+                <div className="relative flex justify-between items-center mb-8 px-4 max-w-2xl mx-auto">
+                    {/* Connecting Line */}
+                    <div className="absolute top-4 left-0 w-full h-0.5 bg-white/10 -z-10" />
+                    <div
+                        className="absolute top-4 left-0 h-0.5 bg-primary -z-10 transition-all duration-500"
+                        style={{ width: `${(getStepIndex() / 2) * 100}%` }}
+                    />
+
+                    {STEPS.map((s, i) => {
                         const currentIndex = getStepIndex();
                         const isCompleted = currentIndex > i;
                         const isActive = currentIndex === i;
 
                         return (
-                            <div key={s} className={`h-1 flex-1 rounded-full transition-all duration-500 relative overflow-hidden ${isCompleted ? 'bg-green-500' :
-                                isActive ? 'bg-primary' : 'bg-white/10'
-                                }`}>
-                                {isActive && (
-                                    <div className="absolute inset-0 bg-white/30 animate-[shimmer_2s_infinite]" />
-                                )}
+                            <div key={s.id} className="flex flex-col items-center gap-2 bg-dark px-2 z-10">
+                                <div className={cn(
+                                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300",
+                                    isActive ? "border-primary text-primary shadow-[0_0_15px_rgba(139,92,246,0.5)] bg-dark" :
+                                        isCompleted ? "border-primary bg-primary text-white" :
+                                            "border-white/10 text-gray-500 bg-dark"
+                                )}>
+                                    {isCompleted ? <Check className="w-4 h-4" /> : i + 1}
+                                </div>
+                                <span className={cn(
+                                    "text-xs font-medium uppercase tracking-wider transition-colors duration-300",
+                                    isActive ? "text-primary" :
+                                        isCompleted ? "text-white" :
+                                            "text-gray-600"
+                                )}>
+                                    {s.label}
+                                </span>
                             </div>
                         );
                     })}
-                </div>
-                <div className="flex justify-between mt-2 text-xs font-mono text-gray-500 uppercase">
-                    <span className={getStepIndex() >= 0 ? "text-white" : ""}>Topic</span>
-                    <span className={getStepIndex() >= 1 ? "text-white" : ""}>Context</span>
-                    <span className={getStepIndex() >= 2 ? "text-primary font-bold" : ""}>Generate</span>
                 </div>
             </div>
 

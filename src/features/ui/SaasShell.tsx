@@ -8,8 +8,11 @@ import { MobileBottomNav } from "@/features/dashboard/components/MobileBottomNav
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useSupport } from "@/features/support/context/SupportContext";
+import { OnboardingTour } from "@/features/onboarding/components/OnboardingTour";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { KeyboardShortcutsHelp } from "@/features/shortcuts/components/KeyboardShortcutsHelp";
 
 // Helper component to avoid hook call issues in the dropdown
 const SupportButton = ({ onClose }: { onClose: () => void }) => {
@@ -55,11 +58,24 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
         : "JO";
 
     const pathname = usePathname();
+    const router = useRouter();
     const isDashboard = pathname === "/dashboard";
     const isHub = pathname === "/hub";
 
     // Dropdown state
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    
+    // Shortcuts state
+    const [showShortcuts, setShowShortcuts] = useState(false);
+
+    useKeyboardShortcuts({
+        'ctrl+/': () => setShowShortcuts(true),
+        'ctrl+n': () => router.push('/project/builder'),
+        'ctrl+s': () => {
+            // Dispatch event for active components to handle
+            window.dispatchEvent(new CustomEvent('jstar:save'));
+        }
+    });
 
     // Inject user data into SupportContext
     const { setUser } = useSupport();
@@ -96,7 +112,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
     };
 
     return (
-        <div className={cn("bg-dark min-h-screen text-white font-sans md:pb-0", !hideBottomNav && "pb-24")}>
+        <div className={cn("bg-dark min-h-screen text-white font-sans md:pb-0", !hideBottomNav && "pb-[calc(6rem+env(safe-area-inset-bottom))]")}>
             {/* Header */}
             <header className="flex justify-between items-center px-4 py-3 md:px-6 md:py-6 sticky top-0 bg-dark/80 backdrop-blur-md z-40 border-b border-white/5">
                 <div className="flex items-center gap-4">
@@ -107,8 +123,8 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                                     <Link href="/dashboard" className="hidden md:block font-normal text-gray-400 hover:text-white transition-colors">
                                         My Projects
                                     </Link>
-                                    <Link href="/dashboard" className="md:hidden text-gray-400 hover:text-white transition-colors">
-                                        <LayoutDashboard className="w-5 h-5" />
+                                    <Link href="/dashboard" aria-label="My Projects" className="md:hidden text-gray-400 hover:text-white transition-colors">
+                                        <LayoutDashboard className="w-5 h-5" aria-hidden="true" />
                                     </Link>
                                     <span className="text-gray-600">/</span>
                                 </div>
@@ -130,7 +146,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             className="hidden md:flex text-gray-400 hover:text-white hover:bg-white/5"
                         >
                             <Link href={hasActiveProject ? "/hub" : "/chat"}>
-                                <MessageSquare className="w-4 h-4 mr-2" />
+                                <MessageSquare className="w-4 h-4 mr-2" aria-hidden="true" />
                                 {hasActiveProject ? "AI Hub" : "Start Chat"}
                             </Link>
                         </Button>
@@ -145,7 +161,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             className="hidden md:flex text-gray-400 hover:text-white hover:bg-white/5"
                         >
                             <Link href="/dashboard">
-                                <LayoutDashboard className="w-4 h-4 mr-2" />
+                                <LayoutDashboard className="w-4 h-4 mr-2" aria-hidden="true" />
                                 Back to Dashboard
                             </Link>
                         </Button>
@@ -162,12 +178,12 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             <Link href="/project/builder">
                                 {hasActiveProject ? (
                                     <>
-                                        <Hammer className="w-4 h-4 mr-2" />
+                                        <Hammer className="w-4 h-4 mr-2" aria-hidden="true" />
                                         Continue Project
                                     </>
                                 ) : (
                                     <>
-                                        <Plus className="w-4 h-4 mr-2" />
+                                        <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
                                         New Project
                                     </>
                                 )}
@@ -182,6 +198,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                     <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            aria-label="Open user menu"
                             className="focus:outline-none focus:ring-2 focus:ring-accent/50 rounded-full"
                         >
                             <UserAvatar
@@ -231,6 +248,9 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
 
             {/* Mobile Navigation */}
             {!hideBottomNav && <MobileBottomNav hasActiveProject={hasActiveProject} />}
+
+            <OnboardingTour />
+            <KeyboardShortcutsHelp isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
         </div>
     );
 };
