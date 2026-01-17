@@ -43,3 +43,6 @@ next-env.d.ts
 # J-Star Reviewer
 .jstar/
 .env.local
+
+# Worktrees
+ux-worktree/
