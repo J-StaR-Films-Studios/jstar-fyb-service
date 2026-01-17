@@ -28,11 +28,13 @@ export const NovelEditor = memo(({ content, onUpdate, projectId, className, onEd
 
     // Set initial content when editor is ready
     useEffect(() => {
-        if (editorInstance && !hasInitialized.current && content) {
+        if (editorInstance && !hasInitialized.current) {
             // Use setTimeout to avoid flushSync errors during initial render
             setTimeout(() => {
                 if (!editorInstance.isDestroyed) {
-                    editorInstance.commands.setContent(content);
+                    if (content) {
+                        editorInstance.commands.setContent(content);
+                    }
                     hasInitialized.current = true;
                 }
             }, 0);
@@ -91,8 +93,8 @@ export const NovelEditor = memo(({ content, onUpdate, projectId, className, onEd
         // Set initial content when editor is created
         if (content) {
             editor.commands.setContent(content);
-            hasInitialized.current = true;
         }
+        hasInitialized.current = true;
     };
 
     return (

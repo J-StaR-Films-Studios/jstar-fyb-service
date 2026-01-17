@@ -2,103 +2,137 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import mermaid from 'mermaid';
+import { downloadPdf, PdfExportOptions } from '@/lib/pdf-export-service';
 
 interface ExportPanelProps {
   projectId: string;
+  projectTitle?: string;
+  content?: string;
 }
 
-export function ExportPanel({ projectId }: ExportPanelProps) {
+export function ExportPanel({ projectId, projectTitle, content }: ExportPanelProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const [exportType, setExportType] = useState<'docx' | 'pdf'>('docx');
 
   const handleExport = async () => {
+    if (!content && exportType === 'pdf') {
+      toast.error('No content available for PDF export');
+      return;
+    }
+
     setIsExporting(true);
-    toast.info('Preparing document...');
+    
+    if (exportType === 'pdf') {
+      toast.info('Preparing PDF document...');
+    } else {
+      toast.info('Preparing DOCX document...');
+    }
 
     try {
-      // 1. Gather all diagrams currently in the DOM or fetch chapter content to find them.
-      // Since we need to match what the server sees (the code strings), we should iterate the chapters via API?
-      // No, let's just grab ALL mermaid diagrams rendered on screen if possible, OR
-      // Better: Fetch all diagrams from the project (using our new API) and render them invisibly to generate images.
+      if (exportType === 'pdf') {
+        // PDF Export (Client-side)
+        const pdfFilename = projectTitle 
+          ? `${projectTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`
+          : `project-${projectId.slice(0, 6)}`;
 
-      const diagramsRes = await fetch(`/api/projects/${projectId}/diagrams`);
-      if (!diagramsRes.ok) throw new Error('Failed to fetch diagrams metadata');
-      const savedDiagrams = await diagramsRes.json();
+        const pdfOptions: PdfExportOptions = {
+          title: projectTitle || undefined,
+          fontSize: 12,
+          lineHeight: 1.5,
+          fontFamily: 'Times New Roman',
+          includePageNumbers: true,
+          includeTitle: !!projectTitle,
+        };
 
-      const imageMap: Record<string, string> = {};
+        await downloadPdf(content || '', pdfFilename, projectTitle, pdfOptions);
+        toast.success('PDF exported successfully!');
+      } else {
+        // DOCX Export (existing logic)
+        // 1. Gather all diagrams currently in the DOM or fetch chapter content to find them.
+        // Since we need to match what the server sees (the code strings), we should iterate chapters via API?
+        // No, let's just grab ALL mermaid diagrams rendered on screen if possible, OR
+        // Better: Fetch all diagrams from project (using our new API) and render them invisibly to generate images.
 
-      // Initialize mermaid
-      mermaid.initialize({ startOnLoad: false, theme: 'default' });
+        const diagramsRes = await fetch(`/api/projects/${projectId}/diagrams`);
+        if (!diagramsRes.ok) throw new Error('Failed to fetch diagrams metadata');
+        const savedDiagrams = await diagramsRes.json();
 
-      // Render each diagram to SVG -> Canvas -> Base64
-      // Note: We need the diagrams that are IN THE TEXT.
-      // The text stores them as <mermaid-diagram code="...">.
-      // So we just need to render the code.
+        const imageMap: Record<string, string> = {};
 
-      // We'll iterate all saved diagrams PLUS we might scan the editor content if we had access.
-      // For now, let's assume we just export Saved Diagrams that might be referenced.
-      // Or actually, let's render every saved diagram's code.
+        // Initialize mermaid
+        mermaid.initialize({ startOnLoad: false, theme: 'default' });
 
-      for (const diag of savedDiagrams) {
-         try {
-             const id = `export-${Math.random().toString(36).slice(2)}`;
-             const { svg } = await mermaid.render(id, diag.mermaidCode);
+        // Render each diagram to SVG -> Canvas -> Base64
+        // Note: We need diagrams that are IN THE TEXT.
+        // The text stores them as <mermaid-diagram code="...">.
+        // So we just need to render the code.
 
-             // Convert SVG to Base64 (simple approach, might fail in Word if not proper image)
-             // DOCX usually wants a buffer. We can send base64 of the image.
-             // SVG to PNG conversion is safer for Word.
+        // We'll iterate all saved diagrams PLUS we might scan the editor content if we had access.
+        // For now, let's assume we just export Saved Diagrams that might be referenced.
+        // Or actually, let's render every saved diagram's code.
 
-             const img = new Image();
-             const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-             const url = URL.createObjectURL(svgBlob);
+        for (const diag of savedDiagrams) {
+           try {
+              const id = `export-${Math.random().toString(36).slice(2)}`;
+              const { svg } = await mermaid.render(id, diag.mermaidCode);
 
-             await new Promise((resolve, reject) => {
-                 img.onload = resolve;
-                 img.onerror = reject;
-                 img.src = url;
-             });
+              // Convert SVG to Base64 (simple approach, might fail in Word if not proper image)
+              // DOCX usually wants a buffer. We can send base64 of image.
+              // SVG to PNG conversion is safer for Word.
 
-             const canvas = document.createElement('canvas');
-             canvas.width = 1200; // High res
-             canvas.height = (img.height / img.width) * 1200;
-             const ctx = canvas.getContext('2d');
-             if (ctx) {
-                 ctx.fillStyle = 'white';
-                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                 const pngData = canvas.toDataURL('image/png');
+              const img = new Image();
+              const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+              const url = URL.createObjectURL(svgBlob);
 
-                 // Map code to image
-                 imageMap[diag.mermaidCode] = pngData;
-             }
-             URL.revokeObjectURL(url);
+              await new Promise((resolve, reject) => {
+                  img.onload = resolve;
+                  img.onerror = reject;
+                  img.src = url;
+              });
 
-         } catch (e) {
-             console.error('Failed to render diagram for export', e);
-         }
+              const canvas = document.createElement('canvas');
+              canvas.width = 1200; // High res
+              canvas.height = (img.height / img.width) * 1200;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                  ctx.fillStyle = 'white';
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+                  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                  const pngData = canvas.toDataURL('image/png');
+
+                  // Map code to image
+                  imageMap[diag.mermaidCode] = pngData;
+              }
+              URL.revokeObjectURL(url);
+
+          } catch (e) {
+              console.error('Failed to render diagram for export', e);
+          }
+       }
+
+       // 2. Call Export API
+       const response = await fetch(`/api/projects/${projectId}/export`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ diagrams: imageMap }),
+       });
+
+       if (!response.ok) throw new Error('Export failed');
+
+       // 3. Download Blob
+       const blob = await response.blob();
+       const url = window.URL.createObjectURL(blob);
+       const downloadLink = document.createElement('a');
+       downloadLink.href = url;
+       downloadLink.download = `project-${projectId.slice(0, 6)}.docx`;
+       document.body.appendChild(downloadLink);
+       downloadLink.click();
+       window.URL.revokeObjectURL(url);
+       document.body.removeChild(downloadLink);
       }
-
-      // 2. Call Export API
-      const response = await fetch(`/api/projects/${projectId}/export`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ diagrams: imageMap }),
-      });
-
-      if (!response.ok) throw new Error('Export failed');
-
-      // 3. Download Blob
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `project-${projectId.slice(0, 6)}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
 
       toast.success('Export complete!');
 
@@ -114,17 +148,58 @@ export function ExportPanel({ projectId }: ExportPanelProps) {
     <div className="p-4 border rounded-xl bg-gray-900/50 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-            <h3 className="font-semibold text-lg">Export Project</h3>
-            <p className="text-sm text-muted-foreground">Download as .docx with diagrams included.</p>
+          <h3 className="font-semibold text-lg">Export Project</h3>
+          <p className="text-sm text-muted-foreground">
+            Download your project with diagrams included.
+          </p>
         </div>
-        <Button onClick={handleExport} disabled={isExporting}>
-          {isExporting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
-          )}
-          Download DOCX
+      </div>
+
+      {/* Export Type Selection */}
+      <div className="flex gap-2">
+        <Button
+          variant={exportType === 'docx' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setExportType('docx')}
+          className="flex items-center gap-2"
+        >
+          <FileText className="h-4 w-4" />
+          DOCX
         </Button>
+        <Button
+          variant={exportType === 'pdf' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setExportType('pdf')}
+          className="flex items-center gap-2"
+        >
+          <FileText className="h-4 w-4" />
+          PDF
+        </Button>
+      </div>
+
+      <Button 
+        onClick={handleExport} 
+        disabled={isExporting}
+        className="w-full"
+      >
+        {isExporting ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Download className="mr-2 h-4 w-4" />
+        )}
+        Download {exportType.toUpperCase()}
+      </Button>
+
+      {/* Export Info */}
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p>
+          {exportType === 'pdf' 
+            ? '• Client-side PDF generation with full formatting support'
+            : '• Server-side DOCX generation with advanced features'
+          }
+        </p>
+        <p>• Includes Mermaid diagrams as images</p>
+        <p>• Preserves markdown formatting and structure</p>
       </div>
     </div>
   );
