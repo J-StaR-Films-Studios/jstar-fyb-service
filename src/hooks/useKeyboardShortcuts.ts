@@ -40,8 +40,9 @@ export const useKeyboardShortcuts = (shortcuts: Record<KeyCombo, Handler>) => {
             if (isInput && keys.length === 0) return;
 
             if (shortcuts[combo]) {
-                // We let the handler decide if it wants to prevent default
-                // But generally global shortcuts SHOULD prevent default
+                // FORCE prevention of default browser behavior for registered shortcuts
+                // This is critical for overriding things like Ctrl+S or Ctrl+P
+                event.preventDefault();
                 shortcuts[combo](event);
             }
             

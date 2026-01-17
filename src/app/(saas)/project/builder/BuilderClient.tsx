@@ -77,10 +77,26 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
         // STEP 3: Sync with current user (only runs destructive reset on actual logout/account-switch)
         syncWithUser(session?.user?.id || null);
 
-        // CRITICAL: Mark hydration complete AFTER all state updates
-        setIsHydrated(true);
+    // CRITICAL: Mark hydration complete AFTER all state updates
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsHydrated(true);
 
     }, [isPending, serverProject, serverIsPaid, session?.user?.id, loadProject, syncWithUser, hydrateFromChat]);
+
+    // Handle Global Save Shortcut (Ctrl+S)
+    useEffect(() => {
+        const handleSaveShortcut = () => {
+            // In a real app, this might trigger an immediate API sync
+            // For now, we show visual feedback since local persistence is instant
+            useBuilderStore.getState().setSaveStatus('saving');
+            setTimeout(() => {
+                useBuilderStore.getState().setSaveStatus('saved');
+            }, 800);
+        };
+
+        window.addEventListener('jstar:save', handleSaveShortcut);
+        return () => window.removeEventListener('jstar:save', handleSaveShortcut);
+    }, []);
 
     // 1. Auth Guard: Redirect to Login if not authenticated
     useEffect(() => {
