@@ -11,6 +11,8 @@ const envSchema = z.object({
     // Authentication
     GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
     GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
+    PARTNER_SECRET: z.string().optional(), // Used for Partner/Influencer auth
+    BETTER_AUTH_SECRET: z.string().optional(), // Fallback for Partner auth
 
     // Payment processing
     PAYSTACK_SECRET_KEY: z.string().min(1, "PAYSTACK_SECRET_KEY is required"),

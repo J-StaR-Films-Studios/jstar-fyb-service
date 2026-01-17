@@ -7,3 +7,8 @@
 **Vulnerability:** `DiagramPreview.tsx` initialized Mermaid with `securityLevel: 'loose'`, which allows HTML tags (including `<script>`) in diagram labels.
 **Learning:** Third-party visualization libraries often default to or allow insecure configurations that prioritize flexibility over security. When rendering user-controlled content, these defaults can lead to Stored XSS.
 **Prevention:** Always explicitly set `securityLevel: 'strict'` (or equivalent) when initializing Mermaid.js or similar libraries if the input can be influenced by users.
+
+## 2026-03-01 - [Hardcoded Secret Fallback in Partner Auth]
+**Vulnerability:** `src/lib/partner-auth.ts` used a hardcoded default secret (`'dev-partner-secret-key'`) as a fallback if env vars were missing. This silently allows insecure deployments in production.
+**Learning:** Hardcoded fallbacks for secrets are dangerous because they can easily be forgotten during deployment. However, simply throwing errors in `production` mode can break local builds (since `next build` sets `NODE_ENV=production`).
+**Prevention:** Enforce secret presence in production but include checks for deployment environments (e.g., `VERCEL`, `RAILWAY_ENVIRONMENT`) to avoid breaking local builds.
