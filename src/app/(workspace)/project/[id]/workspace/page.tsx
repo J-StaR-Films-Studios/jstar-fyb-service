@@ -13,31 +13,24 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
     const { id } = await params;
     const { reference } = await searchParams; // Extract Paystack reference
 
-    // Verify payment status
-    // We check if the project has successful payments totaling at least 15,000
-    const paymentAgg = await prisma.payment.aggregate({
-        _sum: {
-            amount: true
-        },
-        where: {
-            projectId: id,
-            status: 'SUCCESS'
+    // CANONICAL UNLOCK CHECK: Use `isUnlocked` field as the single source of truth.
+    // This supports: normal payments, 100% discounts, admin overrides, etc.
+    const project = await prisma.project.findUnique({
+        where: { id },
+        select: {
+            isUnlocked: true,
+            topic: true,
+            userId: true
         }
     });
 
-    const totalPaid = paymentAgg._sum.amount || 0;
-    const REQUIRED_AMOUNT = 15000;
+    if (!project) {
+        return <div className="min-h-screen flex items-center justify-center text-white">Project not found</div>;
+    }
 
-    if (totalPaid < REQUIRED_AMOUNT) {
-        // Fetch project topic and user referral status
-        const project = await prisma.project.findUnique({
-            where: { id },
-            select: {
-                topic: true,
-                userId: true
-            }
-        });
+    const REQUIRED_AMOUNT = 15000; // For display purposes only
 
+    if (!project.isUnlocked) {
         // Check if user is referred (to disable discount codes)
         let isReferred = false;
         if (project?.userId) {
