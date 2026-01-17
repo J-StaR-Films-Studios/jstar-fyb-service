@@ -3,6 +3,7 @@
 import { useBuilderStore } from "@/features/builder/store/useBuilderStore";
 import { useState, useEffect, useRef } from "react";
 import { Sparkles, MessageSquare, X } from "lucide-react";
+import Link from "next/link";
 
 export function TopicSelector() {
     const { data, updateData, setStep, isFromChat, hydrateFromChat, clearChatData } = useBuilderStore();
@@ -91,6 +92,16 @@ export function TopicSelector() {
                 <Sparkles className="w-5 h-5" />
                 Generate Abstract
             </button>
+
+            <div className="mt-6 text-center">
+                <Link
+                    href="/chat"
+                    className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
+                >
+                    <MessageSquare className="w-4 h-4 group-hover:text-primary transition-colors" />
+                    <span>Don't have a topic yet? Chat with Jay</span>
+                </Link>
+            </div>
         </div>
     );
 }
