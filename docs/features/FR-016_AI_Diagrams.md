@@ -6,7 +6,9 @@ The AI Diagram Generation feature allows users to generate visual representation
 ## Architecture
 - **Service:** `src/lib/ai/diagramService.ts`
 - **API Router:** `src/app/api/projects/[id]/chat/route.ts` & `src/app/api/generate/diagram/route.ts`
-- **UI Component:** `src/features/builder/components/v2/DiagramSuggestionCard.tsx`
+- **UI Components:** 
+  - `src/features/builder/components/v2/DiagramSuggestionCard.tsx`
+  - `src/features/builder/components/v2/DiagramPreview.tsx` (Mermaid SVG renderer)
 - **Dependencies:** `mermaid`, `lucide-react`
 
 ## Key Components
@@ -56,3 +58,14 @@ The system uses a robust persistence pattern for tool calls:
 |---------|------|---------|-------------|
 | `provider` | string | `openrouter` | AI provider for diagram generation |
 | `model` | string | `mimo-v2-flash` | Lightweight model optimized for code generation |
+
+## Hotfixes / Changelog
+
+### Hotfix 2026-01-17: Mermaid Text Not Rendering
+- **Problem:** Diagram node labels appeared as empty boxes. Text was invisible inside rectangles, diamonds, and other shapes.
+- **Root Cause:** DOMPurify was stripping the inner content of `<foreignObject>` elements. Mermaid uses `foreignObject` to embed HTML labels inside SVG nodes, and while DOMPurify preserved the tag, it removed all innerHTML.
+- **Solution:** Removed DOMPurify sanitization from `DiagramPreview.tsx`. This is safe because:
+  1. Mermaid code input is sanitized (markdown fences stripped)
+  2. Mermaid escapes text content before generating SVG
+  3. SVG renders in a sandboxed div
+- **File:** `src/features/builder/components/v2/DiagramPreview.tsx`

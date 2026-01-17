@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mic, SendHorizontal, Plus, ArrowLeft, LogOut, User, AlertTriangle, RefreshCw, Trash2 } from "lucide-react";
+import { Mic, SendHorizontal, Plus, ArrowLeft, LogOut, User, AlertTriangle, RefreshCw, Trash2, Info } from "lucide-react";
 import Link from "next/link";
 import { MessageBubble } from "./MessageBubble";
 import { ThinkingIndicator } from "./ThinkingIndicator";
@@ -14,6 +14,7 @@ import { useChatFlow } from "../hooks/useChatFlow";
 import { ProposalCard } from "./ProposalCard";
 import { BotSwitcher } from "./BotSwitcher";
 import { motion, AnimatePresence } from "framer-motion";
+import { JStarCollectivePopup } from "./JStarCollectivePopup";
 import { useSession } from "@/lib/auth-client";
 import { mergeAnonymousData, clearAllConversations } from "../actions/chat";
 import { signInAction, signOutAction } from "@/features/auth/actions";
@@ -32,7 +33,19 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
     const { messages, state, complexity, isLoading, confirmedTopic, hasProvidedPhone, error, regenerate, handleUserMessage, handleAction, handleSelectTopic, proceedToBuilder, clearChat, anonymousId } = useChatFlow(user?.id);
     const [inputValue, setInputValue] = useState("");
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [showCollective, setShowCollective] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Auto-Greeting Logic
+    const jayGreeting = {
+        id: 'jay-greeting',
+        role: 'ai' as const,
+        content: "Yo! I'm Jay, your FYP plug. Tell me what department you're in or drop a rough topic idea – let's find something that'll make your supervisor smile! 🔥",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        toolInvocations: undefined
+    };
+
+    const displayMessages = messages.length === 0 ? [jayGreeting] : messages;
 
     useEffect(() => {
         const anonymousId = localStorage.getItem("jstar_anonymous_id");
@@ -99,6 +112,19 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <BotSwitcher currentBot="jay" />
+
+                        <button
+                            onClick={() => setShowCollective(true)}
+                            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all group hover:border-primary/30"
+                        >
+                            <div className="flex -space-x-1.5">
+                                <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-purple-500 to-purple-800 border border-dark flex items-center justify-center text-[7px] font-bold text-white">J</div>
+                                <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 border border-dark flex items-center justify-center text-[7px] font-bold text-white">M</div>
+                                <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-green-500 to-emerald-600 border border-dark flex items-center justify-center text-[7px] font-bold text-white">N</div>
+                            </div>
+                            <span className="text-[10px] font-medium text-gray-400 group-hover:text-white transition-colors">Jay + 2 Specialists</span>
+                            <Info className="w-3 h-3 text-gray-500 group-hover:text-primary transition-colors" />
+                        </button>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -205,7 +231,7 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
             <main className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth pb-32">
                 <ErrorBoundary>
                     <AnimatePresence>
-                        {messages.map((msg) => (
+                        {displayMessages.map((msg) => (
                             <div key={msg.id} className="flex flex-col gap-2">
                                 <MessageBubble
                                     role={msg.role}
@@ -299,7 +325,7 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
                     </AnimatePresence>
 
                     {/* Smart Suggestion Chips - shown after last AI message */}
-                    {messages.length > 0 && messages[messages.length - 1].role === 'ai' && (
+                    {displayMessages.length > 0 && displayMessages[displayMessages.length - 1].role === 'ai' && (
                         <div className="ml-0 md:ml-14 max-w-2xl space-y-4">
                             {/* Fallback Context Card - When bot stuck but we have user's info */}
                             {hasProvidedPhone && !confirmedTopic && (
@@ -335,6 +361,8 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
                     {state === "ANALYZING" && <ThinkingIndicator />}
 
                     <div ref={messagesEndRef} />
+
+                    <JStarCollectivePopup isOpen={showCollective} onClose={() => setShowCollective(false)} />
                 </ErrorBoundary>
             </main>
 

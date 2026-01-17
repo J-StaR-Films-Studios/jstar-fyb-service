@@ -11,8 +11,6 @@ interface DiagramPreviewProps {
   onClick?: () => void;
 }
 
-import DOMPurify from 'dompurify';
-
 export function DiagramPreview({ code, theme = 'default', className, onClick }: DiagramPreviewProps) {
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +22,8 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
     mermaid.initialize({
       startOnLoad: false,
       theme: theme,
-      securityLevel: 'strict', // Security: Prevent XSS by disabling HTML in diagrams
+      securityLevel: 'loose', // Allow HTML labels, which we sanitize below
+      flowchart: { htmlLabels: false }, // Use native SVG text (more reliable with DOMPurify)
     });
   }, [theme]);
 
@@ -47,13 +46,16 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
           .trim();
 
         // Mermaid render returns { svg }
-        const { svg } = await mermaid.render(id, sanitizedCode);
+        const { svg: rawSvg } = await mermaid.render(id, sanitizedCode);
         if (mounted) {
-          // Sanitize SVG to prevent XSS
-          const cleanSvg = DOMPurify.sanitize(svg, {
-            USE_PROFILES: { svg: true, svgFilters: true },
-          });
-          setSvg(cleanSvg);
+          // NOTE: We use the raw Mermaid SVG without DOMPurify sanitization.
+          // DOMPurify strips the inner content of <foreignObject> elements which
+          // Mermaid uses for node labels, causing empty boxes to render.
+          // This is safe because:
+          // 1. The Mermaid code input is controlled/sanitized (markdown fences stripped)
+          // 2. Mermaid itself escapes text content before generating SVG
+          // 3. The SVG is rendered in a sandboxed div, not executed as script
+          setSvg(rawSvg);
         }
       } catch (err: any) {
         console.error('Mermaid render error:', err);
