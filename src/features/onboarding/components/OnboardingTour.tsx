@@ -39,7 +39,7 @@ const TourOverlay = ({ step, nextStep, prevStep, skipTour, totalSteps, currentSt
     // For now, if no rect, we render nothing (waiting for element)
     if (!rect) return null; 
 
-    // Calculate tooltip position
+    // Calculate tooltip position with collision detection
     const tooltipStyle = getTooltipStyle(rect, step.position);
 
     return (
@@ -105,18 +105,48 @@ const TourOverlay = ({ step, nextStep, prevStep, skipTour, totalSteps, currentSt
 
 function getTooltipStyle(rect: DOMRect, position: string) {
     const gap = 12;
+    const tooltipWidth = 320; // w-80 is 20rem = 320px
+    const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1000;
+    const padding = 16; // Minimum padding from edge
+
+    let style: any = {};
+
     switch (position) {
         case 'top':
-            return { top: rect.top - gap, left: rect.left + rect.width / 2, x: '-50%', y: '-100%' };
+            style = { top: rect.top - gap, left: rect.left + rect.width / 2, x: '-50%', y: '-100%' };
+            break;
         case 'bottom':
-            return { top: rect.bottom + gap, left: rect.left + rect.width / 2, x: '-50%', y: '0' };
+            style = { top: rect.bottom + gap, left: rect.left + rect.width / 2, x: '-50%', y: '0' };
+            break;
         case 'left':
-            return { top: rect.top + rect.height / 2, left: rect.left - gap, x: '-100%', y: '-50%' };
+            style = { top: rect.top + rect.height / 2, left: rect.left - gap, x: '-100%', y: '-50%' };
+            break;
         case 'right':
-            return { top: rect.top + rect.height / 2, left: rect.right + gap, x: '0', y: '-50%' };
+            style = { top: rect.top + rect.height / 2, left: rect.right + gap, x: '0', y: '-50%' };
+            break;
         case 'center':
-            return { top: '50%', left: '50%', x: '-50%', y: '-50%' };
+            style = { top: '50%', left: '50%', x: '-50%', y: '-50%' };
+            break;
         default: // bottom default
-            return { top: rect.bottom + gap, left: rect.left + rect.width / 2, x: '-50%', y: '0' };
+            style = { top: rect.bottom + gap, left: rect.left + rect.width / 2, x: '-50%', y: '0' };
     }
+
+    // Smart Horizontal Clamping for 'top' and 'bottom'
+    if (position === 'top' || position === 'bottom' || !position) {
+        const centerX = rect.left + rect.width / 2;
+        const halfWidth = tooltipWidth / 2;
+
+        // Check Right Edge
+        if (centerX + halfWidth > windowWidth - padding) {
+            style.left = windowWidth - padding;
+            style.x = '-100%'; // Pivot from right edge
+        }
+        // Check Left Edge
+        else if (centerX - halfWidth < padding) {
+            style.left = padding;
+            style.x = '0%'; // Pivot from left edge
+        }
+    }
+
+    return style;
 }
