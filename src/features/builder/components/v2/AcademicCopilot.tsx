@@ -332,6 +332,9 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
 
                     // Update ref immediately to prevent race in subsequent calls
                     activeThreadIdRef.current = currentThreadId;
+
+                    // Prevent auto-load effect from overwriting our optimistic state
+                    hasLoadedUrlThread.current = true;
                 }
             } catch (e) {
                 console.error("Failed to pre-create thread", e);
@@ -401,6 +404,8 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     const handleThreadSelect = async (threadId: string | null) => {
         setActiveThreadId(threadId);
         updateUrlWithThread(threadId);
+        // Prevent auto-load effect from firing since we are loading manually
+        if (threadId) hasLoadedUrlThread.current = true;
         setSuggestion(null);
         if (threadId) {
             setMessages([]); // Clear view while loading
