@@ -74,8 +74,13 @@ ${projectContext ? `Relevant Project Context:\n${projectContext}` : ''}
             hasExplanation: !!result.explanation
         });
 
+        // Post-processing: Clean the code of any potential markdown formatting that got inside the string
+        let cleanCode = result.mermaidCode;
+        // Remove markdown code blocks if present in the string value
+        cleanCode = cleanCode.replace(/^```mermaid\n?/, '').replace(/^```\n?/, '').replace(/```$/, '').trim();
+
         return {
-            mermaidCode: result.mermaidCode,
+            mermaidCode: cleanCode,
             explanation: result.explanation || 'AI-generated diagram'
         };
     } catch (error) {

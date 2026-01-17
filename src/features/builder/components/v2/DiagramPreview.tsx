@@ -38,8 +38,16 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
       setError(null);
       try {
         const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Sanitize code: remove markdown code blocks if present
+        const sanitizedCode = code
+          .replace(/^```mermaid\n?/, '')
+          .replace(/^```\n?/, '')
+          .replace(/```$/, '')
+          .trim();
+
         // Mermaid render returns { svg }
-        const { svg } = await mermaid.render(id, code);
+        const { svg } = await mermaid.render(id, sanitizedCode);
         if (mounted) {
           // Sanitize SVG to prevent XSS
           const cleanSvg = DOMPurify.sanitize(svg, {
