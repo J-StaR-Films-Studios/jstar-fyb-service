@@ -49,7 +49,8 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
         { maxWait: 2000 }
     );
 
-    // Debounced auto-save - 1.5 second delay
+    // Debounced auto-save - 3 second delay after typing stops
+    // maxWait ensures save happens within 10 seconds even during continuous typing
     const debouncedSave = useDebouncedCallback(
         (content: string) => {
             setSaveStatus('saving');
@@ -57,7 +58,8 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
             setTimeout(() => setSaveStatus('saved'), 400);
             setTimeout(() => setSaveStatus('idle'), 2000);
         },
-        1500
+        3000,
+        { maxWait: 10000 }
     );
 
     // Memoized handler to ensure NovelEditor props remain stable

@@ -69,12 +69,14 @@ export const NovelEditor = memo(({ content, onUpdate, projectId, className, onEd
 
     // Debounce the update callback to avoid expensive markdown serialization on every keystroke
     // This significantly improves performance for large documents
+    // 1 second delay, max 5 seconds during continuous typing
     const debouncedOnUpdate = useDebouncedCallback(
         (editor: EditorInstance) => {
             const markdown = editor.storage.markdown?.getMarkdown?.() || editor.getText();
             onUpdate(markdown);
         },
-        500
+        1000,
+        { maxWait: 5000 }
     );
 
     const handleUpdate = ({ editor }: { editor: EditorInstance }) => {

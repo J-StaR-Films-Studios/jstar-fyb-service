@@ -114,53 +114,74 @@ export async function PATCH(
             where: { projectId_number: { projectId: id, number: num } }
         });
 
+        // Use upsert to handle both creation and update
+        const defaultTitles = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
+        const defaultTitle = defaultTitles[num - 1] || `Chapter ${num}`;
+
+        let updatedChapter;
+
         if (!currentChapter) {
-            return new Response(JSON.stringify({ error: 'Chapter not found' }), { status: 404 });
-        }
+            // CREATE logic
+            updatedChapter = await prisma.chapter.create({
+                data: {
+                    projectId: id,
+                    number: num,
+                    title: defaultTitle,
+                    content: content || '',
+                    status: 'DRAFT',
+                    wordCount: content ? content.split(/\s+/).length : 0,
+                    sections: parseSections(content || ''),
+                    version: 1,
+                    lastEditedAt: new Date()
+                }
+            });
+        } else {
+            // UPDATE logic
 
-        // Update logic
-        const updateData: any = {
-            lastEditedAt: new Date()
-        };
+            // Construct update data
+            const updateData: any = {
+                lastEditedAt: new Date()
+            };
 
-        if (content) {
-            // Auto-versioning: Create snapshot if content changed significantly (>100 chars difference)
-            const contentDiff = Math.abs(content.length - (currentChapter.content?.length || 0));
-            const isSignificantChange = contentDiff > 100 ||
-                (currentChapter.content && content !== currentChapter.content);
+            if (content) {
+                // Auto-versioning: Create snapshot if content changed significantly (>100 chars difference)
+                const contentDiff = Math.abs(content.length - (currentChapter.content?.length || 0));
+                const isSignificantChange = contentDiff > 100 ||
+                    (currentChapter.content && content !== currentChapter.content);
 
-            if (isSignificantChange && currentChapter.content) {
-                // Create version snapshot before updating
-                const newVersionSnapshot = {
-                    version: currentChapter.version,
-                    content: currentChapter.content,
-                    createdAt: new Date().toISOString()
-                };
+                if (isSignificantChange && currentChapter.content) {
+                    // Create version snapshot before updating
+                    const newVersionSnapshot = {
+                        version: currentChapter.version,
+                        content: currentChapter.content,
+                        createdAt: new Date().toISOString()
+                    };
 
-                const existingVersions = (currentChapter.previousVersions as any[]) || [];
+                    const existingVersions = (currentChapter.previousVersions as any[]) || [];
 
-                // Limit stored versions to last 10 to prevent bloat
-                const updatedVersions = [...existingVersions, newVersionSnapshot].slice(-10);
+                    // Limit stored versions to last 10 to prevent bloat
+                    const updatedVersions = [...existingVersions, newVersionSnapshot].slice(-10);
 
-                updateData.previousVersions = updatedVersions;
-                updateData.version = currentChapter.version + 1;
+                    updateData.previousVersions = updatedVersions;
+                    updateData.version = currentChapter.version + 1;
+                }
+
+                updateData.content = content;
+                updateData.wordCount = content.split(/\s+/).length;
+                updateData.sections = parseSections(content);
+                updateData.status = 'EDITING';
             }
 
-            updateData.content = content;
-            updateData.wordCount = content.split(/\s+/).length;
-            updateData.sections = parseSections(content);
-            updateData.status = 'EDITING';
+            updatedChapter = await prisma.chapter.update({
+                where: {
+                    projectId_number: {
+                        projectId: id,
+                        number: num
+                    }
+                },
+                data: updateData
+            });
         }
-
-        const updatedChapter = await prisma.chapter.update({
-            where: {
-                projectId_number: {
-                    projectId: id,
-                    number: num
-                }
-            },
-            data: updateData
-        });
 
         return new Response(JSON.stringify(updatedChapter), { status: 200 });
 

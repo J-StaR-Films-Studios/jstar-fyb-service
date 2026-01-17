@@ -1110,12 +1110,14 @@ Export options panel:
 
 Before moving to Phase 5, verify:
 
-- [ ] Diagram generation API returns valid Mermaid code
-- [ ] Mermaid preview renders correctly
-- [ ] Diagrams save to database
-- [ ] DOCX export includes all chapters
-- [ ] DOCX export includes diagrams as images
-- [ ] Export file downloads correctly
+- [x] Diagram generation API returns valid Mermaid code ✅
+- [x] Mermaid preview renders correctly ✅
+- [x] Diagrams save to database ✅
+- [x] DOCX export includes all chapters ✅
+- [x] DOCX export includes diagrams as images ✅
+- [x] Export file downloads correctly ✅
+- [x] **PDF export implemented client-side** ✅ *NEW*
+- [x] PDF export works with Vercel Free Plan ✅ *NEW*
 
 ---
 
