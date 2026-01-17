@@ -18,6 +18,16 @@ export const useKeyboardShortcuts = (shortcuts: Record<KeyCombo, Handler>) => {
             
             // Normalize key
             const key = event.key.toLowerCase();
+            
+            // Handle shift+? specifically as just "?"
+            if (event.key === '?') {
+                if (shortcuts['?']) {
+                    event.preventDefault();
+                    shortcuts['?'](event);
+                    return;
+                }
+            }
+
             if (!['control', 'meta', 'alt', 'shift'].includes(key)) {
                 keys.push(key);
             }
@@ -30,7 +40,8 @@ export const useKeyboardShortcuts = (shortcuts: Record<KeyCombo, Handler>) => {
             if (isInput && keys.length === 0) return;
 
             if (shortcuts[combo]) {
-                event.preventDefault();
+                // We let the handler decide if it wants to prevent default
+                // But generally global shortcuts SHOULD prevent default
                 shortcuts[combo](event);
             }
             
@@ -38,7 +49,6 @@ export const useKeyboardShortcuts = (shortcuts: Record<KeyCombo, Handler>) => {
             if (event.metaKey && !event.ctrlKey) {
                  const macCombo = combo.replace('meta', 'ctrl');
                  if (shortcuts[macCombo]) {
-                     event.preventDefault();
                      shortcuts[macCombo](event);
                  }
             }

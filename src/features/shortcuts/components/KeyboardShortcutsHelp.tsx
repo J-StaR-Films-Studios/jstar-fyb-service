@@ -11,9 +11,9 @@ interface KeyboardShortcutsHelpProps {
 }
 
 const SHORTCUTS = [
-    { key: 'Ctrl + N', description: 'Create new project' },
+    { key: 'Alt + N', description: 'Create new project' },
     { key: 'Ctrl + S', description: 'Save current changes' },
-    { key: 'Ctrl + /', description: 'Show this help' },
+    { key: '?', description: 'Show this help' },
     { key: 'Esc', description: 'Close modal / Cancel' },
 ];
 

@@ -2,7 +2,7 @@
 
 import { signOut } from "@/lib/auth-client";
 import { useState, useRef, useEffect } from "react";
-import { LogOut, User as UserIcon, LayoutDashboard, Plus, Hammer, MessageSquare, HelpCircle } from "lucide-react";
+import { LogOut, User as UserIcon, LayoutDashboard, Plus, Hammer, MessageSquare, HelpCircle, Keyboard, PlayCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MobileBottomNav } from "@/features/dashboard/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { KeyboardShortcutsHelp } from "@/features/shortcuts/components/KeyboardShortcutsHelp";
+import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 
 // Helper component to avoid hook call issues in the dropdown
 const SupportButton = ({ onClose }: { onClose: () => void }) => {
@@ -51,6 +52,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
     const router = useRouter();
     const isDashboard = pathname === "/dashboard";
     const isHub = pathname === "/hub";
+    const { startTour, setSteps } = useOnboardingStore();
 
     // Dropdown state
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -59,10 +61,16 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
     const [showShortcuts, setShowShortcuts] = useState(false);
 
     useKeyboardShortcuts({
-        'ctrl+/': () => setShowShortcuts(true),
-        'ctrl+n': () => router.push('/project/builder'),
-        'ctrl+s': () => {
+        '?': () => setShowShortcuts(true), // Shift + /
+        'shift+/': () => setShowShortcuts(true), // Fallback
+        'alt+n': () => router.push('/project/builder'),
+        'ctrl+s': (e) => {
+            e.preventDefault(); // STOP browser "Save Page As"
             // Dispatch event for active components to handle
+            window.dispatchEvent(new CustomEvent('jstar:save'));
+        },
+        'meta+s': (e) => { // Mac support
+            e.preventDefault();
             window.dispatchEvent(new CustomEvent('jstar:save'));
         }
     });
@@ -101,13 +109,41 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
         });
     };
 
+    const handleStartTour = () => {
+        setSteps([
+            {
+                id: 'welcome',
+                targetId: 'shell-header-title',
+                title: 'Welcome to J-Star',
+                content: 'This is your creative dashboard. Manage your projects and research here.',
+                position: 'bottom'
+            },
+            {
+                id: 'new-project',
+                targetId: 'shell-new-project-btn',
+                title: 'Start Building',
+                content: 'Ready to start? Click here to launch a new project builder.',
+                position: 'bottom'
+            },
+            {
+                id: 'chat-hub',
+                targetId: 'shell-chat-hub-btn',
+                title: 'AI Assistant',
+                content: 'Need help? Chat with Jay or Nengi to brainstorm ideas.',
+                position: 'bottom'
+            }
+        ]);
+        startTour();
+        setIsDropdownOpen(false);
+    };
+
     return (
         <div className={cn("bg-dark min-h-screen text-white font-sans md:pb-0", !hideBottomNav && "pb-[calc(6rem+env(safe-area-inset-bottom))]")}>
             {/* Header */}
             <header className="flex justify-between items-center px-4 py-3 md:px-6 md:py-6 sticky top-0 bg-dark/80 backdrop-blur-md z-40 border-b border-white/5">
                 <div className="flex items-center gap-4">
                     <div>
-                        <h1 className="text-xl font-bold font-display">
+                        <h1 className="text-xl font-bold font-display" id="shell-header-title">
                             {headerContent ? (
                                 <div className="flex items-center gap-2">
                                     <Link href="/dashboard" className="hidden md:block font-normal text-gray-400 hover:text-white transition-colors">
@@ -133,6 +169,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             asChild
                             variant="ghost"
                             size="sm"
+                            id="shell-chat-hub-btn"
                             className="hidden md:flex text-gray-400 hover:text-white hover:bg-white/5"
                         >
                             <Link href={hasActiveProject ? "/hub" : "/chat"}>
@@ -163,6 +200,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             asChild
                             variant="default"
                             size="sm"
+                            id="shell-new-project-btn"
                             className="hidden md:flex bg-primary hover:bg-primary/90 text-white font-bold"
                         >
                             <Link href="/project/builder">
@@ -213,6 +251,26 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                                     <UserIcon className="w-4 h-4" />
                                     Profile
                                 </Link>
+                                
+                                <button
+                                    onClick={handleStartTour}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+                                >
+                                    <PlayCircle className="w-4 h-4" />
+                                    Start Tour
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setShowShortcuts(true);
+                                        setIsDropdownOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+                                >
+                                    <Keyboard className="w-4 h-4" />
+                                    Shortcuts
+                                </button>
+
                                 <SupportButton onClose={() => setIsDropdownOpen(false)} />
                                 <button
                                     onClick={handleSignOut}
