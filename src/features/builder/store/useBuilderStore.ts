@@ -281,7 +281,7 @@ export const useBuilderStore = create<BuilderState>()(
                 // Should start at TOPIC step to allow user to pick a new topic
                 const isUnlockedForTopicSwitch = isPaid && !projectData.isLocked && !projectData.abstract && projectData.topic;
 
-                set((state) => ({
+                set(() => ({
                     // Determine step based on data presence
                     step: isUnlockedForTopicSwitch ? 'TOPIC' // Force TOPIC step for unlocked topic-switch projects
                         : (projectData.outline && projectData.outline.length > 0) ? 'OUTLINE'

@@ -47,16 +47,6 @@ interface SaasShellProps {
 }
 
 export const SaasShell = ({ children, user, headerContent, fullWidth = false, hasActiveProject = false, noPadding = false, hideBottomNav = false }: SaasShellProps) => {
-    // Generate initials for avatar
-    const initials = user.name
-        ? user.name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2)
-        : "JO";
-
     const pathname = usePathname();
     const router = useRouter();
     const isDashboard = pathname === "/dashboard";

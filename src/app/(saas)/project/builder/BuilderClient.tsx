@@ -1,6 +1,5 @@
 'use client';
 
-import { Suspense } from "react";
 import { useBuilderStore, ProjectData } from "@/features/builder/store/useBuilderStore";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -8,8 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TopicSelector } from "@/features/builder/components/TopicSelector";
 import { AbstractGenerator } from "@/features/builder/components/AbstractGenerator";
 import { ChapterOutliner } from "@/features/builder/components/ChapterOutliner";
-import { X, Loader2, Check } from "lucide-react";
-import Link from "next/link";
+import { Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { useSession } from "@/lib/auth-client";
@@ -38,7 +36,7 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
     const [isHydrated, setIsHydrated] = useState(false);
 
     // CRITICAL: Run payment verification at the TOP LEVEL so it runs on ALL steps, not just OUTLINE
-    const { isVerifying, verificationResult } = usePaymentVerification(isPaid, unlockPaywall);
+    const { isVerifying } = usePaymentVerification(isPaid, unlockPaywall);
 
     // Scroll to top on mount to prevent starting at upgrade section
     useEffect(() => {
@@ -64,6 +62,7 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
         if (hasFreshHandoff) {
             console.log('[BuilderClient] Fresh chat handoff applied. Skipping server load.');
             // Mark as hydrated even for handoff case
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsHydrated(true);
             return;
         }
