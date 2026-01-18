@@ -9,7 +9,8 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement>, onRefresh: (
         if (!element) return;
 
         const handleTouchStart = (e: TouchEvent) => {
-            if (element.scrollTop <= 0) {
+            const scrollY = window.scrollY || document.documentElement.scrollTop;
+            if (scrollY <= 0) {
                 startY.current = e.touches[0].clientY;
             }
         };
@@ -17,10 +18,10 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement>, onRefresh: (
         const handleTouchMove = (e: TouchEvent) => {
             const y = e.touches[0].clientY;
             const pull = y - startY.current;
+            const scrollY = window.scrollY || document.documentElement.scrollTop;
             
             // Simple logic: if pulling down at top, prevent default to avoid native refresh
-            // if we want to handle it ourselves
-            if (pull > 0 && element.scrollTop <= 0 && e.cancelable) {
+            if (pull > 0 && scrollY <= 0 && e.cancelable) {
                  // e.preventDefault(); // Optional: block native scroll if needed
             }
         };
@@ -28,8 +29,9 @@ export function usePullToRefresh(ref: React.RefObject<HTMLElement>, onRefresh: (
         const handleTouchEnd = async (e: TouchEvent) => {
             const y = e.changedTouches[0].clientY;
             const pull = y - startY.current;
+            const scrollY = window.scrollY || document.documentElement.scrollTop;
             
-            if (pull > 100 && element.scrollTop <= 0 && !isRefreshing) {
+            if (pull > 100 && scrollY <= 0 && !isRefreshing) {
                 setIsRefreshing(true);
                 try {
                     await onRefresh();
