@@ -14,3 +14,6 @@
 **Learning:** Defining React components inside other components (e.g. `const Badge = () => ...`) forces a full unmount/remount on every render. In heavy editors, this causes unnecessary layout thrashing and state loss.
 **Action:** Extract sub-components to separate files or outside the main component. Use `React.memo` for UI elements that receive frequent updates (like save status) but rarely change visually.
 
+## 2026-02-17 - [Admin Dashboard Sorting Indexes]
+**Learning:** Admin dashboards often sort large datasets by `createdAt` or `updatedAt` (e.g. Payments, Leads, Requests). Without explicit indexes on these timestamp columns, Postgres performs full table scans and expensive sort operations, degrading performance as data scales.
+**Action:** When creating models that will be displayed in chronological lists (especially admin tables), add `@@index([createdAt])` or `@@index([updatedAt])` to support efficient `ORDER BY` clauses.
