@@ -15,7 +15,7 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
     };
 
     return (
-        <nav className="fixed bottom-0 w-full bg-dark/90 backdrop-blur-xl border-t border-white/10 z-50 md:hidden">
+        <nav className="fixed bottom-0 w-full bg-dark/90 backdrop-blur-xl border-t border-white/10 z-50 md:hidden pb-[env(safe-area-inset-bottom)]">
             <div className="grid grid-cols-5 items-end h-20 pb-4 px-2">
                 {/* 1. Home */}
                 <Link
@@ -25,7 +25,7 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                         isActive('/') && pathname === '/' ? "text-white" : "text-gray-500 hover:text-white"
                     )}
                 >
-                    <Home className="w-5 h-5" />
+                    <Home className="w-5 h-5" aria-hidden="true" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
                 </Link>
 
@@ -37,7 +37,7 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                         isActive('/dashboard') ? "text-white" : "text-gray-500 hover:text-white"
                     )}
                 >
-                    <Folder className="w-5 h-5" />
+                    <Folder className="w-5 h-5" aria-hidden="true" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Projects</span>
                 </Link>
 
@@ -45,6 +45,7 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                 <div className="flex justify-center relative -top-6">
                     <Link
                         href="/project/builder"
+                        aria-label="Create Project"
                         className={cn(
                             "flex items-center justify-center w-14 h-14 rounded-full shadow-lg transition-transform ring-4 ring-dark",
                             isActive('/project/builder')
@@ -52,7 +53,7 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                                 : "bg-primary/80 text-white/90 hover:bg-primary hover:scale-105"
                         )}
                     >
-                        <Hammer className="w-6 h-6 fill-current" />
+                        <Hammer className="w-6 h-6 fill-current" aria-hidden="true" />
                     </Link>
                 </div>
 
@@ -64,7 +65,7 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                         isActive('/chat') || isActive('/hub') ? "text-white" : "text-gray-500 hover:text-white"
                     )}
                 >
-                    <MessageSquare className="w-5 h-5" />
+                    <MessageSquare className="w-5 h-5" aria-hidden="true" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Chat</span>
                 </Link>
 
@@ -76,7 +77,7 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                         isActive('/profile') ? "text-white" : "text-gray-500 hover:text-white"
                     )}
                 >
-                    <User className="w-5 h-5" />
+                    <User className="w-5 h-5" aria-hidden="true" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Me</span>
                 </Link>
             </div>
