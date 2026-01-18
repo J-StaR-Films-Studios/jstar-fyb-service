@@ -7,3 +7,8 @@
 **Vulnerability:** `DiagramPreview.tsx` initialized Mermaid with `securityLevel: 'loose'`, which allows HTML tags (including `<script>`) in diagram labels.
 **Learning:** Third-party visualization libraries often default to or allow insecure configurations that prioritize flexibility over security. When rendering user-controlled content, these defaults can lead to Stored XSS.
 **Prevention:** Always explicitly set `securityLevel: 'strict'` (or equivalent) when initializing Mermaid.js or similar libraries if the input can be influenced by users.
+
+## 2026-02-18 - [Incomplete SSRF Protection in API Route]
+**Vulnerability:** The document upload API (`src/app/api/documents/upload/route.ts`) implemented its own ad-hoc blacklist for SSRF protection, checking only for `localhost`, `127.`, `192.168.`, and `10.` strings.
+**Learning:** Manual blacklists are almost always incomplete. This implementation missed IPv6 (`[::1]`), other private ranges (`172.16.0.0/12`), and alternative IP formats (hex/octal). It also failed to check DNS resolution, allowing DNS rebinding attacks.
+**Prevention:** Centralize security validation logic. We replaced the ad-hoc check with `validateUrlSecurity` from `@/lib/security`, which handles all these cases consistently across the application (used by both the API layer and the internal download service).
