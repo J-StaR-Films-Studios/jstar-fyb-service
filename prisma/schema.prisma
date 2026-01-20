@@ -186,6 +186,8 @@ model Payment {
   // Bolt: Add index for frequent queries by projectId
   @@index([projectId])
   @@index([discountCodeId])
+  // Bolt: Add index for sorting by creation date
+  @@index([createdAt])
 }
 
 model ResearchDocument {
@@ -335,6 +337,8 @@ model TopicSwitchRequest {
   // Bolt: Add indexes for frequent lookups
   @@index([userId])
   @@index([projectId])
+  // Bolt: Add index for sorting by creation date
+  @@index([createdAt])
 }
 
 model TopicSwitchArchive {
