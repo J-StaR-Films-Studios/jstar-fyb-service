@@ -4,7 +4,7 @@
 
 /* React-PDF text layer styles */
 .react-pdf__Page__textContent {
-  line-height: 1.0;
+  line-height: 1;
   user-select: text;
 }
 
@@ -93,7 +93,6 @@ body {
 
 /* Complexity Meter Animation */
 @keyframes pulse-glow {
-
   0%,
   100% {
     box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
@@ -160,10 +159,12 @@ body {
 
 /* Gradual reveal for paywall overlay */
 .paywall-gradient {
-  background: linear-gradient(to top,
-      var(--color-bg) 0%,
-      var(--color-bg) 20%,
-      transparent 100%);
+  background: linear-gradient(
+    to top,
+    var(--color-bg) 0%,
+    var(--color-bg) 20%,
+    transparent 100%
+  );
 }
 
 /* Custom Scrollbar - Global */
@@ -342,7 +343,10 @@ body {
   gap: 0.5rem;
 }
 
-.novel-editor-wrapper .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+.novel-editor-wrapper
+  .ProseMirror
+  ul[data-type="taskList"]
+  input[type="checkbox"] {
   margin-top: 0.25rem;
   accent-color: #8b5cf6;
 }
@@ -360,9 +364,10 @@ body {
 .novel-editor-wrapper .ProseMirror ::selection {
   background: rgba(139, 92, 246, 0.3);
 }
-/* Accessibility Enhancements */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -383,4 +388,16 @@ body {
 
 .skip-link:focus {
   top: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
