@@ -26,23 +26,30 @@ async function checkAdmin() {
 export default async function AdminPaymentsPage() {
     await checkAdmin();
 
-    const payments = await prisma.payment.findMany({
-        include: {
-            user: true,
-            project: true
-        },
-        orderBy: {
-            createdAt: 'desc'
-        }
-    });
+    // Bolt Optimization: Use aggregate for stats and limit list fetch
+    // This prevents fetching thousands of records just to calculate totals
+    const [revenueStats, totalCount, payments] = await Promise.all([
+        prisma.payment.aggregate({
+            _sum: { amount: true },
+            _count: { _all: true },
+            where: { status: 'SUCCESS' }
+        }),
+        prisma.payment.count(),
+        prisma.payment.findMany({
+            take: 100, // Limit to prevent OOM
+            include: {
+                user: true,
+                project: true
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        })
+    ]);
 
-    // Calculate stats
-    const totalRevenue = payments
-        .filter(p => p.status === 'SUCCESS')
-        .reduce((acc, curr) => acc + curr.amount, 0);
-
-    const successRate = payments.length > 0
-        ? (payments.filter(p => p.status === 'SUCCESS').length / payments.length) * 100
+    const totalRevenue = revenueStats._sum.amount || 0;
+    const successRate = totalCount > 0
+        ? (revenueStats._count._all / totalCount) * 100
         : 0;
 
     return (
@@ -53,7 +60,7 @@ export default async function AdminPaymentsPage() {
                 <div className="flex justify-between items-end">
                     <div>
                         <h1 className="text-3xl font-bold font-display mb-2">Payment History</h1>
-                        <p className="text-gray-400">Monitor all transactions and revenue</p>
+                        <p className="text-gray-400">Monitor recent transactions and total revenue</p>
                     </div>
 
                     <div className="flex gap-4">
@@ -148,6 +155,11 @@ export default async function AdminPaymentsPage() {
                                 )}
                             </tbody>
                         </table>
+                        {payments.length >= 100 && (
+                            <div className="p-4 text-center text-xs text-gray-500 border-t border-white/5 bg-white/[0.02]">
+                                Showing last 100 payments only.
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
