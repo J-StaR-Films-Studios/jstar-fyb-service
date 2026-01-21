@@ -160,6 +160,8 @@ model Project {
   @@index([userId])
   // Bolt: Add index for frequent queries by anonymousId
   @@index([anonymousId])
+  // Bolt: Add index for sorting by updatedAt (Admin Dashboard)
+  @@index([updatedAt])
 }
 
 model Payment {
@@ -186,6 +188,8 @@ model Payment {
   // Bolt: Add index for frequent queries by projectId
   @@index([projectId])
   @@index([discountCodeId])
+  // Bolt: Add index for sorting by createdAt (Admin Dashboard)
+  @@index([createdAt])
 }
 
 model ResearchDocument {
@@ -335,6 +339,8 @@ model TopicSwitchRequest {
   // Bolt: Add indexes for frequent lookups
   @@index([userId])
   @@index([projectId])
+  // Bolt: Add index for sorting by createdAt (Admin Dashboard)
+  @@index([createdAt])
 }
 
 model TopicSwitchArchive {
