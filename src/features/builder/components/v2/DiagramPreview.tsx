@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
+import DOMPurify from 'dompurify';
 import { Loader2 } from 'lucide-react';
 
 interface DiagramPreviewProps {
@@ -22,8 +23,7 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
     mermaid.initialize({
       startOnLoad: false,
       theme: theme,
-      securityLevel: 'loose', // Allow HTML labels, which we sanitize below
-      flowchart: { htmlLabels: false }, // Use native SVG text (more reliable with DOMPurify)
+      securityLevel: 'strict', // Sentinel: Force strict security to prevent XSS
     });
   }, [theme]);
 
@@ -48,19 +48,19 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
         // Mermaid render returns { svg }
         const { svg: rawSvg } = await mermaid.render(id, sanitizedCode);
         if (mounted) {
-          // NOTE: We use the raw Mermaid SVG without DOMPurify sanitization.
-          // DOMPurify strips the inner content of <foreignObject> elements which
-          // Mermaid uses for node labels, causing empty boxes to render.
-          // This is safe because:
-          // 1. The Mermaid code input is controlled/sanitized (markdown fences stripped)
-          // 2. Mermaid itself escapes text content before generating SVG
-          // 3. The SVG is rendered in a sandboxed div, not executed as script
-          setSvg(rawSvg);
+          // Sentinel: Sanitize SVG before rendering to prevent XSS
+          // We maintain 'foreignObject' support but rely on 'strict' mode to prevent dangerous content
+          const cleanSvg = DOMPurify.sanitize(rawSvg, {
+            USE_PROFILES: { svg: true, svgFilters: true },
+            ADD_TAGS: ['foreignObject'],
+            ADD_ATTR: ['target']
+          });
+          setSvg(cleanSvg);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Mermaid render error:', err);
         if (mounted) {
-          setError(err.message || 'Failed to render diagram');
+          setError(err instanceof Error ? err.message : 'Failed to render diagram');
           // Keep the old SVG if possible, or show error
         }
       } finally {
