@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-server";
 import { GeminiFileSearchService } from "@/lib/gemini-file-search";
 import { extractPdfText } from "@/lib/pdf-parser";
+import { validateUrlSecurity } from "@/lib/security";
 import mammoth from "mammoth";
 
 // Security constants
@@ -124,21 +125,21 @@ export async function POST(req: Request) {
 
         // Case 1: External Link
         if (link) {
-            // Enhanced URL validation
+            // CRITICAL SECURITY FIX: Use shared security validation for SSRF protection
             try {
-                const url = new URL(link);
-
-                // Additional security checks
-                if (!['http:', 'https:'].includes(url.protocol)) {
-                    return NextResponse.json({ error: "Only HTTP and HTTPS URLs are allowed" }, { status: 400 });
+                await validateUrlSecurity(link);
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : "Invalid URL";
+                // Safe logging: avoid query params
+                let safeLink = link;
+                try {
+                    const u = new URL(link);
+                    safeLink = `${u.origin}${u.pathname}`; // strip search/hash
+                } catch {
+                    safeLink = "invalid-url";
                 }
-
-                // Prevent localhost and internal network access
-                if (url.hostname === 'localhost' || url.hostname.startsWith('127.') || url.hostname.startsWith('192.168.') || url.hostname.startsWith('10.')) {
-                    return NextResponse.json({ error: "Local and internal network URLs are not allowed" }, { status: 400 });
-                }
-            } catch {
-                return NextResponse.json({ error: "Invalid URL provided" }, { status: 400 });
+                console.warn(`[DocumentUpload] Blocked unsafe URL: ${safeLink}`, errorMessage);
+                return NextResponse.json({ error: errorMessage || "Invalid or unsafe URL provided" }, { status: 400 });
             }
 
             // CRITICAL: Actually download the file using ResearchService
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
                 }
 
                 return NextResponse.json({ success: true, doc });
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error("Link processing failed:", error);
                 return NextResponse.json({ error: "Failed to download content from link" }, { status: 500 });
             }
