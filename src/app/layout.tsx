@@ -7,6 +7,7 @@ import { SupportProviderClient } from "@/features/support/components/SupportProv
 import { Toaster } from "sonner";
 import { ReferralListener } from "@/features/referral/components/ReferralListener";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
+import { SkipLink } from "@/features/accessibility/SkipLink";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -25,8 +26,15 @@ export const metadata: Metadata = {
     default: "J-Star FYB Service",
     template: "%s | J-Star FYB",
   },
-  description: "Dominating Final Year Projects. The ultimate tool for researching, outlining, and writing your final year project.",
-  keywords: ["Final Year Project", "Research Assistant", "Writing Tool", "Academic Writing", "Thesis Builder"],
+  description:
+    "Dominating Final Year Projects. The ultimate tool for researching, outlining, and writing your final year project.",
+  keywords: [
+    "Final Year Project",
+    "Research Assistant",
+    "Writing Tool",
+    "Academic Writing",
+    "Thesis Builder",
+  ],
   authors: [{ name: "J-Star Films" }],
   creator: "J-Star Films",
   openGraph: {
@@ -34,7 +42,8 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://fyb.jstarstudios.com",
     title: "J-Star FYB Service - Dominate Your Project",
-    description: "The AI-powered platform to streamline your final year project workflow.",
+    description:
+      "The AI-powered platform to streamline your final year project workflow.",
     siteName: "J-Star FYB",
   },
   twitter: {
@@ -56,10 +65,14 @@ export default function RootLayout({
       <head>
         <MetaPixel />
       </head>
-      <body className={`${outfit.variable} ${spaceGrotesk.variable} font-sans antialiased bg-dark`} suppressHydrationWarning>
+      <body
+        className={`${outfit.variable} ${spaceGrotesk.variable} font-sans antialiased bg-dark`}
+        suppressHydrationWarning
+      >
+        <SkipLink />
         <ErrorBoundary>
           <SupportProviderClient>
-            {children}
+            <div id="main-content">{children}</div>
           </SupportProviderClient>
         </ErrorBoundary>
         <OfflineIndicator />
@@ -71,24 +84,23 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              "name": "J-Star FYB Service",
-              "applicationCategory": "EducationalApplication",
-              "operatingSystem": "Web",
-              "offers": {
+              name: "J-Star FYB Service",
+              applicationCategory: "EducationalApplication",
+              operatingSystem: "Web",
+              offers: {
                 "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "NGN"
+                price: "0",
+                priceCurrency: "NGN",
               },
-              "author": {
+              author: {
                 "@type": "Organization",
-                "name": "J-Star Films",
-                "url": "https://fyb.jstarstudios.com"
-              }
-            })
+                name: "J-Star Films",
+                url: "https://fyb.jstarstudios.com",
+              },
+            }),
           }}
         />
       </body>
     </html>
   );
 }
-
