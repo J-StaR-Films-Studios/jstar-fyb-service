@@ -22,3 +22,8 @@
 **Vulnerability:** The document upload API (`src/app/api/documents/upload/route.ts`) implemented its own ad-hoc blacklist for SSRF protection, checking only for `localhost`, `127.`, `192.168.`, and `10.` strings.
 **Learning:** Manual blacklists are almost always incomplete. This implementation missed IPv6 (`[::1]`), other private ranges (`172.16.0.0/12`), and alternative IP formats (hex/octal). It also failed to check DNS resolution, allowing DNS rebinding attacks.
 **Prevention:** Centralize security validation logic. We replaced the ad-hoc check with `validateUrlSecurity` from `@/lib/security`, which handles all these cases consistently across the application (used by both the API layer and the internal download service).
+
+## 2026-02-20 - [Zod Validation Order Matters]
+**Vulnerability:** Chaining `.min(3).trim()` in Zod allows whitespace-only strings (e.g., "   ") to pass validation because the length check runs on the raw input before trimming.
+**Learning:** Zod validation chains execute sequentially. Placing checks before transformations validates the raw input, while placing them after validates the transformed input.
+**Prevention:** Use `.max(LIMIT)` first for DoS protection (raw length), then `.trim()` to sanitize, then `.min(LIMIT)` to enforce content requirements on the sanitized value.
