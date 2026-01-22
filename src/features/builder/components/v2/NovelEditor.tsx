@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, memo } from 'react';
+import { useEffect, useState, useRef, memo, useCallback } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import {
     EditorRoot,
@@ -79,16 +79,16 @@ export const NovelEditor = memo(({ content, onUpdate, projectId, className, onEd
         { maxWait: 5000 }
     );
 
-    const handleUpdate = ({ editor }: { editor: EditorInstance }) => {
+    const handleUpdate = useCallback(({ editor }: { editor: EditorInstance }) => {
         if (!editorInstance) {
             setEditorInstance(editor);
             onEditorReady?.(editor);
         }
 
         debouncedOnUpdate(editor);
-    };
+    }, [editorInstance, onEditorReady, debouncedOnUpdate]);
 
-    const handleCreate = ({ editor }: { editor: EditorInstance }) => {
+    const handleCreate = useCallback(({ editor }: { editor: EditorInstance }) => {
         setEditorInstance(editor);
         onEditorReady?.(editor);
 
@@ -97,7 +97,7 @@ export const NovelEditor = memo(({ content, onUpdate, projectId, className, onEd
             editor.commands.setContent(content);
         }
         hasInitialized.current = true;
-    };
+    }, [content, onEditorReady]);
 
     return (
         <div className={`novel-editor-wrapper w-full h-full ${className || ''}`}>

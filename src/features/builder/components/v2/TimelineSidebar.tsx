@@ -3,6 +3,7 @@
 import { LucideIcon, CheckCircle2, Lock, MoreHorizontal, ChevronRight, Circle, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { memo } from 'react';
 
 interface ChapterNodeProps {
     number: number;
@@ -11,12 +12,12 @@ interface ChapterNodeProps {
     subsections?: string[];
     isActive?: boolean;
     onClick?: () => void;
-    onGenerate?: (e: React.MouseEvent) => void;
+    onGenerate?: (chapterNumber: number) => void;
     isGenerating?: boolean;
     wordCount?: number;
 }
 
-function ChapterNode({ number, title, status, subsections, isActive, onClick, onGenerate, isGenerating, wordCount }: ChapterNodeProps) {
+const ChapterNode = memo(function ChapterNode({ number, title, status, subsections, isActive, onClick, onGenerate, isGenerating, wordCount }: ChapterNodeProps) {
     // Show generate (always visible) if: draft/empty AND no content
     const showGenerate = (status === 'draft' || (status as string) === 'empty') && !isGenerating && onGenerate && (!wordCount || wordCount < 30);
     // Show regenerate (on hover) if: has content AND not currently generating
@@ -49,7 +50,7 @@ function ChapterNode({ number, title, status, subsections, isActive, onClick, on
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onGenerate?.(e);
+                                onGenerate?.(number);
                             }}
                             className="bg-primary/20 hover:bg-primary/30 p-1.5 rounded-lg text-primary transition-all hover:scale-110"
                             title="Generate Chapter with AI"
@@ -63,7 +64,7 @@ function ChapterNode({ number, title, status, subsections, isActive, onClick, on
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onGenerate?.(e);
+                                onGenerate?.(number);
                             }}
                             className="bg-orange-500/10 hover:bg-orange-500/20 p-1.5 rounded-lg text-orange-400 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
                             title="Regenerate Chapter (will replace existing content)"
@@ -106,7 +107,7 @@ function ChapterNode({ number, title, status, subsections, isActive, onClick, on
             )}
         </div>
     );
-}
+});
 
 export interface TimelineSidebarProps {
     projectTitle?: string;
@@ -123,7 +124,7 @@ export interface TimelineSidebarProps {
     onGenerateChapter?: (number: number) => void;
 }
 
-export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, onChapterSelect, onGenerateChapter }: TimelineSidebarProps) {
+export const TimelineSidebar = memo(function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, onChapterSelect, onGenerateChapter }: TimelineSidebarProps) {
     return (
         <aside className="w-80 flex flex-col glass-panel z-20 h-full border-r border-white/5 bg-dark/50 backdrop-blur-xl">
             {/* Brand Header */}
@@ -163,7 +164,7 @@ export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, o
                         subsections={chapter.subsections}
                         isActive={chapter.number === activeChapterNumber}
                         onClick={() => onChapterSelect(chapter.number)}
-                        onGenerate={onGenerateChapter ? () => onGenerateChapter(chapter.number) : undefined}
+                        onGenerate={onGenerateChapter}
                         isGenerating={chapter.status === 'in-progress' && (!chapter.wordCount || chapter.wordCount < 10)}
                         wordCount={chapter.wordCount}
                     />
@@ -171,4 +172,4 @@ export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, o
             </div>
         </aside>
     );
-}
+});
