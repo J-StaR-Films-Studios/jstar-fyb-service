@@ -13,7 +13,15 @@ export const PRICING_CONFIG = {
             { id: 'AGENCY_CODE_GO', label: 'Code & Go', price: 120_000, popular: false },
             { id: 'AGENCY_DEFENSE_READY', label: 'Defense Ready', price: 200_000, popular: true },
             { id: 'AGENCY_SOFT_LIFE', label: 'The Soft Life', price: 320_000, popular: false }
-        ]
+        ],
+        FEATURES: {
+            'AGENCY_PAPER_EXPRESS': ['Topic Generation (3 Options)', 'Chapters 1-3 (Proposal)', 'Pay-as-you-go Structure', 'Standard Delivery (2 Weeks)'],
+            'AGENCY_PAPER_DEFENSE': ['Topic + Chapters 1-5', 'Presentation Slides', 'Defense Coaching Session', 'Mock Defense Drill', 'Correction Implementation'],
+            'AGENCY_PAPER_PREMIUM': ['Everything in Defense Ready', 'Video Explainer Script', 'Same-Day Revisions', 'Plagiarism Report < 10%', 'Dedicated Project Manager'],
+            'AGENCY_CODE_GO': ['Source Code only', 'Database Schema', 'Setup Instructions', 'No Written Report'],
+            'AGENCY_DEFENSE_READY': ['Complete Source Code & Database', 'Chapters 1-5 (Dossier Grade)', '2 Live Defense Mock Sessions', 'Priority Support'],
+            'AGENCY_SOFT_LIFE': ['Full "Do It For Me" Service', 'Code + Report + Slides', 'Unlimited Revisions', 'Guaranteed A-Grade Technical Audit', 'In-Person Deployment Help (Lagos/Abuja)']
+        }
     },
     // À la carte services - can be purchased on top of any plan
     ADD_ONS: [

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agency Signup Form Mockup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #8b5cf6;
+            --color-accent: #06b6d4;
+            --color-bg: #030014;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--color-bg);
+            color: white;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        .glow-box {
+            box-shadow: 0 0 40px -10px rgba(139, 92, 246, 0.3);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#030014',
+                        primary: '#8b5cf6',
+                        accent: '#06b6d4'
+                    },
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        sans: ['Outfit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Agency Signup Form Component -->
+    <div class="w-full max-w-lg glass-panel rounded-3xl p-8 relative overflow-hidden">
+        
+        <!-- Header / Tier Badge -->
+        <div class="flex items-center justify-between mb-8">
+            <h2 class="text-2xl font-display font-bold">Fast-Track Agency</h2>
+            <div class="px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-xs font-bold text-purple-400 uppercase tracking-wide">
+                Soft Life Package
+            </div>
+        </div>
+
+        <form class="space-y-6">
+            
+            <!-- Name -->
+            <div class="relative group">
+                <input type="text" placeholder=" " class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-4 outline-none focus:border-primary transition-colors peer text-white placeholder-transparent">
+                <label class="absolute left-4 top-4 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-4 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-primary peer-focus:bg-[#030014] peer-focus:px-2 pointer-events-none">
+                    Full Name
+                </label>
+            </div>
+
+            <!-- Email Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="relative group">
+                    <input type="email" placeholder=" " class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-4 outline-none focus:border-primary transition-colors peer text-white placeholder-transparent">
+                    <label class="absolute left-4 top-4 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-4 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-primary peer-focus:bg-[#030014] peer-focus:px-2 pointer-events-none">
+                        Email Address
+                    </label>
+                </div>
+                <div class="relative group">
+                    <input type="email" placeholder=" " class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-4 outline-none focus:border-primary transition-colors peer text-white placeholder-transparent">
+                    <label class="absolute left-4 top-4 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-4 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-primary peer-focus:bg-[#030014] peer-focus:px-2 pointer-events-none">
+                        Confirm Email
+                    </label>
+                </div>
+            </div>
+
+            <!-- WhatsApp -->
+            <div class="relative group">
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                    <i data-lucide="phone" class="w-4 h-4"></i>
+                </div>
+                <input type="tel" placeholder=" " class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-4 outline-none focus:border-primary transition-colors peer text-white placeholder-transparent">
+                <label class="absolute left-10 top-4 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-4 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-primary peer-focus:bg-[#030014] peer-focus:px-2 pointer-events-none">
+                    WhatsApp Number
+                </label>
+            </div>
+
+            <!-- Topic (Optional) -->
+            <div class="relative group">
+                <textarea rows="3" placeholder=" " class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-4 outline-none focus:border-primary transition-colors peer text-white placeholder-transparent resize-none"></textarea>
+                <label class="absolute left-4 top-4 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-4 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-primary peer-focus:bg-[#030014] peer-focus:px-2 pointer-events-none">
+                    Project Topic (Optional)
+                </label>
+                <p class="text-xs text-gray-500 mt-2 text-right">Leave blank if you want suggestions</p>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="button" class="w-full py-4 bg-primary text-white font-display font-bold uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all glow-box flex items-center justify-center gap-2">
+                Get Started
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+
+            <p class="text-center text-xs text-gray-500 mt-4">
+                We'll create an account for you securely.
+            </p>
+
+        </form>
+    </div>
+
+    <!-- Success State (Hidden by default, uncomment to preview) -->
+    <!--
+    <div class="w-full max-w-lg glass-panel rounded-3xl p-12 text-center relative overflow-hidden">
+        <div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-green-400">
+            <i data-lucide="check-circle-2" class="w-10 h-10"></i>
+        </div>
+        <h2 class="text-2xl font-display font-bold mb-4">You're In!</h2>
+        <p class="text-gray-400 mb-8">
+            We've created your file. Click below to confirm details with J Star on WhatsApp.
+        </p>
+        <a href="#" class="w-full py-4 bg-[#25D366] text-white font-display font-bold uppercase tracking-wider rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-green-900/20 flex items-center justify-center gap-2">
+            <i data-lucide="message-circle" class="w-5 h-5"></i>
+            Open WhatsApp
+        </a>
+    </div>
+    -->
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

@@ -85,6 +85,10 @@ model Lead {
   status      String   @default("NEW")
   userId      String?
   anonymousId String?
+  tier        String?  // e.g., "AGENCY_SOFT_LIFE"
+  source      String   @default("JAY_CHAT") // "JAY_CHAT", "AGENCY_FORM", "DIRECT"
+  name        String?  // User's name (for leads without user accounts yet)
+  email       String?  // Email (for leads without user accounts yet)
 
   // Bolt: Add indexes for frequent lookups
   @@index([userId])

@@ -109,53 +109,53 @@ export class AiService {
         let reasoning: string[];
 
         if (lowerText.includes("crypto") || lowerText.includes("blockchain")) {
-            twist = "Blockchain-Based Fake News Detector";
+            twist = "Secure Peer-to-Peer Transaction System";
             complexity = 4;
             reasoning = [
-                "Leverages blockchain's immutable ledger for content verification",
-                "Addresses growing concerns about misinformation online",
-                "Combines cutting-edge technology with social impact"
+                "Focuses on security and decentralized data integrity",
+                "Addresses trust issues in digital transactions",
+                "Demonstrates advanced cryptographic implementation"
             ];
         } else if (lowerText.includes("hospital") || lowerText.includes("healthcare") || lowerText.includes("medical")) {
-            twist = "AI-Powered Patient Triage System";
+            twist = "Integrated Patient Record Management System";
             complexity = 3;
             reasoning = [
-                "Uses machine learning to prioritize patient care effectively",
-                "Addresses critical healthcare resource allocation challenges",
-                "Demonstrates practical AI application in life-saving scenarios"
+                "Streamlines hospital operations and data flow",
+                "Improves patient care through efficient record retrieval",
+                "Focuses on data privacy and system reliability"
             ];
         } else if (lowerText.includes("e-commerce") || lowerText.includes("shop") || lowerText.includes("marketplace")) {
-            twist = "Decentralized Marketplace with AI Recommendations";
-            complexity = 5;
-            reasoning = [
-                "Combines Web3 decentralization with intelligent recommendation systems",
-                "Addresses trust and personalization challenges in online marketplaces",
-                "Showcases advanced distributed systems knowledge"
-            ];
-        } else if (lowerText.includes("education") || lowerText.includes("learning") || lowerText.includes("school")) {
-            twist = "Adaptive Learning Platform with Real-time Analytics";
+            twist = "Hyper-Local Marketplace with Logistics Tracking";
             complexity = 3;
             reasoning = [
-                "Personalizes education through AI-driven content adaptation",
-                "Provides valuable insights for educators and administrators",
-                "Addresses diverse learning needs in modern education"
+                "Solves last-mile delivery challenges in local markets",
+                "Integrates mapping and real-time tracking features",
+                "Directly impacts local economic activities"
+            ];
+        } else if (lowerText.includes("education") || lowerText.includes("learning") || lowerText.includes("school")) {
+            twist = "Offline-First Learning Management System";
+            complexity = 3;
+            reasoning = [
+                "Addresses internet connectivity challenges in schools",
+                "Ensures continuous access to educational resources",
+                "Demonstrates robust data synchronization techniques"
             ];
         } else if (lowerText.includes("banking") || lowerText.includes("finance") || lowerText.includes("payment")) {
-            twist = "Fraud Detection System using Machine Learning";
+            twist = "Automated Reconciliation & Reporting Engine";
             complexity = 4;
             reasoning = [
-                "Addresses critical security concerns in financial transactions",
-                "Demonstrates advanced data analysis and pattern recognition",
-                "Has significant real-world impact and industry relevance"
+                "Automates complex financial workflows",
+                "Reduces human error in critical calculations",
+                "Demonstrates enterprise-grade system architecture"
             ];
         } else {
             // Default fallback
-            twist = "Smart Campus IoT Attendance System";
+            twist = "Cloud-Native Management Portal";
             complexity = 3;
             reasoning = [
-                "Solves a real problem on campus with modern technology",
-                "Hardware + Software integration demonstrates comprehensive skills",
-                "Can be implemented with available campus infrastructure"
+                "Leverages modern cloud infrastructure for scalability",
+                "Focuses on user accessibility and responsiveness",
+                "Demonstrates full-stack development competency"
             ];
         }
 

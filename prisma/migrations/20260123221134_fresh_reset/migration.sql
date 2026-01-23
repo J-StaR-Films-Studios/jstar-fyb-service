@@ -70,6 +70,10 @@ CREATE TABLE "Lead" (
     "status" TEXT NOT NULL DEFAULT 'NEW',
     "userId" TEXT,
     "anonymousId" TEXT,
+    "tier" TEXT,
+    "source" TEXT NOT NULL DEFAULT 'JAY_CHAT',
+    "name" TEXT,
+    "email" TEXT,
 
     CONSTRAINT "Lead_pkey" PRIMARY KEY ("id")
 );
@@ -360,12 +364,20 @@ CREATE TABLE "Influencer" (
     "referralCode" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "commissionRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10,
+    "referralDiscount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
     "totalEarnings" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "pendingPayout" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "freeCredits" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "creditsUsed" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "bankName" TEXT,
+    "accountNumber" TEXT,
+    "accountName" TEXT,
+    "password" TEXT,
+    "lastLogin" TIMESTAMP(3),
+    "resetToken" TEXT,
+    "resetExpires" TIMESTAMP(3),
 
     CONSTRAINT "Influencer_pkey" PRIMARY KEY ("id")
 );
@@ -404,19 +416,64 @@ CREATE TABLE "DiscountCode" (
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
+CREATE INDEX "User_referredById_idx" ON "User"("referredById");
+
+-- CreateIndex
+CREATE INDEX "User_createdAt_idx" ON "User"("createdAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Session_token_key" ON "Session"("token");
+
+-- CreateIndex
+CREATE INDEX "Session_userId_idx" ON "Session"("userId");
+
+-- CreateIndex
+CREATE INDEX "Account_userId_idx" ON "Account"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Lead_whatsapp_key" ON "Lead"("whatsapp");
 
 -- CreateIndex
+CREATE INDEX "Lead_userId_idx" ON "Lead"("userId");
+
+-- CreateIndex
+CREATE INDEX "Lead_anonymousId_idx" ON "Lead"("anonymousId");
+
+-- CreateIndex
+CREATE INDEX "Conversation_userId_idx" ON "Conversation"("userId");
+
+-- CreateIndex
+CREATE INDEX "Conversation_anonymousId_idx" ON "Conversation"("anonymousId");
+
+-- CreateIndex
+CREATE INDEX "Message_conversationId_idx" ON "Message"("conversationId");
+
+-- CreateIndex
 CREATE INDEX "Project_userId_idx" ON "Project"("userId");
+
+-- CreateIndex
+CREATE INDEX "Project_anonymousId_idx" ON "Project"("anonymousId");
+
+-- CreateIndex
+CREATE INDEX "Project_updatedAt_idx" ON "Project"("updatedAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Payment_reference_key" ON "Payment"("reference");
 
 -- CreateIndex
 CREATE INDEX "Payment_userId_idx" ON "Payment"("userId");
+
+-- CreateIndex
+CREATE INDEX "Payment_projectId_idx" ON "Payment"("projectId");
+
+-- CreateIndex
+CREATE INDEX "Payment_discountCodeId_idx" ON "Payment"("discountCodeId");
+
+-- CreateIndex
+CREATE INDEX "Payment_createdAt_idx" ON "Payment"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "ResearchDocument_projectId_idx" ON "ResearchDocument"("projectId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ChapterOutline_projectId_key" ON "ChapterOutline"("projectId");
@@ -428,13 +485,31 @@ CREATE INDEX "Chapter_projectId_idx" ON "Chapter"("projectId");
 CREATE UNIQUE INDEX "Chapter_projectId_number_key" ON "Chapter"("projectId", "number");
 
 -- CreateIndex
+CREATE INDEX "ProjectMessage_projectId_idx" ON "ProjectMessage"("projectId");
+
+-- CreateIndex
 CREATE INDEX "ProjectDiagram_projectId_idx" ON "ProjectDiagram"("projectId");
 
 -- CreateIndex
 CREATE INDEX "ProjectConversation_projectId_threadType_idx" ON "ProjectConversation"("projectId", "threadType");
 
 -- CreateIndex
+CREATE INDEX "ProjectChatMessage_conversationId_idx" ON "ProjectChatMessage"("conversationId");
+
+-- CreateIndex
+CREATE INDEX "TopicSwitchRequest_userId_idx" ON "TopicSwitchRequest"("userId");
+
+-- CreateIndex
+CREATE INDEX "TopicSwitchRequest_projectId_idx" ON "TopicSwitchRequest"("projectId");
+
+-- CreateIndex
+CREATE INDEX "TopicSwitchRequest_createdAt_idx" ON "TopicSwitchRequest"("createdAt");
+
+-- CreateIndex
 CREATE INDEX "TopicSwitchArchive_projectId_idx" ON "TopicSwitchArchive"("projectId");
+
+-- CreateIndex
+CREATE INDEX "TopicSwitchArchive_requestId_idx" ON "TopicSwitchArchive"("requestId");
 
 -- CreateIndex
 CREATE INDEX "InAppNotification_userId_readAt_idx" ON "InAppNotification"("userId", "readAt");
@@ -453,6 +528,9 @@ CREATE UNIQUE INDEX "Influencer_referralCode_key" ON "Influencer"("referralCode"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Commission_paymentId_key" ON "Commission"("paymentId");
+
+-- CreateIndex
+CREATE INDEX "Commission_influencerId_idx" ON "Commission"("influencerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "DiscountCode_code_key" ON "DiscountCode"("code");

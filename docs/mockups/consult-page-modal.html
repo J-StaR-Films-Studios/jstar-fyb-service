@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consult Modal Interaction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --color-bg: #030014;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--color-bg);
+            color: white;
+            min-height: 100vh;
+            overflow: hidden;
+            /* Simulating modal open */
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: { colors: { dark: '#030014', primary: '#8b5cf6', accent: '#06b6d4' } }
+            }
+        }
+    </script>
+</head>
+
+<body class="relative">
+
+    <!-- Background Content (Blurred) -->
+    <div class="absolute inset-0 filter blur-sm opacity-50 pointer-events-none">
+        <div class="p-20 text-center">
+            <h1 class="text-6xl font-bold mb-8">Consult Page Background</h1>
+            <p>This is the existing content behind the modal.</p>
+        </div>
+    </div>
+
+    <!-- Modal Backdrop -->
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+
+        <!-- Modal Content (Question State) -->
+        <div
+            class="w-full max-w-2xl glass-panel rounded-3xl p-1 relative overflow-hidden animate-in fade-in zoom-in duration-300">
+
+            <button class="absolute top-4 right-4 text-gray-500 hover:text-white p-2">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+
+            <!-- Inner Layout -->
+            <div class="p-8 md:p-12 text-center">
+
+                <div
+                    class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-6">
+                    <i data-lucide="help-circle" class="w-8 h-8"></i>
+                </div>
+
+                <h2 class="text-3xl font-display font-bold mb-4 font-['Space_Grotesk']">
+                    Have you chosen a topic?
+                </h2>
+                <p class="text-gray-400 mb-10 max-w-md mx-auto leading-relaxed">
+                    To fast-track your onboarding, we need to know if you already have a refined project topic or if you
+                    need help brainstorming one.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <!-- Option A: Fast Track -->
+                    <button
+                        class="group relative flex flex-col items-center p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-primary/50 transition-all text-left">
+                        <div
+                            class="w-10 h-10 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i data-lucide="zap" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="font-bold text-lg mb-1">Yes, I'm Ready</h3>
+                        <p class="text-xs text-gray-500 text-center">I have a topic & description.</p>
+                        <div
+                            class="absolute inset-0 border-2 border-primary opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity">
+                        </div>
+                    </button>
+
+                    <!-- Option B: Chat -->
+                    <button
+                        class="group flex flex-col items-center p-6 rounded-2xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-left">
+                        <div
+                            class="w-10 h-10 rounded-full bg-gray-500/20 text-gray-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i data-lucide="message-circle" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="font-bold text-lg mb-1">Not Sure Yet</h3>
+                        <p class="text-xs text-gray-500 text-center">I need Jay's help to decide.</p>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

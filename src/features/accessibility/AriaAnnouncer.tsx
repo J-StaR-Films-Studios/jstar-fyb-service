@@ -7,15 +7,11 @@ export function useAnnouncer() {
   const announceRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (announcer) {
-      announcer = (message: string) => {
-        announceRef.current = message;
-      };
-    }
+    // This hook is a consumer, not the primary announcer.
+    // The cleanup does nothing useful as the comparison was invalid.
+    // Keeping effect for potential future use.
     return () => {
-      if (announcer === announceRef) {
-        announcer = null;
-      }
+      // No-op: AriaAnnouncer component handles the global announcer lifecycle.
     };
   }, []);
 

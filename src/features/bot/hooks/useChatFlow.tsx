@@ -22,13 +22,29 @@ import { Message, ChatState, ConfirmedTopic } from "./types";
 import { useChatPersistence } from "./useChatPersistence";
 import { useChatSync } from "./useChatSync";
 import { useChatToolHandlers, detectPhoneNumber } from "./useChatTools";
+import { useSearchParams } from "next/navigation";
+import { useBuilderStore } from "@/features/builder/store/useBuilderStore";
 
 // Re-export types for consumers (e.g. SuggestionChips)
 export type { Message, ChatState, ConfirmedTopic };
 
 
-export function useChatFlow(userId?: string) {
+export function useChatFlow(userId?: string, userName?: string) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const builderTopic = useBuilderStore(state => state.data.topic);
+
+    // Context Refs
+    const tierRef = useRef(searchParams.get('tier'));
+    const topicRef = useRef(builderTopic);
+    const userNameRef = useRef(userName);
+
+    // Update refs on render
+    useEffect(() => {
+        tierRef.current = searchParams.get('tier');
+        topicRef.current = builderTopic;
+        userNameRef.current = userName;
+    }, [searchParams, builderTopic, userName]);
 
     // Core State
     const [state, setState] = useState<ChatState>("INITIAL");
@@ -66,6 +82,11 @@ export function useChatFlow(userId?: string) {
             body.anonymousId = anonymousIdRef.current;
             body.conversationId = conversationIdRef.current;
             body.userId = userIdRef.current;
+
+            // Inject Context for Jay
+            body.tierContext = tierRef.current;
+            body.existingTopic = topicRef.current;
+            body.userName = userNameRef.current;
 
             return fetch(url, {
                 ...options,

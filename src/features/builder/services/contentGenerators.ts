@@ -38,11 +38,12 @@ export function generateTwistVariation(patterns: string[], index: number): strin
     if (patterns.length === 0) return '';
 
     const twistPatterns = [
-        'with Machine Learning Integration',
-        'using Blockchain Technology',
-        'with Real-time Analytics',
-        'featuring Cloud Computing',
-        'with IoT Integration'
+        'focused on User Experience Accessibility',
+        'optimized for Low-Bandwidth Environments',
+        'using Community-Driven Data Sources',
+        'with Real-time Notifications',
+        'featuring Cross-Platform Compatibility',
+        'automated with Smart Workflows'
     ];
 
     return twistPatterns[index % twistPatterns.length];

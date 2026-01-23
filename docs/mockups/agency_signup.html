@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J-Star Agency Signup Mockup</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: '#030014',
+                        primary: '#8b5cf6',
+                        accent: '#06b6d4',
+                        muted: '#94a3b8'
+                    },
+                    animation: {
+                        'float-slow': 'float 6s ease-in-out infinite',
+                        'pulse-glow': 'pulse-glow 2s infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        'pulse-glow': {
+                            '0%, 100%': { boxShadow: '0 0 10px rgba(139, 92, 246, 0.2)' },
+                            '50%': { boxShadow: '0 0 25px rgba(139, 92, 246, 0.5)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.05);
+            /* Slightly lighter than panel */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .glass-input:focus {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: #8b5cf6;
+            outline: none;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #c4b5fd, #a78bfa, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .bg-gradient-main {
+            background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+        }
+
+        /* Background Effects */
+        .bg-grid {
+            background-size: 50px 50px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+        }
+
+        .glow-orb {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%);
+            filter: blur(60px);
+            z-index: -1;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-dark text-white font-sans min-h-screen flex items-center justify-center relative overflow-x-hidden selection:bg-primary/30">
+
+    <!-- Background Elements -->
+    <div class="fixed inset-0 bg-grid pointer-events-none"></div>
+    <div class="glow-orb top-[-100px] left-[-100px] animate-pulse-glow"></div>
+    <div class="glow-orb bottom-[-100px] right-[-100px] bg-accent/20 animate-float-slow" style="animation-delay: 1s;">
+    </div>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-2xl px-4 py-8 relative z-10">
+
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="font-display text-4xl md:text-5xl font-bold mb-3 tracking-tight">
+                <span class="text-gradient">Agency Registration</span>
+            </h1>
+            <p class="text-muted text-lg">Let's build your dream project together.</p>
+        </header>
+
+        <!-- Form Card -->
+        <div class="glass-panel p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
+            <!-- Top Border Gradient -->
+            <div
+                class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500">
+            </div>
+
+            <form class="space-y-6">
+                <!-- Name -->
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-purple-200 ml-1">Full Name</label>
+                    <div class="relative">
+                        <i data-lucide="user"
+                            class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted transition-colors group-focus-within:text-primary"></i>
+                        <input type="text" placeholder="e.g. Bonsa Nemera"
+                            class="w-full pl-12 pr-4 py-3.5 rounded-xl glass-input placeholder:text-slate-600 font-medium" />
+                    </div>
+                </div>
+
+                <!-- Email Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-purple-200 ml-1">Email Address</label>
+                        <div class="relative">
+                            <i data-lucide="mail"
+                                class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"></i>
+                            <input type="email" placeholder="john@example.com"
+                                class="w-full pl-12 pr-4 py-3.5 rounded-xl glass-input placeholder:text-slate-600 font-medium" />
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-purple-200 ml-1">Confirm Email</label>
+                        <div class="relative">
+                            <i data-lucide="mail-check"
+                                class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"></i>
+                            <input type="email" placeholder="Confirm your email"
+                                class="w-full pl-12 pr-4 py-3.5 rounded-xl glass-input placeholder:text-slate-600 font-medium" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WhatsApp -->
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-purple-200 ml-1">WhatsApp Number</label>
+                    <div class="relative">
+                        <i data-lucide="phone" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"></i>
+                        <input type="tel" placeholder="+234 815 335 3131"
+                            class="w-full pl-12 pr-4 py-3.5 rounded-xl glass-input placeholder:text-slate-600 font-medium" />
+                    </div>
+                </div>
+
+                <!-- Dept -->
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-purple-200 ml-1">Department / Course</label>
+                    <div class="relative">
+                        <i data-lucide="graduation-cap"
+                            class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"></i>
+                        <input type="text" placeholder="e.g. Computer Science"
+                            class="w-full pl-12 pr-4 py-3.5 rounded-xl glass-input placeholder:text-slate-600 font-medium" />
+                    </div>
+                </div>
+
+                <!-- Topic (Optional) -->
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-purple-200 ml-1 flex justify-between">
+                        Project Topic
+                        <span class="text-xs text-muted font-normal bg-white/5 px-2 py-0.5 rounded-full">Optional</span>
+                    </label>
+                    <textarea placeholder="e.g. Administering people..." rows="2"
+                        class="w-full p-4 rounded-xl glass-input placeholder:text-slate-600 font-medium resize-none"></textarea>
+                    <p class="text-xs text-right text-muted pr-1">Leave blank for AI suggestions</p>
+                </div>
+
+                <!-- AI Analysis Card -->
+                <div class="mt-8 pt-6 border-t border-white/10 relative">
+                    <div class="flex items-center gap-2 mb-4 text-primary">
+                        <i data-lucide="sparkles" class="w-5 h-5 animate-pulse"></i>
+                        <span
+                            class="font-display font-bold tracking-wide text-sm bg-primary/10 px-3 py-1 rounded-full border border-primary/20">AI
+                            PROJECT ANALYSIS</span>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- Complexity Score -->
+                        <div>
+                            <div class="flex justify-between items-end mb-2">
+                                <span class="text-sm font-bold text-slate-300">COMPLEXITY SCORE</span>
+                                <span class="text-2xl font-bold font-display text-white">2<span
+                                        class="text-muted text-lg">/5</span></span>
+                            </div>
+                            <!-- Meter -->
+                            <div class="h-2 bg-white/5 rounded-full overflow-hidden flex gap-1">
+                                <div class="w-1/5 h-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]"></div>
+                                <div class="w-1/5 h-full bg-emerald-400/50"></div>
+                                <div class="w-1/5 h-full bg-white/5"></div>
+                                <div class="w-1/5 h-full bg-white/5"></div>
+                                <div class="w-1/5 h-full bg-white/5"></div>
+                            </div>
+                            <div
+                                class="flex justify-between mt-2 text-[10px] text-muted tracking-wider uppercase font-medium">
+                                <span>Basic</span>
+                                <span>Expert</span>
+                            </div>
+                        </div>
+
+                        <!-- Twist -->
+                        <div class="bg-black/20 rounded-xl p-4 border border-white/5">
+                            <label class="block text-xs font-bold text-accent mb-2 uppercase tracking-wider">Proposed
+                                Twist / Unique Angle</label>
+                            <p class="text-lg font-medium leading-relaxed font-display text-white/90">
+                                Integrate AI-powered people analytics to optimize workforce distribution.
+                            </p>
+                        </div>
+
+                        <!-- Extra Notes -->
+                        <div class="space-y-2">
+                            <input type="text" placeholder="Additional Notes"
+                                class="w-full px-4 py-3 rounded-xl glass-input placeholder:text-slate-600 font-medium text-sm bg-black/20" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="button"
+                    class="group relative w-full mt-8 overflow-hidden rounded-xl bg-gradient-main p-[1px] transition-all hover:scale-[1.01] hover:shadow-[0_0_40px_-10px_rgba(139,92,246,0.6)]">
+                    <div
+                        class="relative flex items-center justify-center gap-2 rounded-xl bg-dark/20 backdrop-blur-sm py-4 transition-all group-hover:bg-opacity-0">
+                        <span class="font-display text-lg font-bold tracking-wide text-white">GET STARTED</span>
+                        <i data-lucide="arrow-right"
+                            class="w-5 h-5 text-white transition-transform group-hover:translate-x-1"></i>
+                    </div>
+                    <!-- Shine Effect -->
+                    <div
+                        class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent group-hover:animate-[shimmer_1.5s_infinite]">
+                    </div>
+                </button>
+            </form>
+        </div>
+
+        <!-- Trust badge -->
+        <div
+            class="mt-8 text-center opacity-60 flex items-center justify-center gap-2 hover:opacity-100 transition-opacity cursor-default(0)">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+            <span class="text-xs text-slate-400">Secure 256-bit Encrypted Connection</span>
+        </div>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

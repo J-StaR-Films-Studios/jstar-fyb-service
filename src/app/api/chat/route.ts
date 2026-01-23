@@ -1,9 +1,8 @@
-import { createGroq } from '@ai-sdk/groq';
-import { streamText, stepCountIs } from 'ai';
+import { convertToModelMessages, streamText, stepCountIs } from 'ai';
 import { z } from 'zod';
-import { SYSTEM_PROMPT } from '@/features/bot/prompts/system';
+import { SYSTEM_PROMPT, buildJayPrompt } from '@/features/bot/prompts/system';
 import { validateService, getEnv } from '@/lib/env-validation';
-import { validateAndSanitizeMessage, MAX_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH as MAX_MSG_LEN_EXPORT } from '@/features/bot/utils/security';
+import { sanitizeInput, MAX_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH as MAX_MSG_LEN_EXPORT } from '@/features/bot/utils/security';
 import { chatTools } from '@/features/bot/tools/definitions';
 import { selectModel } from '@/lib/ai/router';
 import { Models } from '@/lib/ai/providers';
@@ -39,6 +38,10 @@ const chatSchema = z.object({
     trigger: z.string().optional(),
     modelOverride: z.string().optional(),
     quality: z.string().optional(),
+    // Context fields for Jay
+    tierContext: z.string().optional(),
+    existingTopic: z.string().optional(),
+    userName: z.string().optional(),
 }).passthrough();
 
 export async function POST(req: Request) {
@@ -51,24 +54,46 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ error: 'Invalid input', details: validation.error }), { status: 400 });
         }
 
-        const { messages, modelOverride, quality } = validation.data;
+        const { messages, modelOverride, quality, tierContext, existingTopic, userName } = validation.data;
 
         // Defensive check
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
             return new Response(JSON.stringify({ error: 'Messages array is required' }), { status: 400 });
         }
 
-        // Safely convert messages to model format with sanitization
-        const modelMessages = messages.map((m: any) => {
-            const textContent = validateAndSanitizeMessage(m);
-            return {
-                role: m.role as 'user' | 'assistant' | 'system',
-                content: textContent
-            };
-        }).filter((m: any) => m.content && m.content.trim() !== '');
+        // Build dynamic system prompt based on context
+        const dynamicSystemPrompt = buildJayPrompt({
+            tier: tierContext,
+            existingTopic: existingTopic,
+            userName: userName
+        });
+
+        // Convert to CoreMessage[] format (Vercel AI SDK v6)
+        const coreMessages = (messages as any).length > 0 ? await convertToModelMessages(messages as any) : [];
+
+        // Sanitize user content while preserving structure
+        const modelMessages = coreMessages.map(m => {
+            if (m.role === 'user') {
+                if (typeof m.content === 'string') {
+                    return { ...m, content: sanitizeInput(m.content) };
+                }
+                if (Array.isArray(m.content)) {
+                    return {
+                        ...m,
+                        content: m.content.map(p => {
+                            if (p.type === 'text') {
+                                return { ...p, text: sanitizeInput(p.text) };
+                            }
+                            return p;
+                        })
+                    };
+                }
+            }
+            return m;
+        });
 
         // Debug Log
-        console.log(`[Chat API] Processing ${modelMessages.length} messages. Last: "${modelMessages[modelMessages.length - 1]?.content?.slice(0, 50)}..."`);
+        console.log(`[Chat API] Processing ${modelMessages.length} messages.`);
 
         // Select model using Router
         const { model: selectedModel, modelId } = selectModel({
@@ -84,7 +109,7 @@ export async function POST(req: Request) {
             model: selectedModel,
             maxRetries: 3,
             stopWhen: stepCountIs(5),
-            system: SYSTEM_PROMPT,
+            system: dynamicSystemPrompt,
             messages: modelMessages as any,
             tools: chatTools as any,
             onFinish: async ({ text, toolCalls }: { text: string; toolCalls: any[] }) => {

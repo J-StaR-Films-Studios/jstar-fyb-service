@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { AgencySignupModal } from '@/features/agency/components/AgencySignupModal';
 import { OriginalVariant, MorphingVariant, GridVariant, HybridVariant } from './variants';
 
 const VARIANTS = [OriginalVariant, GridVariant, HybridVariant, MorphingVariant];
@@ -31,11 +33,35 @@ function getVariantIndex(): number {
 }
 
 export default function ConsultPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-dark flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+        }>
+            <ConsultPageContent />
+        </Suspense>
+    );
+}
+
+function ConsultPageContent() {
     const [variantIndex, setVariantIndex] = useState<number | null>(null);
+    const searchParams = useSearchParams();
+    const tierId = searchParams.get('tier');
+    const priceStr = searchParams.get('price');
+    const typeStr = searchParams.get('type');
+
+    // Derived state for modal
+    const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
         setVariantIndex(getVariantIndex());
-    }, []);
+
+        // Show modal if tier is present in URL
+        if (tierId) {
+            setShowModal(true);
+        }
+    }, [tierId]);
 
     // While loading, show nothing (or a skeleton)
     if (variantIndex === null) {
@@ -46,6 +72,25 @@ export default function ConsultPage() {
         );
     }
 
+    const tierDef = tierId ? {
+        id: tierId,
+        label: decodeURIComponent(tierId || '').replace('AGENCY_', '').replace(/_/g, ' '), // Basic cleaner
+        price: priceStr ? Number(priceStr) : 0,
+        type: (typeStr === 'paper' ? 'paper' : 'software') as 'paper' | 'software'
+    } : null;
+
     const VariantComponent = VARIANTS[variantIndex];
-    return <VariantComponent />;
+
+    return (
+        <>
+            {tierDef && (
+                <AgencySignupModal
+                    open={showModal}
+                    onClose={() => setShowModal(false)}
+                    tier={tierDef}
+                />
+            )}
+            <VariantComponent />
+        </>
+    );
 }

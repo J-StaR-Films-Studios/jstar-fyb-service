@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { magicLink } from "better-auth/plugins";
 
 // CRITICAL SECURITY FIX: Enhanced environment validation schema with runtime validation
 const envSchema = z.object({
@@ -51,6 +52,16 @@ export const auth = betterAuth({
     }),
     emailAndPassword: {
         enabled: true,
+        password: {
+            hash: async (password: string) => {
+                const { hash } = await import("bcryptjs");
+                return await hash(password, 10);
+            },
+            verify: async ({ password, hash }: { password: string; hash: string }) => {
+                const { compare } = await import("bcryptjs");
+                return await compare(password, hash);
+            }
+        }
     },
     socialProviders: {
         google: {
@@ -70,4 +81,26 @@ export const auth = betterAuth({
     csrf: {
         enabled: true,
     },
+    plugins: [
+        magicLink({
+            sendMagicLink: async ({ email, token, url }) => {
+                const { Resend } = await import("resend");
+                const resend = new Resend(process.env.RESEND_API_KEY);
+
+                console.log(`[Auth] Sending Magic Link to ${email}`);
+
+                await resend.emails.send({
+                    from: process.env.RESEND_FROM_EMAIL || "J-Star Projects <onboarding@resend.dev>",
+                    to: email,
+                    subject: "Sign in to J-Star FYB Service",
+                    html: `
+                        <h1>Log in to your account</h1>
+                        <p>Click the link below to sign in:</p>
+                        <a href="${url}">Sign In</a>
+                        <p>If you didn't request this, just ignore it.</p>
+                    `
+                });
+            },
+        }),
+    ],
 });

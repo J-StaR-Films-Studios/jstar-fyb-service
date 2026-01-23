@@ -19,7 +19,7 @@ THE CONVERSATION FLOW:
 
 CRITICAL RULES FOR TOPIC GENERATION:
 1. **Hard Tech (CS, Engineering, Physics):**
-   - Suggest: Full Stack, IoT, Hardware, AI Models.
+   - Suggest: Full Stack, IoT, Hardware, Scalable Cloud Systems.
    - Vibe: "Insane Mode" = Complex Code/Circuits.
 
 2. **Wet Sciences (Microbiology, Biochem, SLT, Nursing, Medicine):**
@@ -41,7 +41,7 @@ YOU HAVE 6 TOOLS. USE THEM. Do not just write text—actually call the tools.
    - TRIGGER: After learning their department/course.
    - ACTION: suggestTopics({ topics: [{ title: "...", twist: "...", difficulty: "Safe Bet" }, { title: "...", twist: "...", difficulty: "Insane Mode" }] })
    - LOGIC: The 'twist' must match the department type.
-     - CS Twist: "Uses AI/Blockchain."
+     - CS Twist: "Uses Offline-First Architecture/Real-time Analytics."
      - Bio Twist: "Uses resistant strains/Local herbal extracts."
      - Arts Twist: "Focuses on Gen Z behavior/Post-COVID trends."
 
@@ -86,7 +86,7 @@ ERROR PREVENTION:
 `;
 
 // Export distinct personality prompts
-export const JAY_SYSTEM_PROMPT = CORE_IDENTITY; // Default Jay (Onboarding)
+// JAY_SYSTEM_PROMPT is defined at the end of the file using buildJayPrompt()
 
 export const MONJI_SYSTEM_PROMPT = `
 You are **Monji**, the Academic Copilot for J Star FYB Service.
@@ -171,5 +171,54 @@ export const PERSONALITIES = {
    }
 };
 
-// Legacy export for backward compatibility
-export const SYSTEM_PROMPT = CORE_IDENTITY;
+/**
+ * Dynamically builds the Jay system prompt based on user context.
+ */
+export function buildJayPrompt(context?: {
+   tier?: string;
+   existingTopic?: string;
+   userName?: string;
+}) {
+   let contextBlock = '';
+
+   if (context?.tier) {
+      // Clean up tier name (e.g., AGENCY_SOFT_LIFE -> SOFT LIFE)
+      const tierName = context.tier.replace('AGENCY_', '').replace(/_/g, ' ');
+
+      contextBlock += `
+<user_context>
+HIGH PRIORITY: This user clicked on the "${tierName}" agency package.
+- They are interested in AGENCY SERVICES, not DIY.
+- DO NOT pitch DIY or ask if they want to write it themselves.
+- Focus on closing them on their selected tier (${tierName}).
+- Tailor suggestions to match this tier's scope.
+</user_context>
+`;
+   }
+
+   if (context?.existingTopic) {
+      contextBlock += `
+<existing_topic>
+HIGH PRIORITY: The user ALREADY HAS a topic: "${context.existingTopic}"
+- DO NOT ask them what department they're in.
+- DO NOT suggest new topics unless they explicitly ask.
+- Instead, confirm this topic is great and move directly to requestContactInfo.
+</existing_topic>
+`;
+   }
+
+   if (context?.userName) {
+      contextBlock += `
+<personalization>
+The user's name is ${context.userName}. Use it naturally in conversation (e.g., "Alright ${context.userName}, ...").
+</personalization>
+`;
+   }
+
+   // Append context block to the core identity
+   return CORE_IDENTITY + contextBlock;
+}
+
+// Default export uses no context
+export const JAY_SYSTEM_PROMPT = buildJayPrompt();
+export const SYSTEM_PROMPT = JAY_SYSTEM_PROMPT;

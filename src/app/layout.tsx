@@ -8,6 +8,7 @@ import { Toaster } from "sonner";
 import { ReferralListener } from "@/features/referral/components/ReferralListener";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
 import { SkipLink } from "@/features/accessibility/SkipLink";
+import { PasswordPromptDialog } from "@/features/auth/components/PasswordPromptDialog";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -73,6 +74,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <SupportProviderClient>
             <div id="main-content">{children}</div>
+            <PasswordPromptDialog />
           </SupportProviderClient>
         </ErrorBoundary>
         <OfflineIndicator />

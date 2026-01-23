@@ -30,7 +30,7 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
     const { data: session } = useSession();
     // Prioritize session user if available (client update), otherwise fallback to server passed user
     const user = session?.user || initialUser;
-    const { messages, state, complexity, isLoading, confirmedTopic, hasProvidedPhone, error, regenerate, handleUserMessage, handleAction, handleSelectTopic, proceedToBuilder, clearChat, anonymousId } = useChatFlow(user?.id);
+    const { messages, state, complexity, isLoading, confirmedTopic, hasProvidedPhone, error, regenerate, handleUserMessage, handleAction, handleSelectTopic, proceedToBuilder, clearChat, anonymousId } = useChatFlow(user?.id, user?.name);
     const [inputValue, setInputValue] = useState("");
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [showCollective, setShowCollective] = useState(false);
