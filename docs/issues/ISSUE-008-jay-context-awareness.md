@@ -110,13 +110,13 @@ body: JSON.stringify({
 
 ## Acceptance Criteria
 
-- [ ] `buildJayPrompt` function accepts context object
-- [ ] Tier context injected when present
-- [ ] Topic context injected when user has existing project
-- [ ] Jay skips department discovery if tier known
-- [ ] Jay skips topic suggestions if topic provided
-- [ ] Jay uses user's name if available
-- [ ] Fallback to standard prompt if no context
+- [x] `buildJayPrompt` function accepts context object
+- [x] Tier context injected when present
+- [x] Topic context injected when user has existing project
+- [x] Jay skips department discovery if tier known
+- [x] Jay skips topic suggestions if topic provided
+- [x] Jay uses user's name if available
+- [x] Fallback to standard prompt if no context
 
 ## Testing Scenarios
 

@@ -23,9 +23,9 @@ model Lead {
 
 ## Acceptance Criteria
 
-- [ ] Prisma schema updated with new fields
-- [ ] Migration created and applied: `pnpm prisma migrate dev --name add_lead_tier_source`
-- [ ] Prisma client regenerated
+- [x] Prisma schema updated with new fields
+- [x] Migration created and applied: `pnpm prisma migrate dev --name add_lead_tier_source`
+- [x] Prisma client regenerated
 - [ ] No breaking changes to existing lead capture flow
 - [ ] Admin leads page displays tier badge (if present)
 

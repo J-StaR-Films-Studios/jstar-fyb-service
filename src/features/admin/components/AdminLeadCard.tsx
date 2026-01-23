@@ -3,6 +3,8 @@
 import { MessageCircle, Phone, Clock } from "lucide-react"; // WhatsApp icon usually custom or MessageCircle
 import { SendPaymentLinkButton } from "./SendPaymentLinkButton";
 
+// ... imports
+
 interface Lead {
     id: string;
     whatsapp: string;
@@ -11,7 +13,29 @@ interface Lead {
     twist: string;
     complexity: number;
     status: string;
+    tier?: string | null;
     createdAt: Date | string;
+}
+
+function TierBadge({ tier }: { tier: string | null | undefined }) {
+    if (!tier) return null;
+
+    const colors: Record<string, string> = {
+        'AGENCY_SOFT_LIFE': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+        'AGENCY_DEFENSE_READY': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+        'AGENCY_CODE_GO': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        'AGENCY_PAPER_PREMIUM': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+        'AGENCY_PAPER_DEFENSE': 'bg-green-500/20 text-green-400 border-green-500/30',
+        'AGENCY_PAPER_EXPRESS': 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    };
+
+    const tierLabel = tier.replace('AGENCY_', '').replace(/_/g, ' ');
+
+    return (
+        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border my-2 inline-block ${colors[tier] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+            {tierLabel}
+        </span>
+    );
 }
 
 export function AdminLeadCard({ lead }: { lead: Lead }) {
@@ -31,13 +55,14 @@ export function AdminLeadCard({ lead }: { lead: Lead }) {
                             {new Date(lead.createdAt).toLocaleDateString()}
                         </span>
                     </div>
-                    <h3 className="font-display font-bold text-lg leading-tight line-clamp-2" title={lead.topic}>
+                    <TierBadge tier={lead.tier} />
+                    <h3 className="font-display font-bold text-lg leading-tight line-clamp-2 mt-1" title={lead.topic}>
                         {lead.topic}
                     </h3>
                 </div>
                 <span className={`px-2 py-1 rounded text-xs font-bold border ${lead.status === 'NEW' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                        lead.status === 'SOLD' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                            'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                    lead.status === 'SOLD' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                        'bg-gray-500/20 text-gray-400 border-gray-500/30'
                     }`}>
                     {lead.status}
                 </span>

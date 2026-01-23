@@ -5,6 +5,27 @@ import { AdminLeadCard } from '@/features/admin/components/AdminLeadCard';
 import { SendPaymentLinkButton } from '@/features/admin/components/SendPaymentLinkButton';
 import { MessageCircle, Phone, TrendingUp, Users, AlertCircle } from 'lucide-react';
 
+function TierBadge({ tier }: { tier: string | null }) {
+    if (!tier) return <span className="text-gray-500 text-xs text-muted-foreground">Via Jay</span>;
+
+    const colors: Record<string, string> = {
+        'AGENCY_SOFT_LIFE': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+        'AGENCY_DEFENSE_READY': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+        'AGENCY_CODE_GO': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        'AGENCY_PAPER_PREMIUM': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+        'AGENCY_PAPER_DEFENSE': 'bg-green-500/20 text-green-400 border-green-500/30',
+        'AGENCY_PAPER_EXPRESS': 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    };
+
+    const tierLabel = tier.replace('AGENCY_', '').replace(/_/g, ' ');
+
+    return (
+        <span className={`px-2 py-1 rounded text-xs font-bold border whitespace-nowrap ${colors[tier] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+            {tierLabel}
+        </span>
+    );
+}
+
 export const dynamic = 'force-dynamic';
 
 async function getStats() {
@@ -87,6 +108,7 @@ export default async function AdminLeadsPage(props: { searchParams: Promise<{ pa
                             <tr>
                                 <th className="p-4">Time</th>
                                 <th className="p-4">Contact</th>
+                                <th className="p-4">Tier</th>
                                 <th className="p-4">Idea</th>
                                 <th className="p-4">Complexity</th>
                                 <th className="p-4">Status</th>
@@ -108,6 +130,9 @@ export default async function AdminLeadsPage(props: { searchParams: Promise<{ pa
                                         <td className="p-4">
                                             <div className="font-mono text-accent">{lead.whatsapp}</div>
                                             <div className="text-xs text-muted-foreground">{lead.department}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            <TierBadge tier={lead.tier} />
                                         </td>
                                         <td className="p-4 max-w-sm">
                                             <div className="font-bold text-sm truncate" title={lead.topic}>{lead.topic}</div>

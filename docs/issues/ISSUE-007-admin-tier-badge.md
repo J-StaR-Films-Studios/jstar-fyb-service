@@ -59,11 +59,11 @@ Add column after "Complexity":
 
 ## Acceptance Criteria
 
-- [ ] Tier column visible in desktop table
-- [ ] Tier badge visible on mobile cards
-- [ ] Leads without tier show "Via Jay" or similar
-- [ ] Color coding matches tier hierarchy
-- [ ] Badge text is human-readable (not raw ID)
+- [x] Tier column visible in desktop table
+- [x] Tier badge visible on mobile cards
+- [x] Leads without tier show "Via Jay" or similar
+- [x] Color coding matches tier hierarchy
+- [x] Badge text is human-readable (not raw ID)
 
 ## Dependencies
 

@@ -45,15 +45,15 @@ interface AgencySignupModalProps {
 
 ## Acceptance Criteria
 
-- [ ] Modal appears on mount when tier param present
-- [ ] Question screen shows first with two clear options
-- [ ] "Yes" transitions to form view within modal
-- [ ] "No" closes modal completely
-- [ ] Click outside modal closes it
-- [ ] ESC key closes modal
-- [ ] Smooth fade/slide animation
-- [ ] Mobile-friendly (full-screen on small devices)
-- [ ] Form success state shows within modal
+- [x] Modal appears on mount when tier param present
+- [x] Question screen shows first with two clear options
+- [x] "Yes" transitions to form view within modal
+- [x] "No" closes modal completely
+- [x] Click outside modal closes it
+- [x] ESC key closes modal
+- [x] Smooth fade/slide animation
+- [x] Mobile-friendly (full-screen on small devices)
+- [x] Form success state shows within modal
 
 ## Dependencies
 

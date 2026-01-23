@@ -72,12 +72,12 @@ export default function ConsultPage() {
 
 ## Acceptance Criteria
 
-- [ ] Modal appears when `?tier=` param is present
-- [ ] Modal does NOT appear for direct `/project/consult` visits
-- [ ] Modal closes on dismiss, variant content visible
-- [ ] Variant rotation logic unchanged
-- [ ] No layout shift when modal appears
-- [ ] Works with all 4 existing variants
+- [x] Modal appears when `?tier=` param is present
+- [x] Modal does NOT appear for direct `/project/consult` visits
+- [x] Modal closes on dismiss, variant content visible
+- [x] Variant rotation logic unchanged
+- [x] No layout shift when modal appears
+- [x] Works with all 4 existing variants
 
 ## Dependencies
 

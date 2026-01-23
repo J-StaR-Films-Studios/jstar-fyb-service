@@ -46,12 +46,12 @@ const AgencySignupSchema = z.object({
 
 ## Acceptance Criteria
 
-- [ ] Server action created with proper Zod validation
-- [ ] Email confirmation check (email === confirmEmail)
-- [ ] User created via Better Auth if not exists
-- [ ] Lead created with tier, source="AGENCY_FORM", name, email
+- [x] Server action created with proper Zod validation
+- [x] Email confirmation check (email === confirmEmail)
+- [x] User created via Better Auth if not exists
+- [x] Lead created with tier, source="AGENCY_FORM", name, email
 - [ ] Discord webhook notification sent
-- [ ] WhatsApp URL generated with pre-filled message
+- [x] WhatsApp URL generated with pre-filled message
 - [ ] Error handling for duplicate emails, validation failures
 
 ## Dependencies

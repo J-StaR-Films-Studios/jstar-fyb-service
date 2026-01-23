@@ -45,15 +45,15 @@ interface AgencySignupFormProps {
 
 ## Acceptance Criteria
 
-- [ ] Form renders all required fields
-- [ ] Real-time validation with visual feedback
-- [ ] Confirm email must match email (show error if mismatch)
-- [ ] WhatsApp field accepts only digits
-- [ ] Tier info displayed at top of form
-- [ ] Submit calls `agencySignupAction`
-- [ ] Success state shows prominent WhatsApp button
-- [ ] Mobile-responsive design
-- [ ] Matches existing glass-panel design system
+- [x] Form renders all required fields
+- [x] Real-time validation with visual feedback
+- [x] Confirm email must match email (show error if mismatch)
+- [x] WhatsApp field accepts only digits
+- [x] Tier info displayed at top of form
+- [x] Submit calls `agencySignupAction`
+- [x] Success state shows prominent WhatsApp button
+- [x] Mobile-responsive design
+- [x] Matches existing glass-panel design system
 
 ## Dependencies
 

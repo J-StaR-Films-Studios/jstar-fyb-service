@@ -56,14 +56,14 @@ export default function AgencySignupPage() {
 
 ## Acceptance Criteria
 
-- [ ] Route accessible at `/agency/signup`
-- [ ] Page renders AgencySignupForm component
-- [ ] Tier info extracted from URL params
-- [ ] No tier param shows tier selector
-- [ ] Tier selector allows choosing from PRICING_CONFIG.AGENCY options
-- [ ] Mobile-responsive layout
-- [ ] Consistent with marketing page styling
-- [ ] Back link to homepage or pricing
+- [x] Route accessible at `/agency/signup`
+- [x] Page renders AgencySignupForm component
+- [x] Tier info extracted from URL params
+- [x] No tier param shows tier selector
+- [x] Tier selector allows choosing from PRICING_CONFIG.AGENCY options
+- [x] Mobile-responsive layout
+- [x] Consistent with marketing page styling
+- [x] Back link to homepage or pricing
 
 ## Dependencies
 
