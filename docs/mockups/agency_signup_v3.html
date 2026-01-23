@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J-Star Agency Signup Mockup v3</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: '#030014',
+                        primary: '#8b5cf6',
+                        accent: '#06b6d4',
+                        muted: '#94a3b8'
+                    },
+                    animation: {
+                        'float-slow': 'float 6s ease-in-out infinite',
+                        'pulse-glow': 'pulse-glow 2s infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        'pulse-glow': {
+                            '0%, 100%': { boxShadow: '0 0 10px rgba(139, 92, 246, 0.2)' },
+                            '50%': { boxShadow: '0 0 25px rgba(139, 92, 246, 0.5)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .glass-input:focus {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: #8b5cf6;
+            outline: none;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #c4b5fd, #a78bfa, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .bg-gradient-main {
+            background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+        }
+
+        .bg-grid {
+            background-size: 50px 50px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-dark text-white font-sans min-h-screen flex items-center justify-center relative overflow-x-hidden selection:bg-primary/30 py-8">
+
+    <!-- Background -->
+    <div class="fixed inset-0 bg-grid pointer-events-none"></div>
+
+    <main class="w-full max-w-lg relative z-10 px-4">
+
+        <!-- Header -->
+        <header class="text-center mb-6">
+            <h1 class="font-display text-3xl font-bold mb-1 tracking-tight">
+                <span class="text-gradient">Agency Registration</span>
+            </h1>
+        </header>
+
+        <!-- Form Card -->
+        <div class="glass-panel p-6 rounded-2xl shadow-2xl relative overflow-hidden group">
+            <div
+                class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500">
+            </div>
+
+            <form class="space-y-4">
+                <!-- Name -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-purple-200 ml-1">Full Name</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"></i>
+                        <input type="text" placeholder="e.g. Bonsa Nemera"
+                            class="w-full pl-10 pr-3 py-2.5 rounded-lg glass-input placeholder:text-slate-600 font-medium text-sm" />
+                    </div>
+                </div>
+
+                <!-- Email Grid -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-medium text-purple-200 ml-1">Email</label>
+                        <div class="relative">
+                            <i data-lucide="mail"
+                                class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"></i>
+                            <input type="email" placeholder="john@example.com"
+                                class="w-full pl-10 pr-3 py-2.5 rounded-lg glass-input placeholder:text-slate-600 font-medium text-sm" />
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-medium text-purple-200 ml-1">Confirm</label>
+                        <div class="relative">
+                            <i data-lucide="mail-check"
+                                class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"></i>
+                            <input type="email" placeholder="Confirm email"
+                                class="w-full pl-10 pr-3 py-2.5 rounded-lg glass-input placeholder:text-slate-600 font-medium text-sm" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WhatsApp -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-purple-200 ml-1">WhatsApp</label>
+                    <div class="relative">
+                        <i data-lucide="phone" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"></i>
+                        <input type="tel" placeholder="+234 815 335 3131"
+                            class="w-full pl-10 pr-3 py-2.5 rounded-lg glass-input placeholder:text-slate-600 font-medium text-sm" />
+                    </div>
+                </div>
+
+                <!-- Dept -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-purple-200 ml-1">Department</label>
+                    <div class="relative">
+                        <i data-lucide="graduation-cap"
+                            class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"></i>
+                        <input type="text" placeholder="e.g. Computer Science"
+                            class="w-full pl-10 pr-3 py-2.5 rounded-lg glass-input placeholder:text-slate-600 font-medium text-sm" />
+                    </div>
+                </div>
+
+                <!-- Project Topic -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-purple-200 ml-1 flex justify-between items-center">
+                        Project Topic
+                        <span
+                            class="text-[10px] text-muted font-normal bg-white/5 px-2 py-0.5 rounded-full">Optional</span>
+                    </label>
+                    <textarea placeholder="e.g. Administering people..." rows="2"
+                        class="w-full p-3 rounded-lg glass-input placeholder:text-slate-600 font-medium resize-none text-sm"></textarea>
+                </div>
+
+                <!-- AI Section (Compact) -->
+                <div class="mt-6 pt-4 border-t border-white/10">
+                    <!-- Header + Badge Row -->
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2 text-primary">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span class="font-display font-bold tracking-wide text-xs">AI ANALYSIS</span>
+                        </div>
+
+                        <!-- Complexity Badge (Interactive Demo) -->
+                        <div
+                            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                            <span>COMPLEXITY: 2/5</span>
+                            <span class="w-1 h-1 rounded-full bg-emerald-400"></span>
+                            <span>BASIC</span>
+                        </div>
+                    </div>
+
+                    <!-- Twist Section (Moved Up) -->
+                    <div class="bg-black/20 rounded-lg p-3 border border-white/5 mb-3">
+                        <label
+                            class="block text-[10px] font-bold text-accent mb-1 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="lightbulb" class="w-3 h-3"></i>
+                            Proposed Twist
+                        </label>
+                        <p class="text-sm font-medium leading-relaxed font-display text-white/90">
+                            Integrate AI-powered people analytics to optimize workforce distribution.
+                        </p>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="space-y-1.5">
+                        <input type="text" placeholder="Additional Notes"
+                            class="w-full px-3 py-2.5 rounded-lg glass-input placeholder:text-slate-600 font-medium text-sm bg-black/20" />
+                    </div>
+                </div>
+
+                <!-- CTA -->
+                <button type="button"
+                    class="group relative w-full mt-6 overflow-hidden rounded-xl bg-gradient-main p-[1px] transition-all hover:scale-[1.01]">
+                    <div
+                        class="relative flex items-center justify-center gap-2 rounded-xl bg-dark/20 backdrop-blur-sm py-3 transition-all group-hover:bg-opacity-0">
+                        <span class="font-display text-base font-bold tracking-wide text-white">GET STARTED</span>
+                        <i data-lucide="arrow-right"
+                            class="w-4 h-4 text-white transition-transform group-hover:translate-x-1"></i>
+                    </div>
+                </button>
+            </form>
+        </div>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

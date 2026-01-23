@@ -112,14 +112,18 @@ useEffect(() => {
 
 ## Acceptance Criteria
 
-- [ ] Complexity selector (1-5) added to form
-- [ ] Twist field (text) added to form  
-- [ ] Notes field (textarea) added to form
-- [ ] Auto-analyze triggers on topic blur (debounced 500ms)
-- [ ] Loading indicator during analysis
-- [ ] User can override AI suggestions
-- [ ] Form still works if AI fails (graceful degradation)
-- [ ] All new fields passed to agencySignupAction
+- [x] Complexity selector (1-5) added to form
+- [x] Twist field (text) added to form  
+- [x] Notes field (textarea) added to form
+- [x] Auto-analyze triggers on topic blur (debounced 500ms/800ms)
+- [x] Loading indicator during analysis
+- [x] User can override AI suggestions
+- [x] Form still works if AI fails (graceful degradation)
+- [x] All new fields passed to agencySignupAction
+
+## Implementation Status
+**Status:** ✅ Completed
+**Method:** Implemented in `src/features/agency/components/AgencySignupForm.tsx`. Uses `use-debounce` (800ms) and connects to `/api/analyze-topic`. AI suggestions populate form state which can be overridden.
 
 ## Dependencies
 

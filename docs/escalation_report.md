@@ -1,319 +1,219 @@
 # Escalation Handoff Report
 
-**Generated:** 2026-01-11T05:25:00+01:00
-**Original Issue:** OpenRouter Web Search Plugin not triggering/billing correctly.
+> [!CHECK] **RESOLVED**
+> **Fixed By:** Senior AI Orchestrator
+> **Date:** 2026-01-23
+> **Action:** Implemented "Shadow User" creation logic in `route.ts`. Now creates a stub user if `userId` is missing, preventing P2003 errors.
+
+**Generated:** 2026-01-23 20:30:00
+**Original Issue:** P2003 Foreign Key Constraint Violation in `/api/admin/leads/[id]/send-payment-link`
 
 ---
 
 ## PART 1: THE DAMAGE REPORT
 
 ### 1.1 Original Goal
-Enable "Standard Research" mode to use OpenRouter's "Web Search" capability (via Exa) to find academic papers. The goal was to ensure the AI *actually* searches the web and that OpenRouter billing reflects "Search" tool usage.
+The user (or admin) triggered a "Send Payment Link" action for a Lead (Agency Signup). The goal was to generate a Paystack payment link and record a pending payment in the database.
 
 ### 1.2 Observed Failure / Error
-*   **Symptom:** The user reports "still no billing on the open router side" and "it's not using the search tool".
-*   **Ambiguity:** The user also says "we got results back though", but implies they might be hallucinated or the links are unclickable (though `DocumentUpload.tsx` links were fixed, the "results" in the modal might use a different component or the links returned are garbage/hallucinated).
-*   **Root Cause Suspect:** The manual fetch implementation for OpenRouter might still not be correctly formatted for their specific "plugin" architecture, OR the model `gpt-4o-mini` (mapped to `Models.FREE.GPT_OSS_120B` or similar) doesn't support the `plugins` parameter as expected in this context, even though documentation suggests it does.
+The Backend API crashed with a 500 error due to a Prisma Constraint Violation.
+
+```text
+[SendPaymentLink] Error: Error [PrismaClientKnownRequestError]:
+Invalid `prisma.payment.create()` invocation in
+C:\CreativeOS\...\send-payment-link\route.ts:596:168
+
+Foreign key constraint violated: `Payment_userId_fkey (index)`
+code: 'P2003'
+```
 
 ### 1.3 Failed Approach
-1.  **Vercel AI SDK (`generateObject`):** Tried using `useChat` and `generateObject` with `:online` suffix. Result: Unreliable plugin activation.
-2.  **Manual Fetch:** Reverted to a direct `fetch` call to `https://openrouter.ai/api/v1/chat/completions` with explicit `plugins: [{ id: "web", engine: "exa" }]` in the body. Result: User still reports no billing/tool usage.
+The code attempts to create a `Payment` record. Since Agency Leads often do not have a registered `User` account yet, the code falls back to a hardcoded string `"ADMIN_LINK_PENDING"` for the `userId` field.
+
+```typescript
+// src/app/api/admin/leads/[id]/send-payment-link/route.ts:87
+userId: userId || project.userId || "ADMIN_LINK_PENDING", 
+```
+
+However, the Prisma Schema defines `Payment.userId` as a mandatory foreign key pointing to the `User` table. Since no user exists with ID `"ADMIN_LINK_PENDING"`, the database rejects the insert.
 
 ### 1.4 Key Files Involved
-- `src/features/research/services/researchService.ts` (Core logic for search)
-- `src/features/research/components/ResearchModal.tsx` (UI for triggering search)
-- `src/app/api/documents/upload/route.ts` (Fixed: Link downloading works here)
+- `src/app/api/admin/leads/[id]/send-payment-link/route.ts`
+- `prisma/schema.prisma`
 
 ### 1.5 Best-Guess Diagnosis
-OpenRouter's "Web Search" plugin might require a specific model class or a different API structure than the standard OpenAI-compatible chat completion body we are sending. Alternatively, the "Results" the user sees are just the model's training data (hallucinations), explaining why the plugin isn't billed.
+The `Payment` model requires a valid `User` reference. The developer assumed they could use a placeholder string like `"ADMIN_LINK_PENDING"`, but this violates referential integrity. 
+
+**Fix Options:**
+1.  **Schema Change:** Make `Payment.userId` nullable (`String?`) to allow anonymous payments.
+2.  **Data Fix:** Create a rigid "System User" in the DB with ID `"ADMIN_LINK_PENDING"` to catch these orphan payments.
+3.  **Logic Fix:** Create a shadow/stub User account for the Lead immediately before creating the payment.
 
 ---
 
 ## PART 2: FULL FILE CONTENTS (Self-Contained)
 
-### File: `src/features/research/services/researchService.ts`
+### File: `src/app/api/admin/leads/[id]/send-payment-link/route.ts`
 ```typescript
-import { generateObject } from 'ai';
-import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
-import { ReasoningService } from './reasoningService';
-import { GeminiService } from './geminiService';
-import { Models, openrouter } from '@/lib/ai/providers';
-import { smartDownload } from '@/lib/network/smartBrowser';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { PaystackService } from "@/services/paystack.service";
+import { NotificationService } from "@/services/notification.service";
+import { z } from "zod";
+import { requireAdmin } from "@/lib/auth-server";
 
-export interface ResearchProgress {
-    step: 'planning' | 'searching' | 'downloading' | 'processing' | 'completed' | 'failed';
-    message: string;
-    details?: any;
-}
+const sendPaymentBodySchema = z.object({
+    amount: z.number().positive(),
+    tier: z.string(), // "Basic", "Standard", "Premium"
+});
 
-export type ProgressCallback = (progress: ResearchProgress) => void;
+export async function POST(
+    req: NextRequest,
+    props: { params: Promise<{ id: string }> }
+) {
+    try {
+        const admin = await requireAdmin();
+        if (!admin) {
+            return NextResponse.json({ error: "Unauthorized. Admin role required." }, { status: 403 });
+        }
+        const params = await props.params;
+        const leadId = params.id;
+        const body = await req.json();
+        const { amount, tier } = sendPaymentBodySchema.parse(body);
 
-export class ResearchService {
-
-    /**
-     * Step 1: Generate a research plan (queries) based on project context.
-     */
-    static async generateResearchPlan(projectId: string) {
-        const project = await prisma.project.findUnique({
-            where: { id: projectId },
-            select: { topic: true, twist: true, department: true } // Simplified fetch
+        // 1. Fetch Lead
+        const lead = await prisma.lead.findUnique({
+            where: { id: leadId },
         });
 
-        if (!project) throw new Error('Project not found');
-
-        // Construct simple context strings if detailed abstract/outline missing
-        const goal = `Research topic: ${project.topic}. Context: ${project.twist || 'No specific context'}`;
-        const tech = project.department ? `Field: ${project.department}` : 'General academic research';
-        const audience = 'Academic and technical audience';
-
-        return await ReasoningService.generateSearchQueries(goal, tech, audience);
-    }
-
-    /**
-     * Step 2: Execute Standard Research (Search -> Download -> Save)
-     */
-    static async executeStandardResearch(
-        projectId: string,
-        queries: string[],
-        onProgress?: ProgressCallback
-    ) {
-        try {
-            onProgress?.({ step: 'searching', message: `Executing ${queries.length} search queries via Exa/OpenRouter...` });
-
-            // 1. Search Web (Exa via OpenRouter)
-            // We use Exa via OpenRouter's 'web' plugin for cost-effective deep search
-            const searchResults = await this.searchWeb(queries);
-
-            onProgress?.({ step: 'downloading', message: `Found ${searchResults.length} candidates. Starting acquisition...` });
-
-            // 2. Download & Save
-            return await this.processResults(projectId, searchResults, onProgress);
-
-        } catch (error: any) {
-            onProgress?.({ step: 'failed', message: error.message || 'Standard Research failed' });
-            throw error;
+        if (!lead) {
+            return NextResponse.json({ error: "Lead not found" }, { status: 404 });
         }
-    }
 
-    /**
-     * Step 2b: Execute Deep Research (Gemini Grounding -> Download -> Save)
-     */
-    static async executeDeepResearch(
-        projectId: string,
-        goal: string,
-        onProgress?: ProgressCallback
-    ) {
-        try {
-            onProgress?.({ step: 'searching', message: `Executing Deep Research with Gemini 2.5...` });
+        // 2. Determine Email
+        let email = "hey@jstarstudios.com"; // Default Fallback
+        const userId = lead.userId;
 
-            // 1. Search Web (Gemini Grounding)
-            const searchResults = await GeminiService.groundedSearch(goal);
-
-            onProgress?.({ step: 'downloading', message: `Gemini found ${searchResults.length} authoritative sources.` });
-
-            // 2. Download & Save
-            return await this.processResults(projectId, searchResults, onProgress);
-
-        } catch (error: any) {
-            onProgress?.({ step: 'failed', message: error.message || 'Deep Research failed' });
-            throw error;
-        }
-    }
-
-    /**
-     * Helper: Process and download a list of search results
-     */
-    private static async processResults(
-        projectId: string,
-        results: Array<{ title: string, url: string }>,
-        onProgress?: ProgressCallback
-    ) {
-        let savedCount = 0;
-        for (const result of results) {
-            try {
-                // Start download
-                onProgress?.({ step: 'downloading', message: `Acquiring: ${result.title.substring(0, 30)}...` });
-
-                const saved = await this.downloadAndSaveSource(projectId, result.url, result.title);
-                if (saved) savedCount++;
-
-            } catch (e) {
-                console.error(`Failed to download ${result.url}`, e);
-                // Continue to next result
+        if (userId) {
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { email: true },
+            });
+            if (user && user.email) {
+                email = user.email;
             }
         }
-        onProgress?.({ step: 'completed', message: `Research complete. Saved ${savedCount} new documents.` });
-        return savedCount;
-    }
 
-    /**
-     * Helper: Search via OpenRouter with Exa plugin (Explicit Fetch for Reliability)
-     */
-    private static async searchWeb(queries: string[]): Promise<Array<{ title: string, url: string, snippet?: string }>> {
-        const apiKey = process.env.OPENROUTER_API_KEY;
-        if (!apiKey) throw new Error('OpenRouter API Key missing');
+        // 3. Generate Reference
+        const timestamp = Date.now();
+        // Sanitize characters: Only alphanumeric, dash, dot, =, _ allowed. 
+        // We replace any other char with empty string, but IDs are usually safe.
+        // Format: FYB-TIER-LEADIDSHORT-TIMESTAMP
+        const safeTier = (tier || "UNKNOWN").toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const safeLeadId = (leadId || "UNKNOWN").slice(0, 8).replace(/[^a-zA-Z0-9]/g, '');
+        // Use strictly alphanumeric reference to prevent "Invalid character" errors
+        const reference = `FYB${safeTier}${safeLeadId}${timestamp}`;
 
-        // Combined query
-        const combinedQuery = queries.slice(0, 3).join('\n');
-
-        // We use manual fetch because Vercel SDK's ":online" suffix sometimes fails 
-        // to pass the specific 'web' plugin config correctly to OpenRouter's free tier models.
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://fyb.jstarstudios.com',
-                'X-Title': 'JStar FYB'
-            },
-            body: JSON.stringify({
-                model: Models.FREE.GPT_OSS_120B, // Validated to work with web plugin
-                messages: [
-                    {
-                        role: 'user',
-                        content: `Find 5 authoritative academic sources or research papers for: \n${combinedQuery}\n\nPrefer direct PDF links where possible, but include high-quality open access pages (like ArXiv, NIH, IEEE) if PDFs are not direct.\n\nReturn EXACTLY a JSON list of objects with "title" and "url" fields.`
-                    }
-                ],
-                plugins: [{ id: "web", engine: "exa" }]
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`OpenRouter Search failed: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0]?.message?.content || '';
-
-        // Attempt to parse JSON from content
-        try {
-            const jsonMatch = content.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                const parsed = JSON.parse(jsonMatch[0]);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed;
-                }
+        // 4. Create or Find a Project for this lead
+        let project = await prisma.project.findFirst({
+            where: {
+                topic: lead.topic,
+                OR: [
+                    { userId: userId || undefined },
+                    { anonymousId: lead.anonymousId || undefined }
+                ].filter(o => Object.values(o).some(v => v !== undefined))
             }
-            console.warn('[ResearchService] No JSON array found in search response:', content.substring(0, 200) + '...');
-            return [];
-        } catch (e) {
-            console.warn('[ResearchService] Failed to parse search results JSON. Raw content:', content);
-            return [];
-        }
-    }
-
-    /**
-     * Helper: Download content and save to DB
-     */
-    public static async downloadAndSaveSource(projectId: string, url: string, title: string) {
-        // Validation
-        if (!url || !url.startsWith('http')) return null;
-
-        // check if exists
-        const existing = await prisma.researchDocument.findFirst({
-            where: { projectId, fileUrl: url }
         });
-        if (existing) return existing;
 
-        // Optimize URL for known academic repositories (Landing Page -> Direct PDF)
-        const optimizedUrl = this.optimizeDownloadUrl(url);
-
-        try {
-            // Use High-Trust Smart Downloader
-            const buffer = await smartDownload(optimizedUrl);
-
-            // Inferred metadata
-            const isPdf = optimizedUrl.toLowerCase().endsWith('.pdf') || optimizedUrl.includes('/download');
-            const contentType = isPdf ? 'application/pdf' : 'text/html';
-
-            // Create Record
-            const doc = await prisma.researchDocument.create({
+        if (!project) {
+            project = await prisma.project.create({
                 data: {
-                    projectId,
-                    title,
-                    fileUrl: url,
-                    fileName: title === url ? 'External Link' : title.substring(0, 100) + (isPdf ? '.pdf' : '.html'),
-                    fileType: isPdf ? 'PDF' : 'WEB',
-                    fileData: isPdf ? Buffer.from(buffer) : undefined,
-                    mimeType: contentType,
-                    status: 'PENDING'
+                    topic: lead.topic,
+                    twist: lead.twist,
+                    userId: userId || undefined,
+                    anonymousId: lead.anonymousId || undefined,
+                    mode: "CONCIERGE", // Admin links are for concierge service
+                    status: "OUTLINE_GENERATED"
                 }
             });
+        }
 
-            return doc;
-        } catch (error: any) {
-            console.error(`Failed to download ${url}`, error);
-
-            // FALLBACK: Save the URL anyway
-            try {
-                const doc = await prisma.researchDocument.create({
-                    data: {
-                        projectId,
-                        title,
-                        fileUrl: url,
-                        fileName: title.substring(0, 100) + '.html',
-                        fileType: 'WEB',
-                        fileData: undefined,
-                        mimeType: 'application/x-web-reference',
-                        status: 'ERROR',
-                        importError: `Download failed: ${error.message}`
-                    }
-                });
-                return doc;
-            } catch (dbError) {
-                console.error('Failed to save fallback reference', dbError);
-                return null;
+        // 5. Create Payment Record (to track this link)
+        const payment = await prisma.payment.create({
+            data: {
+                userId: userId || project.userId || "ADMIN_LINK_PENDING", // Use project's user or fallback
+                projectId: project.id, // Now using a valid project ID
+                reference: reference,
+                amount: amount,
+                status: 'PENDING',
+                currency: 'NGN'
             }
-        }
-    }
+        });
 
-    /**
-     * Helper: Transform landing page URLs to direct PDF links where possible
-     */
-    private static optimizeDownloadUrl(url: string): string {
-        let cleanUrl = url;
+        // 5. Initialize Paystack
+        const paymentData = await PaystackService.initializePayment({
+            email,
+            amount,
+            reference,
+            metadata: {
+                leadId,
+                tier,
+                paymentId: payment.id,
+                custom_fields: [
+                    { display_name: "Project Topic", variable_name: "project_topic", value: lead.topic },
+                    { display_name: "Tier", variable_name: "tier", value: tier }
+                ]
+            },
+            callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/project/builder?projectId=${project.id}&payment_ref=${reference}` // Redirect back to builder with projectId
+        });
 
-        // 1. ArXiv: /abs/ -> /pdf/
-        if (cleanUrl.includes('arxiv.org/abs/')) {
-            cleanUrl = cleanUrl.replace('arxiv.org/abs/', 'arxiv.org/pdf/') + '.pdf';
-        } else if (cleanUrl.includes('arxiv.org/pdf/') && !cleanUrl.toLowerCase().endsWith('.pdf')) {
-            cleanUrl += '.pdf';
-        }
+        // 6. Notify (Optional - Internal Log)
+        await NotificationService.notifyPaymentLinkSent(leadId, amount, tier);
 
-        // 2. Preprints.org: /manuscript/ID/v1 -> /manuscript/ID/v1/download
-        if (cleanUrl.includes('preprints.org/manuscript/') && !cleanUrl.includes('/download')) {
-            // ensure it ends with the version number before appending download
-            // regex to check if ends in /v\d+
-            if (/\/v\d+$/.test(cleanUrl)) {
-                cleanUrl += '/download';
-            }
-        }
+        return NextResponse.json({
+            success: true,
+            authorizationUrl: paymentData.authorizationUrl,
+            reference: paymentData.reference,
+            emailUsed: email
+        });
 
-        // 3. MDPI: /htm -> /pdf
-        if (cleanUrl.includes('mdpi.com') && cleanUrl.endsWith('/htm')) {
-            cleanUrl = cleanUrl.replace('/htm', '/pdf');
-        }
-
-        return cleanUrl;
+    } catch (error) {
+        console.error("[SendPaymentLink] Error:", error);
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : "Internal Server Error" },
+            { status: 500 }
+        );
     }
 }
 ```
 
-### File: `src/features/research/components/ResearchModal.tsx`
-```tsx
-"use client";
+### File: `prisma/schema.prisma`
+```prisma
+// ... (User and Payment Models)
 
-import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Bot, Zap, Globe, FileText, Check, ArrowRight, Loader2, Sparkles, X, Terminal } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ResearchClient, ResearchPlan } from '@/services/researchClient';
-import { ResearchProgress as ProgressType } from '../services/researchService';
-import { ResearchProgress } from './ResearchProgress';
+model User {
+  id                     String                      @id
+  name                   String
+  email                  String                      @unique
+  // ...
+  payments               Payment[]
+  // ...
+}
 
-// ... (Rest of UI Component Code)
-// See codebase for full UI logic.
+model Payment {
+  id              String        @id @default(cuid())
+  amount          Float
+  currency        String        @default("NGN")
+  status          String        @default("PENDING")
+  reference       String        @unique
+  userId          String
+  projectId       String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  project         Project       @relation(fields: [projectId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
+  // ...
+}
 ```
 
 ---
@@ -322,15 +222,18 @@ import { ResearchProgress } from './ResearchProgress';
 
 **Attention: Senior AI Orchestrator**
 
-You have received this Escalation Handoff Report. A local agent has failed to solve the "OpenRouter Plugin Activation" problem.
+You have received this Escalation Handoff Report. A local agent has identified a critical database constraint violation preventing admins from sending payment links to new leads.
 
 **Your Directive:**
-1.  **Analyze the Failure:** The goal is to make OpenRouter *actually* perform a web search via the Exa plugin. The current implementation uses a direct `fetch` with `plugins: [{ id: "web", engine: "exa" }]`. The user reports this does not trigger billing/usage, implying it's not working and the model is hallucinating results.
-2.  **Verify Plugin Config:** Confirm if the `model` (Models.FREE.GPT_OSS_120B) supports this plugin parameter, or if a specific model (like `google/gemini-pro-1.5` or `perplexity` models) should be used instead.
-3.  **Investigate Link Clickability:** The user mentioned "results back... but not the type I can click". Check where `searchWeb` returns data and how `ResearchModal` (or its child `ResearchProgress`) renders it. Ensure the `url` field from the search results is actually being passed and rendered as an `<a>` tag.
-4.  **Execute Fix:**
-    *   Find the correct API/Model configuration for OpenRouter Web Search.
-    *   Ensure the JSON parsing of search results is robust (currently using regex).
-    *   Verify the UI renders clickable links for the search results.
+1. **Choose the Strategy:**
+   - **Option A (Proper):** Update `schema.prisma` to make `Payment.userId` optional (`String?`). This is creating technical debt otherwise.
+   - **Option B (Fast):** Implement a "Shadow User" creation routine in the `route.ts`. Check if a user exists for the lead's email; if not, create a dormant User account and use that ID.
+   - **Option C (Hack):** Seed the database with a user id `"ADMIN_LINK_PENDING"`.
+
+2. **Recommendation:** Proceed with **Option B (Stub User)** or **Option A (Schema Change)**. Using magic strings like `"ADMIN_LINK_PENDING"` is fragile.
+
+3. **Execute:**
+   - Modify `src/app/api/admin/leads/[id]/send-payment-link/route.ts` to implement the chosen fix.
+   - If changing schema, run `prisma migrate dev`.
 
 **Begin your analysis now.**

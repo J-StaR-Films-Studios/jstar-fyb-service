@@ -34,16 +34,62 @@ export async function POST(
         }
 
         // 2. Determine Email
+        // 2. Determine Email & Resolve User ID
         let email = "hey@jstarstudios.com"; // Default Fallback
-        const userId = lead.userId;
+        const leadUserId = lead.userId;
+        let finalUserId: string | null = null;
 
-        if (userId) {
+        // Strategy: 
+        // 1. Use Lead's UserId if valid
+        // 2. Use Project's UserId if valid
+        // 3. Find User by Email
+        // 4. Create Shadow (Stub) User if none exists
+
+        // Step A: Check Lead's User ID
+        if (leadUserId) {
             const user = await prisma.user.findUnique({
-                where: { id: userId },
-                select: { email: true },
+                where: { id: leadUserId },
+                select: { id: true, email: true },
             });
-            if (user && user.email) {
-                email = user.email;
+            if (user) {
+                finalUserId = user.id;
+                if (user.email) email = user.email;
+            }
+        }
+
+        // Step B: Check Lead's Email if we still don't have a user
+        if (!finalUserId && lead.email) {
+            email = lead.email;
+            const user = await prisma.user.findUnique({
+                where: { email: lead.email },
+                select: { id: true }
+            });
+            if (user) {
+                finalUserId = user.id;
+            }
+        }
+
+        // Step C: Create Shadow User if still no finalUserId
+        if (!finalUserId) {
+            // Check one last time if 'hey@jstarstudios.com' exists (if we fell back to default email)
+            const existingUser = await prisma.user.findUnique({
+                where: { email }
+            });
+
+            if (existingUser) {
+                finalUserId = existingUser.id;
+            } else {
+                // Create completely new user
+                console.log(`[SendPaymentLink] Creating shadow user for email: ${email}`);
+                const newUser = await prisma.user.create({
+                    data: {
+                        id: crypto.randomUUID(),
+                        email: email,
+                        name: lead.name || "J-Star Client",
+                        role: "USER"
+                    }
+                });
+                finalUserId = newUser.id;
             }
         }
 
@@ -62,7 +108,7 @@ export async function POST(
             where: {
                 topic: lead.topic,
                 OR: [
-                    { userId: userId || undefined },
+                    { userId: finalUserId }, // Use our resolved ID
                     { anonymousId: lead.anonymousId || undefined }
                 ].filter(o => Object.values(o).some(v => v !== undefined))
             }
@@ -73,7 +119,7 @@ export async function POST(
                 data: {
                     topic: lead.topic,
                     twist: lead.twist,
-                    userId: userId || undefined,
+                    userId: finalUserId,
                     anonymousId: lead.anonymousId || undefined,
                     mode: "CONCIERGE", // Admin links are for concierge service
                     status: "OUTLINE_GENERATED"
@@ -84,8 +130,8 @@ export async function POST(
         // 5. Create Payment Record (to track this link)
         const payment = await prisma.payment.create({
             data: {
-                userId: userId || project.userId || "ADMIN_LINK_PENDING", // Use project's user or fallback
-                projectId: project.id, // Now using a valid project ID
+                userId: finalUserId, // Guaranteed to be a valid User ID now
+                projectId: project.id,
                 reference: reference,
                 amount: amount,
                 status: 'PENDING',

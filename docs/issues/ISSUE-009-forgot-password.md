@@ -39,12 +39,16 @@ export default function ForgotPasswordPage() {
 
 ## Acceptance Criteria
 
-- [ ] `/forgot-password` page exists with email input
-- [ ] Submit triggers magic link email via Better-Auth
-- [ ] Success state shows "Check your email" message
-- [ ] Error state handles invalid emails
-- [ ] Link from login page to forgot password
-- [ ] Magic link logs user in and redirects to dashboard
+- [x] `/forgot-password` page exists with email input
+- [x] Submit triggers magic link email via Better-Auth
+- [x] Success state shows "Check your email" message
+- [x] Error state handles invalid emails
+- [x] Link from login page to forgot password
+- [x] Magic link logs user in and redirects to dashboard
+
+## Implementation Status
+**Status:** ✅ Completed
+**Method:** Implemented using `better-auth` magic link flow. Page located at `src/app/auth/forgot-password/page.tsx`.
 
 ## Testing
 

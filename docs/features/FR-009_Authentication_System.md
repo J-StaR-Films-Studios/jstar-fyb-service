@@ -61,3 +61,33 @@ Configured `additionalFields` to include `role` in the session object, enabling 
 - [x] Implement Session-based RBAC for `/admin`
 - [x] Remove legacy Basic Auth from `proxy.ts`
 - [x] Create Admin Promotion CLI script
+- [x] Implement Post-Login Password Prompt for Magic Link users
+- [x] Standardize on Bcrypt for reliable password hashing
+
+## Feature: Magic Link Hybrid Onboarding
+
+To solve the "stuck without password" issue for users signing up via Agency Forms or Magic Links, a hybrid flow is implemented:
+
+### 1. Agency Signup ("Ghost Password" Strategy)
+- **Path:** `src/features/agency/actions/agencySignup.ts`
+- **Logic:**
+  1. Creates a user account with a random temp password (required by Better-Auth email provider).
+  2. **Immediately sets `password` to `NULL`** in the database via `prisma.account.update`.
+  3. This flags the user as "passwordless" despite having an account.
+
+### 2. Post-Login Password Prompt
+- **Path:** `src/features/auth/components/PasswordPromptDialog.tsx`
+- **Trigger:** Checks `checkHasPassword` server action on page load.
+- **Logic:**
+  - If User is logged in AND has NO password (or NULL password) -> Show Dialog.
+  - If User is missing Name -> Show Name input.
+- **Action:**
+  - Calls `setInitialPassword` (Server Action).
+  - Uses manual **Bcrypt** hashing to update `prisma.account`.
+
+### 3. Bcrypt Standardization
+- **Problem:** Better-Auth's `updateUser` API was rejecting password updates or using hidden hashing strategies.
+- **Solution:**
+  - Configured `src/lib/auth.ts` to explicitly use `bcryptjs` for `hash` and `verify`.
+  - Updated `src/features/auth/actions/password.ts` to use `bcryptjs.hash` manually.
+  - This ensures 100% compatibility between manual updates and Better-Auth's verification logic.

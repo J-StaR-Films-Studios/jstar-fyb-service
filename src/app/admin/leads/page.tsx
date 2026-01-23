@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { AdminLeadCard } from '@/features/admin/components/AdminLeadCard';
 import { SendPaymentLinkButton } from '@/features/admin/components/SendPaymentLinkButton';
+import { LinkGenerator } from '@/features/admin/components/LinkGenerator';
 import { MessageCircle, Phone, TrendingUp, Users, AlertCircle } from 'lucide-react';
 
 function TierBadge({ tier }: { tier: string | null }) {
@@ -69,6 +70,9 @@ export default async function AdminLeadsPage(props: { searchParams: Promise<{ pa
                     <div>
                         <h1 className="text-3xl font-display font-bold">Lead Capture Dashboard</h1>
                         <p className="text-muted-foreground">Manage and convert student project leads.</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <LinkGenerator />
                     </div>
                 </div>
 

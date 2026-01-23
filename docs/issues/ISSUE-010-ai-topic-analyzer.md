@@ -73,12 +73,16 @@ export async function POST(req: Request) {
 
 ## Acceptance Criteria
 
-- [ ] POST `/api/analyze-topic` accepts topic + department
-- [ ] Returns complexity (1-5), twist, category, notes
-- [ ] Uses fast model (Groq Llama) for low latency (<2s)
-- [ ] Validates input with Zod
-- [ ] Returns 400 on invalid input
-- [ ] Returns 500 on AI failure with graceful message
+- [x] POST `/api/analyze-topic` accepts topic + department
+- [x] Returns complexity (1-5), twist, category, notes
+- [x] Uses fast model (Groq Llama/GPT-OSS) for low latency (<2s)
+- [x] Validates input with Zod
+- [x] Returns 400 on invalid input
+- [x] Returns 500 on AI failure with graceful message
+
+## Implementation Status
+**Status:** ✅ Completed
+**Method:** Implemented at `src/app/api/analyze-topic/route.ts`. Uses `generateText` with `groq/llama-3.1-8b` (via `GPT_OSS_120B` constant) for compatibility.
 
 ## Testing
 

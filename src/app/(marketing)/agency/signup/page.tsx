@@ -26,12 +26,16 @@ export default async function AgencySignupPage(props: {
     const displayLabel = tierConfig?.label || 'Agency Package';
 
     // Default features list (can be dynamic based on tier later)
-    const features = [
-        "Complete Source Code & Database",
-        "Chapters 1-5 (Dossier Grade)",
-        "2 Live Defense Mock Sessions",
-        "Priority Support"
-    ];
+    // Dynamic features list
+    // @ts-ignore - Index signature issue with literal types
+    const dynamicFeatures = tierId && PRICING_CONFIG.AGENCY.FEATURES[tierId]
+        ? PRICING_CONFIG.AGENCY.FEATURES[tierId as keyof typeof PRICING_CONFIG.AGENCY.FEATURES]
+        : [
+            "Complete Source Code & Database",
+            "Chapters 1-5 (Dossier Grade)",
+            "2 Live Defense Mock Sessions",
+            "Priority Support"
+        ];
 
     return (
         <div className="min-h-screen bg-[#030014] text-white">
@@ -70,7 +74,7 @@ export default async function AgencySignupPage(props: {
                         </p>
 
                         <div className="space-y-4 pt-4">
-                            {features.map((feature, i) => (
+                            {dynamicFeatures.map((feature: string, i: number) => (
                                 <div key={i} className="flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-purple-400 shrink-0">
                                         <Check className="w-5 h-5" />

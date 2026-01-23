@@ -19,7 +19,7 @@ const createDiscountSchema = z.object({
 export async function GET() {
     try {
         const user = await getCurrentUser();
-        if (!user || user.role !== "ADMIN") {
+        if (!user || (user as any).role !== "ADMIN") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -39,7 +39,7 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         const user = await getCurrentUser();
-        if (!user || user.role !== "ADMIN") {
+        if (!user || (user as any).role !== "ADMIN") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
