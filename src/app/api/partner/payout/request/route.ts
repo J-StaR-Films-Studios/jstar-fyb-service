@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { getPartnerSession } from '@/lib/partner-auth';
+import { logger } from '@/lib/logger';
 // import { sendEmail } from '@/lib/email'; // Assuming we have this, or just log for now
 
 export async function POST(request: Request) {
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Minimum payout is ₦1,000' }, { status: 400 });
     }
 
-    console.log(`💰 Payout Requested by ${influencer.name} (${influencer.email}): ₦${payoutAmount}`);
+    // SECURITY FIX: Redacted PII (name/email) from production logs, logging ID instead
+    logger.info(`💰 Payout Requested by Influencer ID ${influencer.id}: ₦${payoutAmount}`);
 
     // TODO: Send actual email using Resend or existing mailer
     // await sendEmail({ to: 'admin@example.com', subject: 'Payout Request', ... })
