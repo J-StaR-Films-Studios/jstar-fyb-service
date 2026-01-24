@@ -93,6 +93,10 @@ model Lead {
   // Bolt: Add indexes for frequent lookups
   @@index([userId])
   @@index([anonymousId])
+  // Bolt: Add index for sorting by createdAt in dashboards
+  @@index([createdAt])
+  // Bolt: Add index for filtering by status in dashboards
+  @@index([status])
 }
 
 model Conversation {
