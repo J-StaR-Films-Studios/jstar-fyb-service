@@ -6,15 +6,20 @@ import SettingsForm from './_components/settings-form';
 
 const prisma = new PrismaClient();
 
+import { PaystackService } from '@/services/paystack.service';
+
 export default async function SettingsPage() {
     const session = await getPartnerSession();
     if (!session) redirect('/partner/login');
 
     const influencer = await prisma.influencer.findUnique({
         where: { id: session.id },
+        include: { payoutConfig: true }
     });
 
     if (!influencer) redirect('/partner/login');
+
+    const banks = await PaystackService.listBanks();
 
     return (
         <div className="p-8 space-y-6">
@@ -24,7 +29,7 @@ export default async function SettingsPage() {
             </div>
 
             <div className="max-w-4xl">
-                <SettingsForm influencer={influencer} />
+                <SettingsForm influencer={influencer} banks={banks} />
             </div>
         </div>
     );

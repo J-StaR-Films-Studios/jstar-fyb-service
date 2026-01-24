@@ -165,7 +165,7 @@ export const ReferralService = {
                 commissionRate: data.commissionRate ?? 0.10,
                 referralDiscount: data.referralDiscount ?? 0.0,
                 freeCredits: data.freeCredits ?? 0,
-                password: await hashPassword("ChangeMe123!") // Default password for new partners
+                // password: removed for security (Influencers use standard auth)
             }
         });
 
@@ -249,6 +249,7 @@ export const ReferralService = {
     async getAllInfluencers() {
         return prisma.influencer.findMany({
             include: {
+                payoutConfig: true,
                 _count: {
                     select: {
                         referredUsers: true,
@@ -257,16 +258,6 @@ export const ReferralService = {
                 }
             },
             orderBy: { createdAt: 'desc' }
-        });
-    },
-
-    /**
-     * Admin: Reset password
-     */
-    async adminResetPassword(influencerId: string, hashedPassword: string) {
-        await prisma.influencer.update({
-            where: { id: influencerId },
-            data: { password: hashedPassword }
         });
     }
 };

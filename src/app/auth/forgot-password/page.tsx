@@ -15,22 +15,17 @@ export default function ForgotPasswordPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            // First check if user exists
-            const { checkEmailExists } = await import("@/features/auth/actions/checkEmail");
-            const exists = await checkEmailExists(email);
-
-            if (!exists) {
-                toast.error("No account found with this email");
-                setLoading(false);
-                return;
-            }
+            // Mitigate Enumeration: Always simulate a request, or initiate without checking existence first
+            // The better-auth library should handle non-existent emails gracefully (sending nothing)
+            // We just show success to the user.
 
             await authClient.signIn.magicLink({
                 email,
                 callbackURL: "/dashboard", // Redirect to dashboard after login
             });
+
             setSubmitted(true);
-            toast.success("Magic link sent!");
+            toast.success("If an account exists, a magic link has been sent!");
         } catch (error) {
             console.error("Magic link error:", error);
             toast.error("Failed to send magic link. Please try again.");

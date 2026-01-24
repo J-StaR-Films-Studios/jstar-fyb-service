@@ -92,5 +92,69 @@ export const PaystackService = {
             console.error('[PaystackService] Signature verification error:', error);
             return false;
         }
+    },
+
+    // --- Transfer & Payout Features ---
+
+    async listBanks() {
+        if (!PAYSTACK_SECRET) return [];
+
+        try {
+            const res = await fetch('https://api.paystack.co/bank?currency=NGN', {
+                headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+                next: { revalidate: 86400 } // Cache for 24 hours
+            });
+            const data = await res.json();
+            return data.status ? data.data : [];
+        } catch (error) {
+            console.error('[PaystackService] List Banks error:', error);
+            return [];
+        }
+    },
+
+    async resolveAccount(accountNumber: string, bankCode: string) {
+        if (!PAYSTACK_SECRET) throw new Error("PAYSTACK_SECRET_KEY is missing");
+
+        const res = await fetch(`https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, {
+            headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.status) {
+            throw new Error(data.message || 'Could not resolve account details');
+        }
+
+        return data.data; // { account_number, account_name, bank_id }
+    },
+
+    async createTransferRecipient(name: string, accountNumber: string, bankCode: string) {
+        if (!PAYSTACK_SECRET) throw new Error("PAYSTACK_SECRET_KEY is missing");
+
+        const params = {
+            type: "nuban",
+            name: name,
+            account_number: accountNumber,
+            bank_code: bankCode,
+            currency: "NGN"
+        };
+
+        const res = await fetch('https://api.paystack.co/transferrecipient', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${PAYSTACK_SECRET}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(params),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.status) {
+            console.error('[PaystackService] Create Recipient failed:', data);
+            throw new Error(data.message || 'Failed to create transfer recipient');
+        }
+
+        return data.data; // { recipient_code, name, details: { account_number, ... } }
     }
 };

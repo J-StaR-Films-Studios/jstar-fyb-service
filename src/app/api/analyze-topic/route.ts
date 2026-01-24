@@ -3,14 +3,27 @@ import { z } from 'zod';
 import { groq, Models } from '@/lib/ai/providers';
 import { createGroq } from '@ai-sdk/groq';
 
-// Fallback if groq provider not configured
-const groqProvider = groq || createGroq({ apiKey: process.env.GROQ_API_KEY || '' });
+// Lazy initialization of Groq provider
+const getGroqProvider = () => {
+    if (!process.env.GROQ_API_KEY && !groq) {
+        throw new Error("GROQ_API_KEY is not set in environment variables");
+    }
+    return groq || createGroq({ apiKey: process.env.GROQ_API_KEY || '' });
+};
 
 // Schema for input validation
 const inputSchema = z.object({
     topic: z.string().min(3),
     department: z.string().min(2),
 });
+
+function sanitizeInput(text: string): string {
+    if (!text) return "";
+    // Strip HTML tags
+    const noTags = text.replace(/<[^>]*>?/gm, '');
+    // Limit length to prevent token exhaustion/DOS
+    return noTags.slice(0, 500).trim();
+}
 
 // Schema for manual validation (not passed to model directly if not supported)
 const analysisSchema = z.object({
@@ -51,11 +64,14 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { topic, department } = inputSchema.parse(body);
 
+        const safeTopic = sanitizeInput(topic);
+        const safeDept = sanitizeInput(department);
+
         // Using generateText for maximum compatibility (some Groq models fail with generateObject/json_schema)
         const { text } = await generateText({
-            model: groqProvider(Models.GROQ.GPT_OSS_120B),
+            model: getGroqProvider()(Models.GROQ.GPT_OSS_120B),
             system: ANALYSIS_PROMPT,
-            prompt: `Department: ${department}\nTopic: ${topic}`,
+            prompt: `Department: ${safeDept}\nTopic: ${safeTopic}`,
             temperature: 0.5,
         });
 

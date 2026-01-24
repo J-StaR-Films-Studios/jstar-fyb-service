@@ -38,6 +38,28 @@ export function verifySessionToken(token: string): { id: string; email: string }
 }
 
 export async function getPartnerSession() {
+    // 1. Check for standard User Session (New Flow)
+    // We import dynamically to avoid circular deps if any, though checking headers is safe
+    const { auth } = await import("@/lib/auth");
+    const { headers } = await import("next/headers");
+
+    try {
+        const session = await auth.api.getSession({
+            headers: await headers()
+        });
+
+        if (session?.user?.email) {
+            // Find influencer by email
+            const influencer = await prisma.influencer.findUnique({
+                where: { email: session.user.email },
+            });
+            if (influencer) return influencer;
+        }
+    } catch (error) {
+        // Ignore auth errors, fall through to legacy check
+    }
+
+    // 2. Legacy Cookie Check (Deprecated but kept for transition if needed)
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
 
