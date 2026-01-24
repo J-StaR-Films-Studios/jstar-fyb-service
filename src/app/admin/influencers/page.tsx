@@ -23,6 +23,12 @@ interface Influencer {
     bankName?: string | null;
     accountNumber?: string | null;
     accountName?: string | null;
+    payoutConfig?: {
+        bankName: string;
+        last4Digits: string;
+        accountName: string;
+        recipientCode: string;
+    } | null;
 }
 
 export default function AdminInfluencersPage() {
@@ -420,18 +426,43 @@ export default function AdminInfluencersPage() {
                                 Payout Details
                             </h2>
                             <div className="space-y-4 bg-white/5 p-4 rounded-lg">
-                                <div>
-                                    <div className="text-xs text-gray-400 uppercase mb-1">Bank Name</div>
-                                    <div className="font-medium text-lg">{viewBankDetails.bankName || 'Not Provided'}</div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-gray-400 uppercase mb-1">Account Number</div>
-                                    <div className="font-mono text-xl tracking-wider">{viewBankDetails.accountNumber || '---'}</div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-gray-400 uppercase mb-1">Account Name</div>
-                                    <div className="font-medium text-lg">{viewBankDetails.accountName || '---'}</div>
-                                </div>
+                                {viewBankDetails.payoutConfig ? (
+                                    <>
+                                        <div>
+                                            <div className="text-xs text-gray-400 uppercase mb-1">Bank Name</div>
+                                            <div className="font-medium text-lg">{viewBankDetails.payoutConfig.bankName}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-gray-400 uppercase mb-1">Account Number</div>
+                                            <div className="font-mono text-xl tracking-wider">•••• {viewBankDetails.payoutConfig.last4Digits}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-gray-400 uppercase mb-1">Account Name</div>
+                                            <div className="font-medium text-lg">{viewBankDetails.payoutConfig.accountName}</div>
+                                        </div>
+                                        <div className="pt-2 border-t border-white/10 mt-2">
+                                            <div className="text-xs text-green-500 uppercase mb-1">Paystack Recipient ID</div>
+                                            <div className="flex items-center gap-2">
+                                                <code className="font-mono text-sm text-gray-300 bg-white/5 px-2 py-1 rounded select-all">
+                                                    {viewBankDetails.payoutConfig.recipientCode}
+                                                </code>
+                                                <a
+                                                    href="https://dashboard.paystack.com/#/transfers/recipients"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                                                >
+                                                    Open in Paystack <LinkIcon className="w-3 h-3" />
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center py-4 text-gray-500">
+                                        <p>No payout details configured.</p>
+                                        <p className="text-xs mt-1">Ask the partner to set up their bank in settings.</p>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-6 flex gap-3">

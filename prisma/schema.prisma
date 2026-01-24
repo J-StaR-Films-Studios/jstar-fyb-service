@@ -424,16 +424,25 @@ model Influencer {
   referredUsers  User[]       @relation("ReferredUsers")
   commissions    Commission[]
 
-  // Payout Details
-  bankName       String?
-  accountNumber  String?
-  accountName    String?
+  // Payout Details - Secured via Paystack Transfer Recipient
+  payoutConfig   InfluencerPayoutConfig?
+}
 
-  // Authentication & Security
-  password       String?      // Hashed password (bcrypt) - Optional initially for existing users
-  lastLogin      DateTime?    // Track engagement
-  resetToken     String?      // For password recovery
-  resetExpires   DateTime?    // Expiry for token
+model InfluencerPayoutConfig {
+  id              String     @id @default(cuid())
+  influencerId    String     @unique
+  influencer      Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  
+  // Safe Fields (We do NOT store the full account number)
+  bankName        String
+  bankCode        String     // e.g "058" (GTBank)
+  accountName     String     // as returned by Paystack Resolve
+  recipientCode   String     // The Paystack Recipient Code (RCP_xxxx) - CRITICAL
+  last4Digits     String     // For UI display only
+  currency        String     @default("NGN")
+  
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 }
 
 model Commission {
