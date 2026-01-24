@@ -80,8 +80,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true }, { status: 200 });
 
     } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Server Error';
+        // Secure error handling: Log the specific error server-side, but return a generic message to the client
+        const errorMessage = error instanceof Error ? error.message : 'Unknown Server Error';
         logger.error('[Webhook] Error processing event:', errorMessage);
-        return NextResponse.json({ error: errorMessage }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
