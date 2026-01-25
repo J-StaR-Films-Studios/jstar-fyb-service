@@ -22,3 +22,8 @@
 **Vulnerability:** The document upload API (`src/app/api/documents/upload/route.ts`) implemented its own ad-hoc blacklist for SSRF protection, checking only for `localhost`, `127.`, `192.168.`, and `10.` strings.
 **Learning:** Manual blacklists are almost always incomplete. This implementation missed IPv6 (`[::1]`), other private ranges (`172.16.0.0/12`), and alternative IP formats (hex/octal). It also failed to check DNS resolution, allowing DNS rebinding attacks.
 **Prevention:** Centralize security validation logic. We replaced the ad-hoc check with `validateUrlSecurity` from `@/lib/security`, which handles all these cases consistently across the application (used by both the API layer and the internal download service).
+
+## 2026-02-19 - [IDOR in Research API Endpoints]
+**Vulnerability:** The Research API endpoints (`/api/research/execute` and `/api/research/plan`) accepted a `projectId` without verifying if the authenticated user owned that project.
+**Learning:** API routes that accept resource IDs must explicitly verify ownership or permissions, even if the user is authenticated. Service-layer functions often assume authorization is handled at the controller/API layer.
+**Prevention:** Always fetch the resource and check `resource.userId === currentUser.id` (or RBAC) before performing actions.
