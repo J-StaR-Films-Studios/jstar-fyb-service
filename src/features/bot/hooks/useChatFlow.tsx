@@ -236,7 +236,7 @@ export function useChatFlow(userId?: string, userName?: string) {
         const detectedPhone = detectPhoneNumber(text);
 
         if (detectedPhone) {
-            console.log("[useChatFlow] Phone detected:", detectedPhone);
+            console.log("[useChatFlow] Phone number detected (redacted)");
 
             try {
                 // Build history for extraction

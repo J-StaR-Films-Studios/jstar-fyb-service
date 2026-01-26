@@ -22,3 +22,8 @@
 **Vulnerability:** The document upload API (`src/app/api/documents/upload/route.ts`) implemented its own ad-hoc blacklist for SSRF protection, checking only for `localhost`, `127.`, `192.168.`, and `10.` strings.
 **Learning:** Manual blacklists are almost always incomplete. This implementation missed IPv6 (`[::1]`), other private ranges (`172.16.0.0/12`), and alternative IP formats (hex/octal). It also failed to check DNS resolution, allowing DNS rebinding attacks.
 **Prevention:** Centralize security validation logic. We replaced the ad-hoc check with `validateUrlSecurity` from `@/lib/security`, which handles all these cases consistently across the application (used by both the API layer and the internal download service).
+
+## 2026-01-26 - [Information Disclosure via Console Logs]
+**Vulnerability:** Sensitive information (PII like phone numbers, errors with stack traces, payment data) was being logged to the console in both server-side actions and client-side hooks using `console.log` and `console.error`.
+**Learning:** Developers often use `console.log` for debugging and forget to remove it, or assume server logs are private (they are often aggregated in third-party services). Client-side logs are visible to any user or extension. Standard `JSON.stringify(error)` returns `{}` for Error objects, leading to lost error details if not handled explicitly.
+**Prevention:** Enforce the use of a centralized `logger` utility that sanitizes output (redacting emails, IPs, keys). For client-side code, audit hooks to ensure no PII is logged. Explicitly extract `error.message` when logging Error objects.

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { logger } from "@/lib/logger";
 
 export async function checkHasPassword() {
     const session = await auth.api.getSession({
@@ -10,7 +11,7 @@ export async function checkHasPassword() {
     });
 
     if (!session?.user) {
-        console.log("[checkHasPassword] No session user found");
+        logger.info("[checkHasPassword] No session user found");
         return { hasPassword: true, hasName: true };
     }
 
@@ -24,7 +25,7 @@ export async function checkHasPassword() {
 
     const hasName = !!session.user.name && session.user.name !== "J-Star Client" && !session.user.name.includes("@");
 
-    console.log(`[checkHasPassword] User: ${session.user.id}, HasPassword: ${!!account}, HasName: ${hasName}`);
+    logger.info(`[checkHasPassword] User: ${session.user.id}, HasPassword: ${!!account}, HasName: ${hasName}`);
     return {
         hasPassword: !!account,
         hasName
@@ -105,7 +106,8 @@ export async function setInitialPassword(password: string, name?: string) {
 
         return { success: true };
     } catch (error) {
-        console.error("Failed to set password manually:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Failed to set password manually: ${errorMessage}`);
         throw error;
     }
 }

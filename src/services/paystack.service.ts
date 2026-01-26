@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createHmac, timingSafeEqual } from 'crypto';
 import { validateService, getEnv } from "@/lib/env-validation";
+import { logger } from "@/lib/logger";
 
 // Validate payment service configuration
 if (!validateService('payment')) {
@@ -43,7 +44,7 @@ export const PaystackService = {
         const data = await res.json();
 
         if (!res.ok || !data.status) {
-            console.error('[PaystackService] Init failed:', data);
+            logger.error(data, '[PaystackService] Init failed');
             throw new Error(data.message || 'Payment initialization failed');
         }
 
@@ -89,7 +90,8 @@ export const PaystackService = {
             return timingSafeEqual(hashBuffer, signatureBuffer);
         } catch (error) {
             // Handle potential Buffer creation errors (though unlikely with hex strings)
-            console.error('[PaystackService] Signature verification error:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.error(errorMessage, '[PaystackService] Signature verification error');
             return false;
         }
     },
@@ -107,7 +109,8 @@ export const PaystackService = {
             const data = await res.json();
             return data.status ? data.data : [];
         } catch (error) {
-            console.error('[PaystackService] List Banks error:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.error(errorMessage, '[PaystackService] List Banks error');
             return [];
         }
     },
@@ -151,7 +154,7 @@ export const PaystackService = {
         const data = await res.json();
 
         if (!res.ok || !data.status) {
-            console.error('[PaystackService] Create Recipient failed:', data);
+            logger.error(data, '[PaystackService] Create Recipient failed');
             throw new Error(data.message || 'Failed to create transfer recipient');
         }
 
