@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const LeadSchema = z.object({
     whatsapp: z.string().regex(/^\d{10,15}$/, "Invalid WhatsApp number: must be 10-15 digits"),
@@ -41,11 +42,12 @@ export async function captureLead(data: LeadData) {
             }
         });
 
-        console.log(`✅ Lead Captured (ID: ${lead.id})`);
+        logger.info(`✅ Lead Captured (ID: ${lead.id})`);
         return { success: true, id: lead.id };
 
     } catch (error) {
-        console.error("❌ Failed to capture lead:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`❌ Failed to capture lead: ${errorMessage}`);
         return { success: false, error: "Failed to save lead" };
     }
 }

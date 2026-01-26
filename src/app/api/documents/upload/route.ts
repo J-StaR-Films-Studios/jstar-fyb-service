@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-server";
+import { logger } from "@/lib/logger";
 import { GeminiFileSearchService } from "@/lib/gemini-file-search";
 import { extractPdfText } from "@/lib/pdf-parser";
 import { validateUrlSecurity } from "@/lib/security";
@@ -138,7 +139,7 @@ export async function POST(req: Request) {
                 } catch {
                     safeLink = "invalid-url";
                 }
-                console.warn(`[DocumentUpload] Blocked unsafe URL: ${safeLink}`, errorMessage);
+                logger.warn(`Blocked unsafe URL: ${safeLink}. Error: ${errorMessage}`, "[DocumentUpload]");
                 return NextResponse.json({ error: errorMessage || "Invalid or unsafe URL provided" }, { status: 400 });
             }
 
@@ -154,7 +155,8 @@ export async function POST(req: Request) {
 
                 return NextResponse.json({ success: true, doc });
             } catch (error: unknown) {
-                console.error("Link processing failed:", error);
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                logger.error(`Link processing failed: ${errorMessage}`, "[DocumentUpload]");
                 return NextResponse.json({ error: "Failed to download content from link" }, { status: 500 });
             }
         }
@@ -191,7 +193,7 @@ export async function POST(req: Request) {
 
             if (!isPdf && !isDocx && !isImage) {
                 // CRITICAL SECURITY FIX: Log security event for file type mismatch
-                console.warn(`[Security] File type mismatch detected: ${file.name} (${file.type})`);
+                logger.warn(`File type mismatch detected: ${file.name} (${file.type})`, "[Security]");
                 return NextResponse.json({ error: "File content does not match the declared type" }, { status: 400 });
             }
 
@@ -202,7 +204,7 @@ export async function POST(req: Request) {
                 const tailSection = buffer.slice(Math.max(0, buffer.length - 1024));
                 const tailString = tailSection.toString('ascii', 0, tailSection.length);
                 if (!tailString.includes('%%EOF')) {
-                    console.warn(`[Security] PDF missing %%EOF marker: ${file.name}`);
+                    logger.warn(`PDF missing %%EOF marker: ${file.name}`, "[Security]");
                     return NextResponse.json({ error: "Invalid PDF file structure - missing EOF marker" }, { status: 400 });
                 }
             }
@@ -214,17 +216,18 @@ export async function POST(req: Request) {
 
             try {
                 if (isPdf) {
-                    console.log(`[DocumentUpload] Extracting text from PDF: ${sanitizedFileName}`);
+                    logger.info(`Extracting text from PDF: ${sanitizedFileName}`, "[DocumentUpload]");
                     extractedContent = await extractPdfText(buffer);
-                    console.log(`[DocumentUpload] PDF extraction complete: ${extractedContent.length} chars`);
+                    logger.info(`PDF extraction complete: ${extractedContent.length} chars`, "[DocumentUpload]");
                 } else if (isDocx) {
-                    console.log(`[DocumentUpload] Extracting text from DOCX: ${sanitizedFileName}`);
+                    logger.info(`Extracting text from DOCX: ${sanitizedFileName}`, "[DocumentUpload]");
                     const result = await mammoth.extractRawText({ buffer });
                     extractedContent = result.value || '';
-                    console.log(`[DocumentUpload] DOCX extraction complete: ${extractedContent.length} chars`);
+                    logger.info(`DOCX extraction complete: ${extractedContent.length} chars`, "[DocumentUpload]");
                 }
             } catch (extractError) {
-                console.error('[DocumentUpload] Text extraction failed:', extractError);
+                const errorMessage = extractError instanceof Error ? extractError.message : String(extractError);
+                logger.error(`Text extraction failed: ${errorMessage}`, "[DocumentUpload]");
                 // Continue with upload even if extraction fails - can retry later
             }
 
@@ -267,7 +270,7 @@ export async function POST(req: Request) {
                     let storeId = project?.fileSearchStoreId;
 
                     if (!storeId) {
-                        console.log('[DocumentUpload] Creating new FileSearchStore for project:', projectId);
+                        logger.info(`Creating new FileSearchStore for project: ${projectId}`, "[DocumentUpload]");
                         storeId = await GeminiFileSearchService.createStore(projectId);
 
                         await prisma.project.update({
@@ -295,7 +298,7 @@ export async function POST(req: Request) {
                             result.error.includes('403') ||
                             result.error.includes('not exist')
                         )) {
-                            console.warn('[DocumentUpload] Store permission denied or missing. Recreating store for project:', projectId);
+                            logger.warn(`Store permission denied or missing. Recreating store for project: ${projectId}`, "[DocumentUpload]");
 
                             // 2a. Recreate Store
                             const newStoreId = await GeminiFileSearchService.createStore(projectId);
@@ -310,7 +313,7 @@ export async function POST(req: Request) {
                             });
 
                             // 2c. Retry Upload
-                            console.log(`[DocumentUpload] Retrying upload to new store: ${newStoreId}`);
+                            logger.info(`Retrying upload to new store: ${newStoreId}`, "[DocumentUpload]");
                             result = await GeminiFileSearchService.uploadDocument(
                                 newStoreId,
                                 buffer,
@@ -329,7 +332,7 @@ export async function POST(req: Request) {
                                 }
                             });
                         } else {
-                            console.error('[DocumentUpload] File Search upload failed:', result.error);
+                            logger.error(`File Search upload failed: ${result.error}`, "[DocumentUpload]");
                             await prisma.researchDocument.update({
                                 where: { id: doc.id },
                                 data: { importError: result.error || 'Upload failed' }
@@ -337,7 +340,8 @@ export async function POST(req: Request) {
                         }
                     }
                 } catch (error) {
-                    console.error('[DocumentUpload] Async File Search sync error:', error);
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    logger.error(`Async File Search sync error: ${errorMessage}`, "[DocumentUpload]");
                     // Update document with error
                     await prisma.researchDocument.update({
                         where: { id: doc.id },
@@ -353,7 +357,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "No file or link provided" }, { status: 400 });
 
     } catch (error) {
-        console.error("[DocumentUpload] Security error:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Security error: ${errorMessage}`, "[DocumentUpload]");
         return NextResponse.json({ error: "Failed to upload document" }, { status: 500 });
     }
 }
