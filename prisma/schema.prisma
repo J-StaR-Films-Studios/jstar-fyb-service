@@ -85,14 +85,18 @@ model Lead {
   status      String   @default("NEW")
   userId      String?
   anonymousId String?
-  tier        String?  // e.g., "AGENCY_SOFT_LIFE"
+  tier        String? // e.g., "AGENCY_SOFT_LIFE"
   source      String   @default("JAY_CHAT") // "JAY_CHAT", "AGENCY_FORM", "DIRECT"
-  name        String?  // User's name (for leads without user accounts yet)
-  email       String?  // Email (for leads without user accounts yet)
+  name        String? // User's name (for leads without user accounts yet)
+  email       String? // Email (for leads without user accounts yet)
 
   // Bolt: Add indexes for frequent lookups
   @@index([userId])
   @@index([anonymousId])
+  // Bolt: Add index for filtering by status in dashboards
+  @@index([status])
+  // Bolt: Add index for sorting by createdAt in dashboards
+  @@index([createdAt])
 }
 
 model Conversation {
@@ -196,6 +200,8 @@ model Payment {
   @@index([discountCodeId])
   // Bolt: Add index for sorting by createdAt in dashboards
   @@index([createdAt])
+  // Bolt: Add index for filtering by status in dashboards
+  @@index([status])
 }
 
 model ResearchDocument {
@@ -294,22 +300,22 @@ model ProjectDiagram {
 }
 
 model ProjectConversation {
-  id        String               @id @default(cuid())
+  id        String   @id @default(cuid())
   projectId String
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Thread categorization
-  threadType   String  @default("general") // "general", "chapter_1", ..., "research", "editing"
-  threadTitle  String? // User-facing title, e.g., "Chapter 1 Revisions"
-  
+  threadType  String  @default("general") // "general", "chapter_1", ..., "research", "editing"
+  threadTitle String? // User-facing title, e.g., "Chapter 1 Revisions"
+
   // Context scope (what this thread "sees")
-  contextScope Json?   // { chapterNumbers: [1, 2], includeResearch: true }
-  
+  contextScope Json? // { chapterNumbers: [1, 2], includeResearch: true }
+
   isArchived Boolean @default(false)
-  
-  messages  ProjectChatMessage[]
-  project   Project              @relation(fields: [projectId], references: [id])
+
+  messages ProjectChatMessage[]
+  project  Project              @relation(fields: [projectId], references: [id])
 
   @@index([projectId, threadType])
 }
@@ -319,7 +325,7 @@ model ProjectChatMessage {
   conversationId  String
   role            String
   content         String
-  reasoning       String?             // AI reasoning/thinking content (optional)
+  reasoning       String? // AI reasoning/thinking content (optional)
   toolInvocations Json?
   createdAt       DateTime            @default(now())
   conversation    ProjectConversation @relation(fields: [conversationId], references: [id])
@@ -406,51 +412,51 @@ model SystemSetting {
 // ============================================
 
 model Influencer {
-  id             String       @id @default(cuid())
-  name           String
-  email          String       @unique
-  phone          String?
-  referralCode   String       @unique  // e.g., "JOHNGPT", "TECHBRO"
-  isActive       Boolean      @default(true)
-  commissionRate Float        @default(0.10)  // 10% default
-  referralDiscount Float      @default(0.0)   // Discount for referred users (0-1.0)
-  totalEarnings  Float        @default(0)
-  pendingPayout  Float        @default(0)
+  id               String       @id @default(cuid())
+  name             String
+  email            String       @unique
+  phone            String?
+  referralCode     String       @unique // e.g., "JOHNGPT", "TECHBRO"
+  isActive         Boolean      @default(true)
+  commissionRate   Float        @default(0.10) // 10% default
+  referralDiscount Float        @default(0.0) // Discount for referred users (0-1.0)
+  totalEarnings    Float        @default(0)
+  pendingPayout    Float        @default(0)
   // Admin-controlled demo credits (in Naira)
-  freeCredits    Float        @default(0)     // e.g., 50000 = ₦50k worth of free usage
-  creditsUsed    Float        @default(0)     // Track how much they've used
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  referredUsers  User[]       @relation("ReferredUsers")
-  commissions    Commission[]
+  freeCredits      Float        @default(0) // e.g., 50000 = ₦50k worth of free usage
+  creditsUsed      Float        @default(0) // Track how much they've used
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  referredUsers    User[]       @relation("ReferredUsers")
+  commissions      Commission[]
 
   // Payout Details - Secured via Paystack Transfer Recipient
-  payoutConfig   InfluencerPayoutConfig?
+  payoutConfig InfluencerPayoutConfig?
 }
 
 model InfluencerPayoutConfig {
-  id              String     @id @default(cuid())
-  influencerId    String     @unique
-  influencer      Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
-  
+  id           String     @id @default(cuid())
+  influencerId String     @unique
+  influencer   Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
   // Safe Fields (We do NOT store the full account number)
-  bankName        String
-  bankCode        String     // e.g "058" (GTBank)
-  accountName     String     // as returned by Paystack Resolve
-  recipientCode   String     // The Paystack Recipient Code (RCP_xxxx) - CRITICAL
-  last4Digits     String     // For UI display only
-  currency        String     @default("NGN")
-  
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  bankName      String
+  bankCode      String // e.g "058" (GTBank)
+  accountName   String // as returned by Paystack Resolve
+  recipientCode String // The Paystack Recipient Code (RCP_xxxx) - CRITICAL
+  last4Digits   String // For UI display only
+  currency      String @default("NGN")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Commission {
   id           String     @id @default(cuid())
   influencerId String
   paymentId    String     @unique
-  amount       Float      // Commission amount in Naira
-  status       String     @default("PENDING")  // PENDING, PAID
+  amount       Float // Commission amount in Naira
+  status       String     @default("PENDING") // PENDING, PAID
   paidAt       DateTime?
   createdAt    DateTime   @default(now())
   influencer   Influencer @relation(fields: [influencerId], references: [id])
@@ -461,12 +467,12 @@ model Commission {
 
 model DiscountCode {
   id            String    @id @default(cuid())
-  code          String    @unique  // e.g., "NEWYEAR25"
-  discountType  String    @default("PERCENTAGE")  // PERCENTAGE, FIXED
-  discountValue Float     // 15 = 15% or ₦15 fixed
-  maxUses       Int?      // null = unlimited
+  code          String    @unique // e.g., "NEWYEAR25"
+  discountType  String    @default("PERCENTAGE") // PERCENTAGE, FIXED
+  discountValue Float // 15 = 15% or ₦15 fixed
+  maxUses       Int? // null = unlimited
   currentUses   Int       @default(0)
-  minAmount     Float?    // Minimum payment to qualify
+  minAmount     Float? // Minimum payment to qualify
   expiresAt     DateTime?
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
