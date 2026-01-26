@@ -27,3 +27,8 @@
 **Vulnerability:** Sensitive information (PII like phone numbers, errors with stack traces, payment data) was being logged to the console in both server-side actions and client-side hooks using `console.log` and `console.error`.
 **Learning:** Developers often use `console.log` for debugging and forget to remove it, or assume server logs are private (they are often aggregated in third-party services). Client-side logs are visible to any user or extension. Standard `JSON.stringify(error)` returns `{}` for Error objects, leading to lost error details if not handled explicitly.
 **Prevention:** Enforce the use of a centralized `logger` utility that sanitizes output (redacting emails, IPs, keys). For client-side code, audit hooks to ensure no PII is logged. Explicitly extract `error.message` when logging Error objects.
+
+## 2026-02-19 - [IDOR in Research API Endpoints]
+**Vulnerability:** The Research API endpoints (`/api/research/execute` and `/api/research/plan`) accepted a `projectId` without verifying if the authenticated user owned that project.
+**Learning:** API routes that accept resource IDs must explicitly verify ownership or permissions, even if the user is authenticated. Service-layer functions often assume authorization is handled at the controller/API layer.
+**Prevention:** Always fetch the resource and check `resource.userId === currentUser.id` (or RBAC) before performing actions.
