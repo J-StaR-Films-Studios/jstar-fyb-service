@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
 import { ResearchService, ResearchProgress } from '@/features/research/services/researchService';
 
@@ -14,6 +15,21 @@ export async function POST(req: NextRequest) {
 
         if (!projectId || !mode) {
             return new NextResponse('Project ID and Mode required', { status: 400 });
+        }
+
+        // Sentinel: Prevent IDOR by verifying project ownership
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            select: { userId: true }
+        });
+
+        if (!project) {
+            return new NextResponse('Project not found', { status: 404 });
+        }
+
+        const isAdmin = (user as { role?: string }).role === 'ADMIN';
+        if (project.userId !== user.id && !isAdmin) {
+            return new NextResponse('Forbidden: Access denied', { status: 403 });
         }
 
         // Create Streaming Response
