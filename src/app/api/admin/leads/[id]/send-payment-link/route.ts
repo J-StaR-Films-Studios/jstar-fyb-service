@@ -4,6 +4,7 @@ import { PaystackService } from "@/services/paystack.service";
 import { NotificationService } from "@/services/notification.service";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth-server";
+import { logger } from "@/lib/logger";
 
 const sendPaymentBodySchema = z.object({
     amount: z.number().positive(),
@@ -80,7 +81,7 @@ export async function POST(
                 finalUserId = existingUser.id;
             } else {
                 // Create completely new user
-                console.log(`[SendPaymentLink] Creating shadow user for email: ${email}`);
+                logger.info(`[SendPaymentLink] Creating shadow user for email: ${email}`, "[SendPaymentLink]");
                 const newUser = await prisma.user.create({
                     data: {
                         id: crypto.randomUUID(),
@@ -167,9 +168,14 @@ export async function POST(
         });
 
     } catch (error) {
-        console.error("[SendPaymentLink] Error:", error);
+        // SECURITY: Log full error details server-side but return generic message to client to prevent info leakage
+        logger.error({
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+        }, "[SendPaymentLink]");
+
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Internal Server Error" },
+            { error: "Internal Server Error" },
             { status: 500 }
         );
     }
