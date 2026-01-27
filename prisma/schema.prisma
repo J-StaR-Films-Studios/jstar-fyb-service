@@ -122,7 +122,7 @@ model Message {
   createdAt       DateTime     @default(now())
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  @@index([conversationId])
+  @@index([conversationId, createdAt])
 }
 
 model Project {
@@ -194,7 +194,7 @@ model Payment {
   // Commission tracking
   commission      Commission?
 
-  @@index([userId])
+  @@index([userId, createdAt])
   // Bolt: Add index for frequent queries by projectId
   @@index([projectId])
   @@index([discountCodeId])
@@ -268,7 +268,6 @@ model Chapter {
   project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, number])
-  @@index([projectId])
 }
 
 model ProjectMessage {
@@ -280,7 +279,7 @@ model ProjectMessage {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   // Bolt: Add index for frequent queries by projectId
-  @@index([projectId])
+  @@index([projectId, createdAt])
 }
 
 model ProjectDiagram {
@@ -330,7 +329,7 @@ model ProjectChatMessage {
   createdAt       DateTime            @default(now())
   conversation    ProjectConversation @relation(fields: [conversationId], references: [id])
 
-  @@index([conversationId])
+  @@index([conversationId, createdAt])
 }
 
 model TopicSwitchRequest {
