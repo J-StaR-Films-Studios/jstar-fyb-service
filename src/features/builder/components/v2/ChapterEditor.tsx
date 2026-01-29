@@ -82,6 +82,15 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
     // Editor Ref for Inline Insertion
     const editorRef = useRef<TipTapEditor | null>(null);
 
+    const handleEditorReady = useCallback((editor: TipTapEditor) => {
+        editorRef.current = editor;
+    }, []);
+
+    const handleEnhanceClick = useCallback((text: string) => {
+        setContentToEnhance(text);
+        setShowEnhancePopover(true);
+    }, []);
+
     const handleServerSideExport = async (format: 'markdown' | 'docx', options: ExportOptions) => {
         if (format === 'markdown') {
             // Fallback to client-side for MD as it's simple
@@ -446,11 +455,8 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                             : `Chapter ${activeChapterNumber} / ${activeChapter?.title || 'Untitled'}`}
                         content={activeChapter?.content}
                         onValidChange={handleSave}
-                        onEditorReady={(editor) => { editorRef.current = editor; }}
-                        onEnhanceClick={(text) => {
-                            setContentToEnhance(text);
-                            setShowEnhancePopover(true);
-                        }}
+                        onEditorReady={handleEditorReady}
+                        onEnhanceClick={handleEnhanceClick}
                         headerRight={
                             <div className="flex items-center gap-2">
                                 {activeChapter && (
@@ -636,16 +642,11 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                     content={activeChapter.content}
                     wordCount={activeChapter.wordCount}
                     onClose={() => setMobileView('timeline')}
-                    onSave={(content) => {
-                        handleSave(content);
-                    }}
+                    onSave={handleSave}
                     onOpenChat={() => {
                         handleMobileTabChange('chat');
                     }}
-                    onEnhanceClick={(text) => {
-                        setContentToEnhance(text);
-                        setShowEnhancePopover(true);
-                    }}
+                    onEnhanceClick={handleEnhanceClick}
                     projectId={projectId}
                     chapterNumber={activeChapter.number}
                     currentVersion={activeChapter.version || 1}
