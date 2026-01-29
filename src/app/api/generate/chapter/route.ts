@@ -6,6 +6,7 @@ import { BuilderAiService } from '@/features/builder/services/builderAiService';
 import { GeminiFileSearchService } from '@/lib/gemini-file-search';
 import { selectModel } from '@/lib/ai';
 import { getChapterSpecificPrompt, COMMON_ACADEMIC_RULES } from '@/features/bot/prompts/chapterPrompts';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 300; // Increased duration for RAG
 
@@ -121,9 +122,9 @@ async function saveChapterToDb(projectId: string, chapterNumber: number, text: s
             where: { id: projectId },
             data: { updatedAt: new Date() }
         });
-        console.log('[GenerateChapter] Chapter saved successfully');
+        logger.info('Chapter saved successfully', '[GenerateChapter]');
     } catch (dbError) {
-        console.error('[GenerateChapter] Failed to save chapter:', dbError);
+        logger.error(dbError, '[GenerateChapter]');
     }
 }
 
@@ -218,7 +219,7 @@ export async function POST(req: Request) {
         const hasDocuments = project.documents && project.documents.length > 0;
         const useGroundedParams = !!fileSearchStoreId && hasDocuments;
 
-        console.log(`[GenerateChapter] Mode: ${useGroundedParams ? 'GROUNDED (Gemini)' : 'STANDARD (FREE Tier)'}`);
+        logger.info(`Mode: ${useGroundedParams ? 'GROUNDED (Gemini)' : 'STANDARD (FREE Tier)'}`, '[GenerateChapter]');
 
         // ==========================================================
         // MODE A: STANDARD GENERATION (FREE Tier - DeepSeek V3 / Kimi K2)
@@ -226,7 +227,7 @@ export async function POST(req: Request) {
         if (!useGroundedParams) {
             // Use FREE tier model for cost savings
             const { model, modelId, provider, isFree, reason } = selectModel({ quality: 'high' });
-            console.log(`[GenerateChapter] Router selected: ${modelId} via ${provider} (free: ${isFree}) - ${reason}`);
+            logger.info(`Router selected: ${modelId} via ${provider} (free: ${isFree}) - ${reason}`, '[GenerateChapter]');
 
             const result = streamText({
                 model,
@@ -349,7 +350,7 @@ export async function POST(req: Request) {
 
                     controller.close();
                 } catch (err) {
-                    console.error('Stream error:', err);
+                    logger.error(err, '[GenerateChapter] Stream error');
                     controller.error(err);
                 }
             }
@@ -363,7 +364,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error: unknown) {
-        console.error('[GenerateChapter] Error:', error);
+        logger.error(error, '[GenerateChapter]');
         return new Response(
             JSON.stringify({ error: 'Failed to generate chapter' }),
             { status: 500, headers: { 'Content-Type': 'application/json' } }
