@@ -83,7 +83,7 @@ function validateFileSecurity(file: File): { isValid: boolean; error?: string } 
 
         return { isValid: true };
     } catch (error) {
-        console.error('[DocumentUpload] File validation error:', error);
+        logger.error('[DocumentUpload] File validation error:', String(error));
         return { isValid: false, error: "File validation failed" };
     }
 }

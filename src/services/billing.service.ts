@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getTierByPrice } from "@/config/pricing";
 import { EmailService } from "@/services/email.service";
 import { ProjectsService } from "./projects.service";
+import { logger } from "@/lib/logger";
 
 export interface PaymentData {
     reference: string;
@@ -30,7 +31,7 @@ export const BillingService = {
         const projectId = data.metadata?.projectId;
 
         if (!projectId) {
-            console.error('[BillingService] No projectId found in payment metadata', data.reference);
+            logger.error('[BillingService] No projectId found in payment metadata', data.reference);
             // We might still want to record the payment, but we can't link it to a project easily without the ID.
             // For now, let's try to find the project by other means or just record it with a null project if the schema allowed (it doesn't).
             // Schema requires projectId on Payment. If it's missing, we have a problem.
@@ -44,7 +45,7 @@ export const BillingService = {
 
         // Idempotency: If already success, return immediately
         if (payment && payment.status === 'SUCCESS') {
-            console.log(`[BillingService] Payment already processed: ${data.reference}`);
+            logger.info(`[BillingService] Payment already processed: ${data.reference}`);
             return payment;
         }
 
@@ -105,7 +106,7 @@ export const BillingService = {
 
         // 6. Send Receipt Email
         this.sendReceiptEmail(userId, payment.id).catch(e =>
-            console.error('[BillingService] Background email failed:', e)
+            logger.error('[BillingService] Background email failed:', String(e))
         );
 
         return payment;
@@ -131,11 +132,11 @@ export const BillingService = {
                     where: { id: discountCodeId },
                     data: { currentUses: { increment: 1 } }
                 });
-                console.log(`[BillingService] Incremented usage for discount ${discountCodeId}`);
+                logger.info(`[BillingService] Incremented usage for discount ${discountCodeId}`);
             }
 
         } catch (err) {
-            console.error('[BillingService] Failed to process post-payment actions:', err);
+            logger.error('[BillingService] Failed to process post-payment actions:', String(err));
         }
     },
 
@@ -164,9 +165,10 @@ export const BillingService = {
                 // Agency tiers start with 'AGENCY'
                 const isAgency = tier.id.startsWith('AGENCY');
                 updateData.mode = isAgency ? 'CONCIERGE' : 'DIY';
-                console.log(`[BillingService] Inferred mode from price ${amountNaira}: ${updateData.mode}`);
+                logger.info(`[BillingService] Inferred mode from price ${amountNaira}: ${updateData.mode}`);
             } else {
-                console.warn(`[BillingService] Could not find tier for price ${amountNaira}`);
+                // Warning is fine as info/warn
+                logger.warn(`[BillingService] Could not find tier for price ${amountNaira}`);
             }
         }
 
@@ -174,7 +176,7 @@ export const BillingService = {
             where: { id: projectId },
             data: updateData
         });
-        console.log(`[BillingService] Unlocked project (paid) and Locked topic atomically: ${projectId}`);
+        logger.info(`[BillingService] Unlocked project (paid) and Locked topic atomically: ${projectId}`);
     },
 
     async sendReceiptEmail(userId: string, paymentId: string) {
@@ -190,7 +192,7 @@ export const BillingService = {
             });
 
             if (!payment || !user) {
-                console.error(`[BillingService] Could not send receipt. Missing data. Payment: ${!!payment}, User: ${!!user}`);
+                logger.error(`[BillingService] Could not send receipt. Missing data. Payment: ${!!payment}, User: ${!!user}`);
                 return;
             }
 
@@ -210,9 +212,9 @@ export const BillingService = {
             // 3. Send via EmailService
             await EmailService.sendPaymentReceipt(emailParams);
 
-            console.log(`[BillingService] Receipt email sent to ${user.email} for payment ${payment.reference}`);
+            logger.info(`[BillingService] Receipt email sent to ${user.email} for payment ${payment.reference}`);
         } catch (error) {
-            console.error('[BillingService] Failed to send receipt email:', error);
+            logger.error('[BillingService] Failed to send receipt email:', String(error));
         }
     },
 
