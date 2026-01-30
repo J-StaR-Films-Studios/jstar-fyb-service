@@ -124,7 +124,8 @@ export interface TimelineSidebarProps {
     onGenerateChapter?: (number: number) => void;
 }
 
-export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, onChapterSelect, onGenerateChapter }: TimelineSidebarProps) {
+// Bolt: Memoized to prevent re-renders when parent state (like search query or active tab) changes
+export const TimelineSidebar = memo(function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, onChapterSelect, onGenerateChapter }: TimelineSidebarProps) {
     return (
         <aside className="w-80 flex flex-col glass-panel z-20 h-full border-r border-white/5 bg-dark/50 backdrop-blur-xl">
             {/* Brand Header */}
@@ -172,4 +173,4 @@ export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, o
             </div>
         </aside>
     );
-}
+});
