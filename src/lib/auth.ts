@@ -16,7 +16,7 @@ const envSchema = z.object({
 // CRITICAL SECURITY FIX: Runtime environment validation with security checks
 const envValidation = envSchema.safeParse(process.env);
 if (!envValidation.success) {
-    logger.error("[Auth] Environment validation failed: " + envValidation.error.toString());
+    logger.error({ error: envValidation.error }, "[Auth] Environment validation failed");
     throw new Error("Missing required environment variables for authentication");
 }
 
