@@ -318,51 +318,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         return saveChapterContent(activeChapterNumber, content);
     }, [activeChapterNumber, saveChapterContent]);
 
-    const handleGenerateChapter = useCallback(async (chapterNumber: number) => {
-        try {
-            setChapters(prev => prev.map(c =>
-                c.number === chapterNumber ? { ...c, status: 'in-progress' } : c
-            ));
 
-            const response = await fetch('/api/generate/chapter', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId, chapterNumber })
-            });
-
-            if (!response.ok) throw new Error('Failed to generate');
-
-            const reader = response.body?.getReader();
-            const decoder = new TextDecoder();
-            let content = '';
-
-            if (reader) {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    content += decoder.decode(value, { stream: true });
-
-                    setChapters(prev => prev.map(c =>
-                        c.number === chapterNumber ? {
-                            ...c,
-                            content,
-                            wordCount: content.split(/\s+/).length,
-                            subsections: parseSubsections(content)
-                        } : c
-                    ));
-                }
-            }
-
-            saveChapterContent(chapterNumber, content);
-
-            setChapters(prev => prev.map(c =>
-                c.number === chapterNumber ? { ...c, status: 'complete' } : c
-            ));
-
-        } catch (error) {
-            console.error('Generation failed', error);
-        }
-    }, [projectId, saveChapterContent]);
 
     const handleApplyAiEdit = useCallback((chapterNumber: number, original: string, replacement: string) => {
         const chapter = chapters.find(c => c.number === chapterNumber);

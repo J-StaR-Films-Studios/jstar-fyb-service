@@ -4,7 +4,7 @@ import { LucideIcon, CheckCircle2, Lock, MoreHorizontal, ChevronRight, Circle, S
 import { memo } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { memo } from 'react';
+
 
 interface ChapterNodeProps {
     number: number;
