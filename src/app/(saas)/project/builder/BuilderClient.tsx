@@ -78,7 +78,7 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
         syncWithUser(session?.user?.id || null);
 
     // CRITICAL: Mark hydration complete AFTER all state updates
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setIsHydrated(true);
 
     }, [isPending, serverProject, serverIsPaid, session?.user?.id, loadProject, syncWithUser, hydrateFromChat]);

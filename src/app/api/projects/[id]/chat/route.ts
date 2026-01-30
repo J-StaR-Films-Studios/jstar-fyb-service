@@ -218,7 +218,7 @@ ${researchText}
 
                 // Extract tool invocations from steps for persistence
                 // SDK v6 structure: step.content[] contains objects with type: 'tool-call' and 'tool-result'
-                let toolInvocations: any[] = [];
+                const toolInvocations: any[] = [];
                 if (steps && Array.isArray(steps)) {
                     for (const step of steps) {
                         const content = step.content || [];

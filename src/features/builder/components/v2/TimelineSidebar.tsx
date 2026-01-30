@@ -4,6 +4,7 @@ import { LucideIcon, CheckCircle2, Lock, MoreHorizontal, ChevronRight, Circle, S
 import { memo } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { memo } from 'react';
 
 interface ChapterNodeProps {
     number: number;
@@ -124,7 +125,7 @@ export interface TimelineSidebarProps {
     onGenerateChapter?: (number: number) => void;
 }
 
-export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, onChapterSelect, onGenerateChapter }: TimelineSidebarProps) {
+export const TimelineSidebar = memo(function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, onChapterSelect, onGenerateChapter }: TimelineSidebarProps) {
     return (
         <aside className="w-80 flex flex-col glass-panel z-20 h-full border-r border-white/5 bg-dark/50 backdrop-blur-xl">
             {/* Brand Header */}
@@ -172,4 +173,4 @@ export function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, o
             </div>
         </aside>
     );
-}
+});

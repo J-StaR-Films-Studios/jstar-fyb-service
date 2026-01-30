@@ -69,6 +69,10 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
         debouncedSave(newContent);
     }, [debouncedSetEditedContent, debouncedSave]);
 
+    const handleEditorReady = useCallback((e: EditorInstance) => {
+        setEditor(e);
+    }, []);
+
     const handleDone = () => {
         // Force immediate save on Done and cancel pending debounced saves
         debouncedSave.cancel();
@@ -213,7 +217,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
                     content={initialContent}
                     onUpdate={handleContentUpdate}
                     projectId={projectId}
-                    onEditorReady={(e) => setEditor(e as any)}
+                    onEditorReady={handleEditorReady}
                     className="min-h-[calc(100vh-250px)]"
                 />
             </main>

@@ -47,6 +47,8 @@ const parseSubsections = (content: string) => {
     return content.match(/^##\s+(.+)$/gm)?.map(s => s.replace(/^##\s+/, '')) || [];
 };
 
+const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
+
 export function ChapterEditor({ projectId }: ChapterEditorProps) {
     // State
     const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -188,7 +190,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
             const data = await response.json();
 
             if (data.success && data.chapters) {
-                const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
                 let mappedChapters: Chapter[] = [];
 
                 if (Array.isArray(data.chapters) && data.chapters.length > 0) {
@@ -247,7 +248,6 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                 setChapters(mappedChapters);
             } else {
                 // ... (Empty logic same as before)
-                const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
                 const emptyChapters: Chapter[] = Array.from({ length: 5 }, (_, i) => ({
                     id: `chapter-${i + 1}`,
                     number: i + 1,
@@ -409,6 +409,57 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         }
     }, [mobileView]);
 
+    const handleEditorReady = useCallback((editor: TipTapEditor) => {
+        editorRef.current = editor;
+    }, []);
+
+    const handleGenerateChapter = useCallback(async (chapterNumber: number) => {
+        try {
+            setChapters(prev => prev.map(c =>
+                c.number === chapterNumber ? { ...c, status: 'in-progress' } : c
+            ));
+
+            const response = await fetch('/api/generate/chapter', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ projectId, chapterNumber })
+            });
+
+            if (!response.ok) throw new Error('Failed to generate');
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            let content = '';
+
+            if (reader) {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    content += decoder.decode(value, { stream: true });
+
+                    setChapters(prev => prev.map(c =>
+                        c.number === chapterNumber ? {
+                            ...c,
+                            content,
+                            wordCount: content.split(/\s+/).length,
+                            subsections: parseSubsections(content)
+                        } : c
+                    ));
+                }
+            }
+
+            // After stream finishes, save the final content to ensure DB consistency
+            await saveChapterContent(chapterNumber, content);
+
+            setChapters(prev => prev.map(c =>
+                c.number === chapterNumber ? { ...c, status: 'complete' } : c
+            ));
+
+        } catch (error) {
+            console.error('Generation failed', error);
+        }
+    }, [projectId, saveChapterContent]);
+
     const activeChapter = chapters.find(c => c.number === activeChapterNumber);
 
     const handleMobileTabChange = (tab: 'write' | 'research' | 'chat' | 'diagrams' | 'settings') => {
@@ -446,7 +497,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
                             : `Chapter ${activeChapterNumber} / ${activeChapter?.title || 'Untitled'}`}
                         content={activeChapter?.content}
                         onValidChange={handleSave}
-                        onEditorReady={(editor) => { editorRef.current = editor; }}
+                        onEditorReady={handleEditorReady}
                         onEnhanceClick={(text) => {
                             setContentToEnhance(text);
                             setShowEnhancePopover(true);

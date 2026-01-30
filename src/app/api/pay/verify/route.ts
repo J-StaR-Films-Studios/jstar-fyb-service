@@ -113,7 +113,7 @@ const processPaymentVerification = async (reference: string) => {
 
         // 6. CRITICAL SECURITY FIX: Atomic update of payment and project with proper error handling
         // 2. Determine project to unlock (handling lead vs project IDs)
-        let projectId = payment.projectId;
+        const projectId = payment.projectId;
         let project = await tx.project.findUnique({ where: { id: projectId } });
 
         // If not found, check if it was a lead-based payment
