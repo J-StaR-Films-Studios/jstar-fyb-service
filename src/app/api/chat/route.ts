@@ -6,6 +6,7 @@ import { sanitizeInput, MAX_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH as MAX_MSG_LEN_EX
 import { chatTools } from '@/features/bot/tools/definitions';
 import { selectModel } from '@/lib/ai/router';
 import { Models } from '@/lib/ai/providers';
+import { logger } from '@/lib/logger';
 
 // Validate AI service configuration at startup
 // We keep this check but make it non-blocking if other providers are available
@@ -13,7 +14,7 @@ import { Models } from '@/lib/ai/providers';
 try {
     validateService('ai');
 } catch (e) {
-    console.warn('Groq AI service not fully configured, falling back to router logic.');
+    logger.warn('Groq AI service not fully configured, falling back to router logic.', '[Chat API]');
 }
 
 // Get validated environment variables
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
         const validation = chatSchema.safeParse(body);
 
         if (!validation.success) {
-            console.error('[Chat API] Validation failed:', JSON.stringify(validation.error.format(), null, 2));
+            logger.error(validation.error.format(), '[Chat API] Validation failed');
             return new Response(JSON.stringify({ error: 'Invalid input', details: validation.error }), { status: 400 });
         }
 
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
         });
 
         // Debug Log
-        console.log(`[Chat API] Processing ${modelMessages.length} messages.`);
+        logger.info(`Processing ${modelMessages.length} messages.`, '[Chat API]');
 
         // Select model using Router
         const { model: selectedModel, modelId } = selectModel({
@@ -103,7 +104,7 @@ export async function POST(req: Request) {
             tools: true,
         });
 
-        console.log(`[Chat API] Using model: ${modelId}`);
+        logger.info(`Using model: ${modelId}`, '[Chat API]');
 
         const result = streamText({
             model: selectedModel,
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
         return result.toUIMessageStreamResponse();
 
     } catch (error: any) {
-        console.error('[Chat API] Fatal error after retries:', error);
+        logger.error(error, '[Chat API] Fatal error after retries');
 
         // Standardized recovery for tool errors
         const errorMessage = error?.message || '';
@@ -128,7 +129,7 @@ export async function POST(req: Request) {
             .some(msg => errorMessage.includes(msg));
 
         if (isToolCallError) {
-            console.warn('[Chat API] Tool call failed, returning recovery message');
+            logger.warn('Tool call failed, returning recovery message', '[Chat API]');
             const recoveryText = "Oops! I got a bit confused there. Let me try again — could you repeat what you'd like to do? If you've already shared your WhatsApp, you can click \"Proceed to Builder\" below to continue!";
             return new Response(JSON.stringify({ error: recoveryText, recoverable: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
@@ -145,7 +146,7 @@ export async function DELETE() {
         // The client handles clearing localStorage/state on its own
         return Response.json({ success: true });
     } catch (error: any) {
-        console.error('[Chat DELETE] Error:', error);
+        logger.error(error, '[Chat DELETE]');
         return new Response(JSON.stringify({ error: 'Failed to clear conversation' }), { status: 500 });
     }
 }
