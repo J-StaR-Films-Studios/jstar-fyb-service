@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 export const chatTools = {
     suggestTopics: tool({
@@ -16,7 +17,7 @@ NEGATIVE: Never write topics as plain text. If you want to suggest topics, you M
             })),
         }),
         execute: async ({ topics }) => {
-            console.log('[TOOL CALL] suggestTopics:', JSON.stringify(topics, null, 2));
+            logger.info({ topics }, '[TOOL CALL] suggestTopics');
             return { topics, suggested: true };
         },
     }),
@@ -27,7 +28,7 @@ NEGATIVE: Never write topics as plain text. If you want to suggest topics, you M
             reason: z.string().describe('Short punchy reason (e.g. "Requires complex API integration")'),
         }),
         execute: async ({ level, reason }) => {
-            console.log('[TOOL CALL] setComplexity:', { level, reason });
+            logger.info({ level, reason }, '[TOOL CALL] setComplexity');
             return { level, reason, updated: true };
         },
     }),
@@ -35,7 +36,7 @@ NEGATIVE: Never write topics as plain text. If you want to suggest topics, you M
         description: 'Get the current J Star pricing tiers.',
         inputSchema: z.object({}),
         execute: async () => {
-            console.log('[TOOL CALL] getPricing: Fetching pricing tiers');
+            logger.info('Fetching pricing tiers', '[TOOL CALL] getPricing');
             return {
                 basic: "₦120,000",
                 standard: "₦200,000",
@@ -50,7 +51,7 @@ NEGATIVE: Never write topics as plain text. If you want to suggest topics, you M
             reason: z.string().describe('Why you gave this score'),
         }),
         execute: async ({ score, reason }) => {
-            console.log('[TOOL CALL] measureConviction:', { score, reason });
+            logger.info({ score, reason }, '[TOOL CALL] measureConviction');
             return { score, reason, tracked: true };
         }
     }),
@@ -64,7 +65,7 @@ NEGATIVE: Never say "drop your WhatsApp" or "send me your number" in plain text.
             reason: z.string().describe('Context for asking (e.g. "To send architecture")'),
         }),
         execute: async ({ reason }) => {
-            console.log('[TOOL CALL] requestContactInfo:', { reason });
+            logger.info({ reason }, '[TOOL CALL] requestContactInfo');
             return { reason, requesting: true };
         }
     }),
@@ -79,7 +80,7 @@ NEGATIVE: Never end conversation or say "we're done" without calling this tool.`
             twist: z.string().describe('The unique angle/twist'),
         }),
         execute: async ({ topic, twist }) => {
-            console.log('[TOOL CALL] confirmTopic:', { topic, twist });
+            logger.info({ topic, twist }, '[TOOL CALL] confirmTopic');
             return { topic, twist, confirmed: true };
         }
     })

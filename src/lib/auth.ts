@@ -16,7 +16,7 @@ const envSchema = z.object({
 // CRITICAL SECURITY FIX: Runtime environment validation with security checks
 const envValidation = envSchema.safeParse(process.env);
 if (!envValidation.success) {
-    logger.error({ error: envValidation.error }, "[Auth] Environment validation failed");
+    logger.error(envValidation.error, "[Auth] Environment validation failed");
     throw new Error("Missing required environment variables for authentication");
 }
 
@@ -32,20 +32,20 @@ const isActuallyDeployed = process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT
 
 if (process.env.NODE_ENV === "production" && isActuallyDeployed) {
     if (dbProvider === "sqlite") {
-        logger.error("[Auth] CRITICAL: SQLite is not allowed in production environment");
+        logger.error("SQLite is not allowed in production environment", "[Auth] CRITICAL");
         throw new Error("SQLite database provider is not secure for production use");
     }
 
     // Additional security check for production database URL
     const dbUrl = envValidation.data.DATABASE_URL;
     if (dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1')) {
-        logger.error("[Auth] CRITICAL: Local database URLs are not allowed in production");
+        logger.error("Local database URLs are not allowed in production", "[Auth] CRITICAL");
         throw new Error("Production environment must use secure database connections");
     }
 }
 
 // Security logging for database configuration - only log provider, not environment variables
-logger.info(`[Auth] Database provider configured: ${dbProvider} (Environment: ${process.env.NODE_ENV || 'development'})`);
+logger.info(`Database provider configured: ${dbProvider} (Environment: ${process.env.NODE_ENV || 'development'})`, "[Auth]");
 
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
@@ -88,7 +88,7 @@ export const auth = betterAuth({
                 const { Resend } = await import("resend");
                 const resend = new Resend(process.env.RESEND_API_KEY);
 
-                logger.info(`[Auth] Sending Magic Link to ${email}`);
+                logger.info(`Sending Magic Link to ${email}`, "[Auth]");
 
                 await resend.emails.send({
                     from: process.env.RESEND_FROM_EMAIL || "J-Star Projects <onboarding@resend.dev>",
