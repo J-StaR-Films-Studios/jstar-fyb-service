@@ -167,7 +167,8 @@ model Project {
   documents                ResearchDocument[]
   diagrams                 ProjectDiagram[]
 
-  @@index([userId])
+  // Bolt: Optimized index for dashboard sorting (userId + updatedAt)
+  @@index([userId, updatedAt])
   // Bolt: Add index for frequent queries by anonymousId
   @@index([anonymousId])
   // Bolt: Add index for sorting by updatedAt in dashboards
