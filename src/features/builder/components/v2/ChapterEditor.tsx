@@ -42,13 +42,13 @@ interface ChapterEditorProps {
     };
 }
 
+// Helper defined outside component to prevent recreation
 const parseSubsections = (content: string) => {
     if (!content) return [];
     return content.match(/^##\s+(.+)$/gm)?.map(s => s.replace(/^##\s+/, '')) || [];
 };
 
 const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
-
 export function ChapterEditor({ projectId }: ChapterEditorProps) {
     // State
     const [chapters, setChapters] = useState<Chapter[]>([]);
