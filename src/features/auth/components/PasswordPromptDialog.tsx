@@ -15,9 +15,7 @@ export function PasswordPromptDialog() {
     useEffect(() => {
         const init = async () => {
             try {
-                console.log("[PasswordPromptDialog] Checking password status...");
                 const { hasPassword } = await checkHasPassword();
-                console.log("[PasswordPromptDialog] Has password:", hasPassword);
                 if (!hasPassword) {
                     setIsOpen(true);
                 }
