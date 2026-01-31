@@ -1,0 +1,16 @@
+{
+    "merged_branches": [
+        "origin/Agency_Onboarding_Flow",
+        "origin/ux-improvements",
+        "origin/bolt-add-db-indexes-76468552354140913483504244023121837122739872",
+        "origin/sentinel-fix-idor-research-api-182592034812011145839816361",
+        "origin/sentinel-fix-pii-leak-payout-57551...",
+        "origin/bolt-lead-indexes-2284536049732563...",
+        "origin/bolt/performance-sidebar-optimization-18...",
+        "origin/bolt-novel-editor-memoization-1647845441...",
+        "origin/sentinel/fix-pii-logging-173945709774528...",
+        "origin/sentinel-logging-fix-17139745480911549626"
+    ],
+    "consolidation_branch": "chore/batch-merge-prs",
+    "status": "merged_locally"
+}

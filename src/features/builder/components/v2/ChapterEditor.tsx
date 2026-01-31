@@ -374,9 +374,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         }
     }, [mobileView]);
 
-    const handleEditorReady = useCallback((editor: TipTapEditor) => {
-        editorRef.current = editor;
-    }, []);
+
 
     const handleGenerateChapter = useCallback(async (chapterNumber: number) => {
         try {
