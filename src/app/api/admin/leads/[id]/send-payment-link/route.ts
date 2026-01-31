@@ -81,7 +81,7 @@ export async function POST(
                 finalUserId = existingUser.id;
             } else {
                 // Create completely new user
-                logger.info(`[SendPaymentLink] Creating shadow user for email: ${email}`);
+                logger.info(`[SendPaymentLink] Creating shadow user for email: ${email}`, "[SendPaymentLink]");
                 const newUser = await prisma.user.create({
                     data: {
                         id: crypto.randomUUID(),
@@ -168,9 +168,13 @@ export async function POST(
         });
 
     } catch (error) {
-        logger.error("[SendPaymentLink] Error: " + (error instanceof Error ? error.message : String(error)));
+        // SECURITY: Log full error details server-side but return generic message to client to prevent info leakage
+        logger.error({
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+        }, "[SendPaymentLink]");
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Internal Server Error" },
+            { error: "Internal Server Error" },
             { status: 500 }
         );
     }
