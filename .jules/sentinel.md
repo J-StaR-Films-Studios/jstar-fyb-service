@@ -32,3 +32,8 @@
 **Vulnerability:** The Research API endpoints (`/api/research/execute` and `/api/research/plan`) accepted a `projectId` without verifying if the authenticated user owned that project.
 **Learning:** API routes that accept resource IDs must explicitly verify ownership or permissions, even if the user is authenticated. Service-layer functions often assume authorization is handled at the controller/API layer.
 **Prevention:** Always fetch the resource and check `resource.userId === currentUser.id` (or RBAC) before performing actions.
+
+## 2026-02-20 - [Zod Validation Order Matters]
+**Vulnerability:** Chaining `.min(3).trim()` in Zod allows whitespace-only strings (e.g., "   ") to pass validation because the length check runs on the raw input before trimming.
+**Learning:** Zod validation chains execute sequentially. Placing checks before transformations validates the raw input, while placing them after validates the transformed input.
+**Prevention:** Use `.max(LIMIT)` first for DoS protection (raw length), then `.trim()` to sanitize, then `.min(LIMIT)` to enforce content requirements on the sanitized value.
