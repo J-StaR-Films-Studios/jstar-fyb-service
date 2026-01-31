@@ -108,9 +108,9 @@ model Conversation {
   title       String?
   messages    Message[]
 
-  // Bolt: Add indexes for frequent lookups
-  @@index([userId])
-  @@index([anonymousId])
+  // Bolt: Add composite indexes for frequent lookups and sorting
+  @@index([userId, updatedAt])
+  @@index([anonymousId, updatedAt])
 }
 
 model Message {
@@ -122,6 +122,7 @@ model Message {
   createdAt       DateTime     @default(now())
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
+  // Bolt: Add composite index for retrieving chat history sorted by time
   @@index([conversationId, createdAt])
 }
 
@@ -167,10 +168,9 @@ model Project {
   documents                ResearchDocument[]
   diagrams                 ProjectDiagram[]
 
-  // Bolt: Optimized index for dashboard sorting (userId + updatedAt)
+  // Bolt: Add composite indexes for frequent lookups and sorting
   @@index([userId, updatedAt])
-  // Bolt: Add index for frequent queries by anonymousId
-  @@index([anonymousId])
+  @@index([anonymousId, updatedAt])
   // Bolt: Add index for sorting by updatedAt in dashboards
   @@index([updatedAt])
 }
@@ -318,6 +318,8 @@ model ProjectConversation {
   project  Project              @relation(fields: [projectId], references: [id])
 
   @@index([projectId, threadType])
+  // Bolt: Add index for sorting threads by date
+  @@index([projectId, updatedAt])
 }
 
 model ProjectChatMessage {
@@ -330,6 +332,7 @@ model ProjectChatMessage {
   createdAt       DateTime            @default(now())
   conversation    ProjectConversation @relation(fields: [conversationId], references: [id])
 
+  // Bolt: Add composite index for retrieving chat history sorted by time
   @@index([conversationId, createdAt])
 }
 
