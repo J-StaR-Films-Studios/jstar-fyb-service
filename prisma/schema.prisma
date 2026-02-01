@@ -109,8 +109,10 @@ model Conversation {
   messages    Message[]
 
   // Bolt: Add indexes for frequent lookups
-  @@index([userId])
-  @@index([anonymousId])
+  // Bolt: Optimized composite index for sorting (userId + updatedAt)
+  @@index([userId, updatedAt])
+  // Bolt: Optimized composite index for sorting (anonymousId + updatedAt)
+  @@index([anonymousId, updatedAt])
 }
 
 model Message {
@@ -167,7 +169,8 @@ model Project {
   documents                ResearchDocument[]
   diagrams                 ProjectDiagram[]
 
-  @@index([userId])
+  // Bolt: Optimized composite index for Dashboard queries (userId + updatedAt)
+  @@index([userId, updatedAt])
   // Bolt: Add index for frequent queries by anonymousId
   @@index([anonymousId])
   // Bolt: Add index for sorting by updatedAt in dashboards
@@ -194,7 +197,8 @@ model Payment {
   // Commission tracking
   commission      Commission?
 
-  @@index([userId])
+  // Bolt: Optimized composite index for Payment history (userId + createdAt)
+  @@index([userId, createdAt])
   // Bolt: Add index for frequent queries by projectId
   @@index([projectId])
   @@index([discountCodeId])
@@ -330,7 +334,8 @@ model ProjectChatMessage {
   createdAt       DateTime            @default(now())
   conversation    ProjectConversation @relation(fields: [conversationId], references: [id])
 
-  @@index([conversationId])
+  // Bolt: Optimized composite index for chat history (conversationId + createdAt)
+  @@index([conversationId, createdAt])
 }
 
 model TopicSwitchRequest {
