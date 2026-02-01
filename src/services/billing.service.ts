@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getTierByPrice } from "@/config/pricing";
 import { EmailService } from "@/services/email.service";
-import { ProjectsService } from "./projects.service";
 import { logger } from "@/lib/logger";
+import { ProjectsService } from "./projects.service";
+
 
 export interface PaymentData {
     reference: string;
@@ -55,7 +56,10 @@ export const BillingService = {
                 include: { user: true }
             });
 
-            if (!project) throw new Error(`Project not found: ${projectId}`);
+            if (!project) {
+                logger.error(`[BillingService] Project not found for payment: ${projectId}`);
+                throw new Error(`Project not found: ${projectId}`);
+            }
             userId = project.userId || undefined;
 
             // Fallback to email lookup if project is anonymous
@@ -64,7 +68,10 @@ export const BillingService = {
                 userId = user?.id || undefined;
             }
 
-            if (!userId) throw new Error(`Could not determine User ID for payment: ${data.reference}`);
+            if (!userId) {
+                logger.error(`[BillingService] Could not determine User ID for payment: ${data.reference}`);
+                throw new Error(`Could not determine User ID for payment: ${data.reference}`);
+            }
         }
 
         // 3. Update or Create Payment Record
