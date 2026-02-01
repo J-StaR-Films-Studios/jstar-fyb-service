@@ -1,11 +1,6 @@
 'use client';
 
-<<<<<<< HEAD
-import { LucideIcon, CheckCircle2, Lock, MoreHorizontal, ChevronRight, Circle, Sparkles, Loader2, RefreshCw } from 'lucide-react';
-import { memo } from 'react';
-=======
 import { CheckCircle2, Lock, MoreHorizontal, Sparkles, Loader2, RefreshCw } from 'lucide-react';
->>>>>>> origin/bolt/memoize-timeline-sidebar-1488303458527545788
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { memo } from 'react';
@@ -17,13 +12,8 @@ interface ChapterNodeProps {
     status: 'locked' | 'draft' | 'in-progress' | 'complete';
     subsections?: string[];
     isActive?: boolean;
-<<<<<<< HEAD
-    onSelect: (id: number) => void;
-    onGenerate?: (id: number) => void;
-=======
     onSelect?: (number: number) => void;
     onGenerate?: (number: number) => void;
->>>>>>> origin/bolt/memoize-timeline-sidebar-1488303458527545788
     isGenerating?: boolean;
     wordCount?: number;
 }
@@ -49,11 +39,7 @@ const ChapterNode = memo(function ChapterNode({ number, title, status, subsectio
 
     return (
         <div
-<<<<<<< HEAD
-            onClick={status !== 'locked' ? () => onSelect(number) : undefined}
-=======
             onClick={handleClick}
->>>>>>> origin/bolt/memoize-timeline-sidebar-1488303458527545788
             className={cn(
                 "group rounded-xl p-3 transition-all border border-transparent relative",
                 isActive ? "bg-primary/10 border-primary/20 cursor-default" :
@@ -76,14 +62,7 @@ const ChapterNode = memo(function ChapterNode({ number, title, status, subsectio
                     {/* Generate Button - Always visible for empty chapters */}
                     {showGenerate && (
                         <button
-<<<<<<< HEAD
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onGenerate?.(number);
-                            }}
-=======
                             onClick={handleGenerate}
->>>>>>> origin/bolt/memoize-timeline-sidebar-1488303458527545788
                             className="bg-primary/20 hover:bg-primary/30 p-1.5 rounded-lg text-primary transition-all hover:scale-110"
                             title="Generate Chapter with AI"
                         >
@@ -94,14 +73,7 @@ const ChapterNode = memo(function ChapterNode({ number, title, status, subsectio
                     {/* Regenerate Button - Shows on hover for chapters with content */}
                     {showRegenerate && (
                         <button
-<<<<<<< HEAD
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onGenerate?.(number);
-                            }}
-=======
                             onClick={handleGenerate}
->>>>>>> origin/bolt/memoize-timeline-sidebar-1488303458527545788
                             className="bg-orange-500/10 hover:bg-orange-500/20 p-1.5 rounded-lg text-orange-400 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
                             title="Regenerate Chapter (will replace existing content)"
                         >

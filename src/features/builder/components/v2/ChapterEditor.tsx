@@ -22,6 +22,7 @@ import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { generateMarkdownBlob, downloadFile, sanitizeFilename, ExportOptions } from '@/lib/export-service';
 import { type Editor as TipTapEditor } from '@tiptap/core';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface Chapter {
     id: string;
@@ -419,7 +420,12 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
             ));
 
         } catch (error) {
-            console.error('Generation failed', error);
+            logger.error(error, '[ChapterEditor] Generation failed');
+            // Reset chapter status to draft on error
+            setChapters(prev => prev.map(c =>
+                c.number === chapterNumber ? { ...c, status: 'draft' } : c
+            ));
+            toast.error('Chapter generation failed. Please try again.');
         }
     }, [projectId, saveChapterContent]);
 

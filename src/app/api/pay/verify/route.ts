@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { PaystackService } from "@/services/paystack.service";
 import { BillingService } from "@/services/billing.service";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 // Input validation schema
 const verifyPaymentSchema = z.object({
@@ -40,7 +41,7 @@ const processPaymentVerification = async (reference: string) => {
 
             if (existingPayment.status === 'SUCCESS') {
                 // Log duplicate verification attempt
-                console.warn(`[Security] Duplicate verification attempt for reference: ${reference}`);
+                logger.warn(`Duplicate verification attempt for reference: ${reference}`, '[Security]');
                 return { success: true, message: "Already verified", payment: existingPayment };
             }
 
@@ -136,7 +137,7 @@ const processPaymentVerification = async (reference: string) => {
                         }
                     });
                 } else {
-                    console.error('[PaymentVerify] Link target not found:', payment.projectId);
+                    logger.error(`Link target not found: ${payment.projectId}`, '[PaymentVerify]');
                 }
             }
         }
@@ -261,9 +262,9 @@ export async function POST(req: Request) {
                     (result as any).requestId,
                     (result as any).paymentRef
                 );
-                console.log('[Verify] Topic switch payment processed successfully');
+                logger.info('Topic switch payment processed successfully', '[Verify]');
             } catch (err) {
-                console.error('[Verify] Failed to process topic switch:', err);
+                logger.error(err, '[Verify] Failed to process topic switch');
                 // Payment was still successful, but switch processing failed
                 // This should be handled via a manual admin review
             }
@@ -291,9 +292,9 @@ export async function POST(req: Request) {
                 result.payment.discountCodeId || undefined,
                 result.payment.discountAmount || undefined
             );
-            console.log('[Verify] Post-payment actions (commission/discount) processed');
+            logger.info('Post-payment actions (commission/discount) processed', '[Verify]');
         } catch (err) {
-            console.error('[Verify] Failed to process post-payment actions:', err);
+            logger.error(err, '[Verify] Failed to process post-payment actions');
             // Don't fail the response, just log it.
         }
 
@@ -309,7 +310,7 @@ export async function POST(req: Request) {
                 date: new Date()
             });
         } catch (err) {
-            console.error('[Verify] Failed to send receipt email:', err);
+            logger.error(err, '[Verify] Failed to send receipt email');
             // Don't fail the payment if email fails
         }
 
@@ -321,7 +322,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error: any) {
-        console.error("[PaymentVerify] Security error:", error);
+        logger.error(error, '[PaymentVerify] Security error');
 
         // Return generic error message to prevent information disclosure
         if (error.message.includes("not found") ||
