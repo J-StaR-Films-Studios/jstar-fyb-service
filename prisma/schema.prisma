@@ -16,20 +16,14 @@ model User {
   createdAt              DateTime                    @default(now())
   updatedAt              DateTime                    @updatedAt
   role                   String                      @default("USER")
+  referredById           String?
   accounts               Account[]
   notifications          InAppNotification[]
   payments               Payment[]
   projects               Project[]
   sessions               Session[]
-  notificationPreference UserNotificationPreference?
-  // Referral tracking
-  referredById           String?
   referredBy             Influencer?                 @relation("ReferredUsers", fields: [referredById], references: [id])
-
-  // Bolt: Add index for frequent queries by referredById
-  @@index([referredById])
-  // Bolt: Add index for sorting by createdAt in dashboards
-  @@index([createdAt])
+  notificationPreference UserNotificationPreference?
 }
 
 model Session {
@@ -42,8 +36,6 @@ model Session {
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
 }
 
 model Account {
@@ -61,8 +53,6 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
 }
 
 model Verification {
@@ -107,11 +97,6 @@ model Conversation {
   updatedAt   DateTime  @updatedAt
   title       String?
   messages    Message[]
-
-  // Bolt: Optimized composite index for sorting (userId + updatedAt)
-  @@index([userId, updatedAt])
-  // Bolt: Optimized composite index for sorting (anonymousId + updatedAt)
-  @@index([anonymousId, updatedAt])
 }
 
 model Message {
@@ -123,8 +108,7 @@ model Message {
   createdAt       DateTime     @default(now())
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  // Bolt: Add composite index for retrieving chat history sorted by time
-  @@index([conversationId, createdAt])
+  @@index([conversationId])
 }
 
 model Project {
@@ -165,16 +149,11 @@ model Project {
   payments                 Payment[]
   user                     User?                 @relation(fields: [userId], references: [id])
   conversations            ProjectConversation[]
+  diagrams                 ProjectDiagram[]
   messages                 ProjectMessage[]
   documents                ResearchDocument[]
-  diagrams                 ProjectDiagram[]
 
-  // Bolt: Optimized composite index for Dashboard queries (userId + updatedAt)
-  @@index([userId, updatedAt])
-  // Bolt: Add index for frequent queries by anonymousId
-  @@index([anonymousId])
-  // Bolt: Add index for sorting by updatedAt in dashboards
-  @@index([updatedAt])
+  @@index([userId])
 }
 
 model Payment {
@@ -188,24 +167,14 @@ model Payment {
   projectId       String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  discountAmount  Float         @default(0)
+  discountCodeId  String?
+  commission      Commission?
+  discountCode    DiscountCode? @relation(fields: [discountCodeId], references: [id])
   project         Project       @relation(fields: [projectId], references: [id])
   user            User          @relation(fields: [userId], references: [id])
-  // Discount tracking
-  discountCodeId  String?
-  discountAmount  Float         @default(0)
-  discountCode    DiscountCode? @relation(fields: [discountCodeId], references: [id])
-  // Commission tracking
-  commission      Commission?
 
-  // Bolt: Optimized composite index for Payment history (userId + createdAt)
-  @@index([userId, createdAt])
-  // Bolt: Add index for frequent queries by projectId
-  @@index([projectId])
-  @@index([discountCodeId])
-  // Bolt: Add index for sorting by createdAt in dashboards
-  @@index([createdAt])
-  // Bolt: Add index for filtering by status in dashboards
-  @@index([status])
+  @@index([userId])
 }
 
 model ResearchDocument {
@@ -272,6 +241,7 @@ model Chapter {
   project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, number])
+  @@index([projectId])
 }
 
 model ProjectMessage {
@@ -281,48 +251,37 @@ model ProjectMessage {
   content   String
   createdAt DateTime @default(now())
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  // Bolt: Add index for frequent queries by projectId
-  @@index([projectId, createdAt])
 }
 
 model ProjectDiagram {
   id          String   @id @default(cuid())
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   title       String
   diagramType String
-  mermaidCode String   @db.Text
-  description String?  @db.Text
+  mermaidCode String
+  description String?
   version     Int      @default(1)
   isArchived  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
 
 model ProjectConversation {
-  id        String   @id @default(cuid())
-  projectId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Thread categorization
-  threadType  String  @default("general") // "general", "chapter_1", ..., "research", "editing"
-  threadTitle String? // User-facing title, e.g., "Chapter 1 Revisions"
-
-  // Context scope (what this thread "sees")
-  contextScope Json? // { chapterNumbers: [1, 2], includeResearch: true }
-
-  isArchived Boolean @default(false)
-
-  messages ProjectChatMessage[]
-  project  Project              @relation(fields: [projectId], references: [id])
+  id           String               @id @default(cuid())
+  projectId    String
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  contextScope Json?
+  isArchived   Boolean              @default(false)
+  threadTitle  String?
+  threadType   String               @default("general")
+  messages     ProjectChatMessage[]
+  project      Project              @relation(fields: [projectId], references: [id])
 
   @@index([projectId, threadType])
-  // Bolt: Add index for sorting threads by date
-  @@index([projectId, updatedAt])
 }
 
 model ProjectChatMessage {
@@ -330,13 +289,12 @@ model ProjectChatMessage {
   conversationId  String
   role            String
   content         String
-  reasoning       String? // AI reasoning/thinking content (optional)
   toolInvocations Json?
   createdAt       DateTime            @default(now())
+  reasoning       String?
   conversation    ProjectConversation @relation(fields: [conversationId], references: [id])
 
-  // Bolt: Optimized composite index for chat history (conversationId + createdAt)
-  @@index([conversationId, createdAt])
+  @@index([conversationId])
 }
 
 model TopicSwitchRequest {
@@ -353,12 +311,6 @@ model TopicSwitchRequest {
   resolvedAt  DateTime?
   resolvedBy  String?
   explanation String?
-
-  // Bolt: Add indexes for frequent lookups
-  @@index([userId])
-  @@index([projectId])
-  // Bolt: Add index for sorting by createdAt in dashboards
-  @@index([createdAt])
 }
 
 model TopicSwitchArchive {
@@ -413,10 +365,6 @@ model SystemSetting {
   updatedAt   DateTime @updatedAt
 }
 
-// ============================================
-// INFLUENCER REFERRAL & DISCOUNT SYSTEM
-// ============================================
-
 model Influencer {
   id               String       @id @default(cuid())
   name             String
@@ -441,44 +389,39 @@ model Influencer {
 }
 
 model InfluencerPayoutConfig {
-  id           String     @id @default(cuid())
-  influencerId String     @unique
-  influencer   Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
-
-  // Safe Fields (We do NOT store the full account number)
+  id            String     @id @default(cuid())
+  influencerId  String     @unique
   bankName      String
-  bankCode      String // e.g "058" (GTBank)
-  accountName   String // as returned by Paystack Resolve
-  recipientCode String // The Paystack Recipient Code (RCP_xxxx) - CRITICAL
-  last4Digits   String // For UI display only
-  currency      String @default("NGN")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  bankCode      String
+  accountName   String
+  recipientCode String
+  last4Digits   String
+  currency      String     @default("NGN")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  influencer    Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
 }
 
 model Commission {
   id           String     @id @default(cuid())
   influencerId String
   paymentId    String     @unique
-  amount       Float // Commission amount in Naira
-  status       String     @default("PENDING") // PENDING, PAID
+  amount       Float
+  status       String     @default("PENDING")
   paidAt       DateTime?
   createdAt    DateTime   @default(now())
   influencer   Influencer @relation(fields: [influencerId], references: [id])
   payment      Payment    @relation(fields: [paymentId], references: [id])
-
-  @@index([influencerId])
 }
 
 model DiscountCode {
   id            String    @id @default(cuid())
-  code          String    @unique // e.g., "NEWYEAR25"
-  discountType  String    @default("PERCENTAGE") // PERCENTAGE, FIXED
-  discountValue Float // 15 = 15% or ₦15 fixed
-  maxUses       Int? // null = unlimited
+  code          String    @unique
+  discountType  String    @default("PERCENTAGE")
+  discountValue Float
+  maxUses       Int?
   currentUses   Int       @default(0)
-  minAmount     Float? // Minimum payment to qualify
+  minAmount     Float?
   expiresAt     DateTime?
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
