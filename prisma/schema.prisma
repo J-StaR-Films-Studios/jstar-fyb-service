@@ -24,6 +24,9 @@ model User {
   sessions               Session[]
   referredBy             Influencer?                 @relation("ReferredUsers", fields: [referredById], references: [id])
   notificationPreference UserNotificationPreference?
+
+  // Bolt: Index for referral lookups and counting
+  @@index([referredById])
 }
 
 model Session {
@@ -36,6 +39,9 @@ model Session {
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Bolt: Index for cascading deletes and user lookups
+  @@index([userId])
 }
 
 model Account {
@@ -53,6 +59,9 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Bolt: Index for cascading deletes and user lookups
+  @@index([userId])
 }
 
 model Verification {
@@ -311,6 +320,11 @@ model TopicSwitchRequest {
   resolvedAt  DateTime?
   resolvedBy  String?
   explanation String?
+
+  // Bolt: Index for filtering requests by project and status
+  @@index([projectId, status])
+  // Bolt: Index for looking up requests by user
+  @@index([userId])
 }
 
 model TopicSwitchArchive {
@@ -412,6 +426,9 @@ model Commission {
   createdAt    DateTime   @default(now())
   influencer   Influencer @relation(fields: [influencerId], references: [id])
   payment      Payment    @relation(fields: [paymentId], references: [id])
+
+  // Bolt: Index for fetching influencer commissions by status
+  @@index([influencerId, status])
 }
 
 model DiscountCode {
