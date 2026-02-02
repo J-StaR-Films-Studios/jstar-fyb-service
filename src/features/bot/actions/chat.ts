@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // Input validation schema
 const saveConversationSchema = z.object({
@@ -73,7 +74,7 @@ export async function saveConversation({
 
 
         if (!validation.success) {
-            console.error('Validation failed:', validation.error);
+            logger.error(`Validation failed: ${validation.error}`, '[saveConversation]');
             return { success: false, error: 'Invalid input parameters' };
         }
 
@@ -90,7 +91,8 @@ export async function saveConversation({
                 });
             }
         } catch (error) {
-            console.error('[saveConversation] Failed to find conversation:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.error(`Failed to find conversation: ${errorMessage}`, '[saveConversation]');
             return { success: false, error: 'Failed to retrieve conversation' };
         }
 
@@ -106,7 +108,8 @@ export async function saveConversation({
                     },
                 });
             } catch (error) {
-                console.error('[saveConversation] Failed to create conversation:', error);
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                logger.error(`Failed to create conversation: ${errorMessage}`, '[saveConversation]');
                 return { success: false, error: 'Failed to create conversation' };
             }
         }
@@ -140,13 +143,15 @@ export async function saveConversation({
                 }),
             ]);
         } catch (error) {
-            console.error('[saveConversation] Failed to update messages:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.error(`Failed to update messages: ${errorMessage}`, '[saveConversation]');
             return { success: false, error: 'Failed to update conversation history' };
         }
 
         return { success: true, conversationId: conversation.id };
     } catch (error) {
-        console.error('[saveConversation] Unexpected error:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Unexpected error: ${errorMessage}`, '[saveConversation]');
         return { success: false, error: 'An unexpected error occurred' };
     }
 }
@@ -185,7 +190,7 @@ export async function getLatestConversation({
 
         if (!userExists) {
             // CRITICAL SECURITY FIX: Log security event for invalid user access attempt
-            console.warn(`[Security] Invalid userId attempted: ${userId}`);
+            logger.warn(`[Security] Invalid userId attempted: ${userId}`);
             return null;
         }
 
@@ -250,7 +255,8 @@ export async function mergeAnonymousData(anonymousId: string, userId: string) {
         ]);
         return { success: true };
     } catch (error) {
-        console.error('Failed to merge anonymous data:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Failed to merge anonymous data: ${errorMessage}`);
         return { success: false, error };
     }
 }
@@ -294,10 +300,11 @@ export async function clearAllConversations({
             where: whereClause
         });
 
-        console.log(`[clearAllConversations] Scope: ${botType || 'ALL'}, Identifiers: ${identifierClause.length}. Deleted ${result.count} conversations`);
+        logger.info(`Scope: ${botType || 'ALL'}, Identifiers: ${identifierClause.length}. Deleted ${result.count} conversations`, '[clearAllConversations]');
         return { success: true, deletedCount: result.count };
     } catch (error) {
-        console.error('[clearAllConversations] Failed:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Failed: ${errorMessage}`, '[clearAllConversations]');
         return { success: false, error: 'Failed to clear conversations' };
     }
 }
@@ -322,7 +329,7 @@ export async function saveLeadAction(params: SaveLeadParams) {
     try {
         const validation = saveLeadSchema.safeParse(params);
         if (!validation.success) {
-            console.error('[saveLead] Validation failed:', validation.error);
+            logger.error(`Validation failed: ${validation.error}`, '[saveLead]');
             return { success: false, error: 'Invalid lead data' };
         }
 
@@ -351,10 +358,11 @@ export async function saveLeadAction(params: SaveLeadParams) {
             },
         });
 
-        console.log('[saveLead] Success:', lead.id);
+        logger.info(`Success: ${lead.id}`, '[saveLead]');
         return { success: true, leadId: lead.id };
     } catch (error) {
-        console.error('[saveLead] Unexpected error:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Unexpected error: ${errorMessage}`, '[saveLead]');
         return { success: false, error: 'Failed to save lead information' };
     }
 }
