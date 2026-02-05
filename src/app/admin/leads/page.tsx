@@ -1,10 +1,31 @@
-// @ts-nocheck
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { AdminLeadCard } from '@/features/admin/components/AdminLeadCard';
 import { SendPaymentLinkButton } from '@/features/admin/components/SendPaymentLinkButton';
 import { LinkGenerator } from '@/features/admin/components/LinkGenerator';
-import { MessageCircle, Phone, TrendingUp, Users, AlertCircle } from 'lucide-react';
+import { MessageCircle, Phone, TrendingUp, Users, AlertCircle, RefreshCw, Database } from 'lucide-react';
+
+// Define TypeScript interfaces
+interface LeadData {
+    id: string;
+    createdAt: Date;
+    whatsapp: string;
+    department: string;
+    topic: string;
+    twist: string;
+    complexity: number;
+    status: string;
+    tier?: string | null;
+    source?: string | null;
+    name?: string | null;
+    email?: string | null;
+}
+
+interface StatsData {
+    total: number;
+    newLeads: number;
+    soldLeads: number;
+}
 
 function TierBadge({ tier }: { tier: string | null }) {
     if (!tier) return <span className="text-gray-500 text-xs text-muted-foreground">Via Jay</span>;
@@ -29,7 +50,7 @@ function TierBadge({ tier }: { tier: string | null }) {
 
 export const dynamic = 'force-dynamic';
 
-async function getStats() {
+async function getStats(): Promise<StatsData> {
     // Simple stats aggregation
     const total = await prisma.lead.count();
     const newLeads = await prisma.lead.count({ where: { status: 'NEW' } });
@@ -40,8 +61,8 @@ async function getStats() {
 
 export default async function AdminLeadsPage(props: { searchParams: Promise<{ page?: string }> }) {
     const searchParams = await props.searchParams;
-    let leads: any[] = [];
-    let stats = { total: 0, newLeads: 0, soldLeads: 0 };
+    let leads: LeadData[] = [];
+    let stats: StatsData = { total: 0, newLeads: 0, soldLeads: 0 };
 
     const page = Number(searchParams?.page) || 1;
     const pageSize = 50;
@@ -59,6 +80,66 @@ export default async function AdminLeadsPage(props: { searchParams: Promise<{ pa
         stats = statsData;
     } catch (e) {
         console.error("DB Error", e);
+        const error = e as Error;
+        
+        // Return user-friendly error page
+        return (
+            <div className="min-h-screen bg-dark text-white p-8">
+                <div className="max-w-4xl mx-auto">
+                    <div className="flex items-center gap-3 mb-6">
+                        <Database className="w-8 h-8 text-red-500" />
+                        <h1 className="text-3xl font-bold">Database Connection Error</h1>
+                    </div>
+                    
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 mb-6">
+                        <p className="text-red-400 mb-4">
+                            Unable to connect to the database. This could be due to:
+                        </p>
+                        <ul className="list-disc list-inside text-gray-300 space-y-2">
+                            <li>Network connectivity issues</li>
+                            <li>Database server maintenance</li>
+                            <li>Firewall or security restrictions</li>
+                        </ul>
+                    </div>
+                    
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
+                        <h3 className="text-lg font-semibold mb-3">Troubleshooting Steps:</h3>
+                        <ol className="list-decimal list-inside text-gray-300 space-y-2">
+                            <li>Check your internet connection</li>
+                            <li>Try refreshing the page in a few moments</li>
+                            <li>Contact support if the issue persists</li>
+                        </ol>
+                    </div>
+                    
+                    <div className="flex gap-4">
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            Retry Connection
+                        </button>
+                        <Link 
+                            href="/admin"
+                            className="px-6 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
+                        >
+                            Back to Dashboard
+                        </Link>
+                    </div>
+                    
+                    {error.message && (
+                        <details className="mt-6">
+                            <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
+                                Technical Details
+                            </summary>
+                            <pre className="mt-2 p-4 bg-black/50 rounded-lg text-xs text-gray-500 overflow-auto">
+                                {error.message}
+                            </pre>
+                        </details>
+                    )}
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -136,7 +217,7 @@ export default async function AdminLeadsPage(props: { searchParams: Promise<{ pa
                                             <div className="text-xs text-muted-foreground">{lead.department}</div>
                                         </td>
                                         <td className="p-4">
-                                            <TierBadge tier={lead.tier} />
+                                            <TierBadge tier={lead.tier || null} />
                                         </td>
                                         <td className="p-4 max-w-sm">
                                             <div className="font-bold text-sm truncate" title={lead.topic}>{lead.topic}</div>

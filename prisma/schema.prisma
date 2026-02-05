@@ -24,6 +24,9 @@ model User {
   sessions               Session[]
   referredBy             Influencer?                 @relation("ReferredUsers", fields: [referredById], references: [id])
   notificationPreference UserNotificationPreference?
+
+  @@index([createdAt])
+  @@index([referredById])
 }
 
 model Session {
@@ -36,6 +39,8 @@ model Session {
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Account {
@@ -53,6 +58,8 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Verification {
@@ -75,18 +82,15 @@ model Lead {
   status      String   @default("NEW")
   userId      String?
   anonymousId String?
-  tier        String? // e.g., "AGENCY_SOFT_LIFE"
-  source      String   @default("JAY_CHAT") // "JAY_CHAT", "AGENCY_FORM", "DIRECT"
-  name        String? // User's name (for leads without user accounts yet)
-  email       String? // Email (for leads without user accounts yet)
+  tier        String?
+  source      String?  @default("JAY_CHAT")
+  name        String?
+  email       String?
 
-  // Bolt: Add indexes for frequent lookups
-  @@index([userId])
   @@index([anonymousId])
-  // Bolt: Add index for filtering by status in dashboards
-  @@index([status])
-  // Bolt: Add index for sorting by createdAt in dashboards
   @@index([createdAt])
+  @@index([status])
+  @@index([userId])
 }
 
 model Conversation {
@@ -97,6 +101,9 @@ model Conversation {
   updatedAt   DateTime  @updatedAt
   title       String?
   messages    Message[]
+
+  @@index([anonymousId])
+  @@index([userId])
 }
 
 model Message {
@@ -154,6 +161,8 @@ model Project {
   documents                ResearchDocument[]
 
   @@index([userId])
+  @@index([anonymousId])
+  @@index([updatedAt])
 }
 
 model Payment {
@@ -175,6 +184,9 @@ model Payment {
   user            User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([createdAt])
+  @@index([discountCodeId])
+  @@index([projectId])
 }
 
 model ResearchDocument {
@@ -251,6 +263,8 @@ model ProjectMessage {
   content   String
   createdAt DateTime @default(now())
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 model ProjectDiagram {
@@ -311,6 +325,10 @@ model TopicSwitchRequest {
   resolvedAt  DateTime?
   resolvedBy  String?
   explanation String?
+
+  @@index([createdAt])
+  @@index([projectId])
+  @@index([userId])
 }
 
 model TopicSwitchArchive {
@@ -366,26 +384,23 @@ model SystemSetting {
 }
 
 model Influencer {
-  id               String       @id @default(cuid())
+  id               String                  @id @default(cuid())
   name             String
-  email            String       @unique
+  email            String                  @unique
   phone            String?
-  referralCode     String       @unique // e.g., "JOHNGPT", "TECHBRO"
-  isActive         Boolean      @default(true)
-  commissionRate   Float        @default(0.10) // 10% default
-  referralDiscount Float        @default(0.0) // Discount for referred users (0-1.0)
-  totalEarnings    Float        @default(0)
-  pendingPayout    Float        @default(0)
-  // Admin-controlled demo credits (in Naira)
-  freeCredits      Float        @default(0) // e.g., 50000 = ₦50k worth of free usage
-  creditsUsed      Float        @default(0) // Track how much they've used
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  referredUsers    User[]       @relation("ReferredUsers")
+  referralCode     String                  @unique
+  isActive         Boolean                 @default(true)
+  commissionRate   Float                   @default(0.10)
+  totalEarnings    Float                   @default(0)
+  pendingPayout    Float                   @default(0)
+  freeCredits      Float                   @default(0)
+  creditsUsed      Float                   @default(0)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  referralDiscount Float?                  @default(0.0) @db.Real
   commissions      Commission[]
-
-  // Payout Details - Secured via Paystack Transfer Recipient
-  payoutConfig InfluencerPayoutConfig?
+  payoutConfig     InfluencerPayoutConfig?
+  referredUsers    User[]                  @relation("ReferredUsers")
 }
 
 model InfluencerPayoutConfig {
@@ -412,6 +427,8 @@ model Commission {
   createdAt    DateTime   @default(now())
   influencer   Influencer @relation(fields: [influencerId], references: [id])
   payment      Payment    @relation(fields: [paymentId], references: [id])
+
+  @@index([influencerId])
 }
 
 model DiscountCode {

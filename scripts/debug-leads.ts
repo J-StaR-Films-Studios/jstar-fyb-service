@@ -30,12 +30,10 @@ async function debugLeads() {
     }
 
     // Check for any issues
-    const leadsWithoutTier = await prisma.lead.count({ where: { tier: null } });
-    const leadsWithTier = await prisma.lead.count({ where: { tier: { not: null } } });
-
     console.log('=== Summary ===');
-    console.log('Leads WITH tier:', leadsWithTier);
-    console.log('Leads WITHOUT tier:', leadsWithoutTier);
+    console.log('Total leads:', leads.length);
+    console.log('Leads with userId:', leads.filter(l => l.userId).length);
+    console.log('Leads with anonymousId:', leads.filter(l => l.anonymousId).length);
 }
 
 debugLeads()

@@ -8,7 +8,12 @@
     "dev": "next dev",
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:backup": "npx tsx scripts/backup-database.ts backup",
+    "db:restore": "npx tsx scripts/backup-database.ts restore",
+    "db:full-reset": "npx tsx scripts/full-database-reset.ts",
+    "db:debug": "npx tsx scripts/debug-leads.ts",
+    "db:pre-check": "npx tsx scripts/pre-migration-check.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.5",
