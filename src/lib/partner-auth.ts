@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 const prisma = new PrismaClient();
 
 // CRITICAL SECURITY FIX: Prevent hardcoded secret in production
-const PARTNER_SECRET = process.env.PARTNER_AUTH_SECRET;
+const PARTNER_SECRET = process.env.PARTNER_AUTH_SECRET as string;
 
 if (!PARTNER_SECRET) {
     throw new Error('PARTNER_AUTH_SECRET must be set in environment variables');
