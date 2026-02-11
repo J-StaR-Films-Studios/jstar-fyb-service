@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useSession } from '@/lib/auth-client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 const REFERRAL_STORAGE_KEY = 'jstar_pending_referral_code';
 
@@ -23,7 +24,9 @@ export function ReferralListener() {
             // Should we check if user already has referrer? 
             // The API handles that check, so just try to link.
             try {
-                console.log('[ReferralListener] found pending code:', pendingCode);
+                // logger.info is removed to avoid spam, or we can log it if strictly needed.
+                // console.log('[ReferralListener] found pending code:', pendingCode);
+
                 const res = await fetch('/api/referral/link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -37,7 +40,7 @@ export function ReferralListener() {
                     const data = await res.json();
                     // If error is "already linked", that's fine, just clear it.
                     // If invalid code, maybe warn?
-                    console.warn('[ReferralListener] Failed to link:', data.error);
+                    logger.warn(`[ReferralListener] Failed to link: ${data.error}`);
 
                     // If user is already linked, clear the code so we don't retry forever
                     if (data.error?.includes('already linked')) {
@@ -48,7 +51,8 @@ export function ReferralListener() {
                     localStorage.removeItem(REFERRAL_STORAGE_KEY);
                 }
             } catch (err) {
-                console.error('[ReferralListener] Error processing referral:', err);
+                const errorMessage = err instanceof Error ? err.message : String(err);
+                logger.error(`[ReferralListener] Error processing referral: ${errorMessage}`);
                 // Don't clear on network error, retry next time
             }
         };

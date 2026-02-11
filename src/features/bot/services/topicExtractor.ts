@@ -1,6 +1,7 @@
 import { createGroq } from '@ai-sdk/groq';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -55,10 +56,13 @@ Extract the following from this conversation:
 If any required field is unclear, make your best guess based on context. Never leave required fields empty.`,
         });
 
-        console.log('[TopicExtractor] Extracted:', object);
+        logger.info('Topic extracted successfully', '[TopicExtractor]');
+        // Only log object in debug mode if needed, or rely on info logging not showing it.
+        // For now, removing the object dump is safer.
         return object;
     } catch (error) {
-        console.error('[TopicExtractor] Failed:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`[TopicExtractor] Failed: ${errorMessage}`);
         return null;
     }
 }
