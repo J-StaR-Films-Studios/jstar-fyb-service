@@ -6,13 +6,10 @@ import { cookies } from 'next/headers';
 const prisma = new PrismaClient();
 
 // CRITICAL SECURITY FIX: Prevent hardcoded secret in production
-// We check for actual deployment to avoid breaking local production builds
-const isActuallyDeployed = process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT || process.env.RENDER;
-const DEFAULT_SECRET = 'dev-partner-secret-key';
-const PARTNER_SECRET = process.env.PARTNER_SECRET || process.env.BETTER_AUTH_SECRET || DEFAULT_SECRET;
+const PARTNER_SECRET = process.env.PARTNER_AUTH_SECRET;
 
-if (process.env.NODE_ENV === 'production' && isActuallyDeployed && PARTNER_SECRET === DEFAULT_SECRET) {
-    throw new Error('PARTNER_SECRET or BETTER_AUTH_SECRET must be set in production environment');
+if (!PARTNER_SECRET) {
+    throw new Error('PARTNER_AUTH_SECRET must be set in environment variables');
 }
 
 const COOKIE_NAME = 'partner_token';
