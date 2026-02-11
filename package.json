@@ -1,7 +1,8 @@
 {
-  "name": "temp-scaffold",
-  "version": "0.1.0",
+  "name": "jstar-fyb-service",
+  "version": "0.5.0",
   "private": true,
+  "description": "A comprehensive SaaS platform for Nigerian final-year students to automate project writing.",
   "license": "UNLICENSED",
   "author": "J StaR Films Studios",
   "scripts": {
