@@ -58,7 +58,7 @@
     "mermaid": "^11.12.2",
     "micromark-util-decode-numeric-character-reference": "^2.0.2",
     "micromark-util-decode-string": "^2.0.1",
-    "next": "16.0.10",
+    "next": "16.1.6",
     "novel": "^1.0.2",
     "react": "19.2.1",
     "react-dom": "19.2.1",
@@ -78,7 +78,10 @@
     "onlyBuiltDependencies": [
       "@prisma/client",
       "sharp"
-    ]
+    ],
+    "overrides": {
+      "lodash-es": "^4.17.23"
+    }
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
@@ -91,7 +94,7 @@
     "autoprefixer": "10",
     "baseline-browser-mapping": "^2.9.19",
     "eslint": "^9",
-    "eslint-config-next": "16.0.10",
+    "eslint-config-next": "16.1.6",
     "postcss": "8",
     "prettier": "^3.7.4",
     "prisma": "5.22.0",
