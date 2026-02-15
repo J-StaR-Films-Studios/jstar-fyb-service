@@ -2,7 +2,7 @@
 
 **Session ID:** orch-20260213-200100
 **Created:** 2026-02-13 20:01:00
-**Status:** In Progress
+**Status:** ✅ COMPLETE
 
 ## Overview
 Implement the Hybrid Research Feature for J-Star FYB. Replaces the broken OpenRouter Exa + SmartBrowser pipeline with **Semantic Scholar API** (academic papers) + **Gemini Grounding** (web sources) running in parallel. No binary PDF downloads — metadata-only approach.
@@ -16,9 +16,9 @@ Implement the Hybrid Research Feature for J-Star FYB. Replaces the broken OpenRo
         ├──► 02_semantic_scholar_service (P0)  ─┐
         │                                       ├──► 04_refactor_research_service (P0)
         ├──► 03_refactor_gemini_grounding (P1) ─┘            │
-                                                              └──► 05_research_results_ui (P1)
-                                                                          │
-                                                                          └──► 06_integration_verification (P0)
+                                                               └──► 05_research_results_ui (P1)
+                                                                           │
+                                                                           └──► 06_integration_verification (P0)
 ```
 
 **Parallelization:** Tasks 02 + 03 can run simultaneously after 01 completes.
@@ -27,19 +27,19 @@ Implement the Hybrid Research Feature for J-Star FYB. Replaces the broken OpenRo
 
 | # | Task File | Status | Assigned To | Deps |
 |---|-----------|--------|-------------|------|
-| 1 | 01_schema_migration.task.md | Pending | /mode-code | None |
-| 2 | 02_semantic_scholar_service.task.md | Pending | /mode-code | 01 |
-| 3 | 03_refactor_gemini_grounding.task.md | Pending | /mode-code | 01 |
-| 4 | 04_refactor_research_service.task.md | Pending | /mode-code | 02, 03 |
-| 5 | 05_research_results_ui.task.md | Pending | /mode-code | 04 |
-| 6 | 06_integration_verification.task.md | Pending | /mode-review | ALL |
+| 1 | 01_schema_migration.task.md | ✅ Complete | /mode-code | None |
+| 2 | 02_semantic_scholar_service.task.md | ✅ Complete | /mode-code | 01 |
+| 3 | 03_refactor_gemini_grounding.task.md | ✅ Complete | /mode-code | 01 |
+| 4 | 04_refactor_research_service.task.md | ✅ Complete | /mode-code | 02, 03 |
+| 5 | 05_research_results_ui.task.md | ✅ Complete | /mode-code | 04 |
+| 6 | 06_integration_verification.task.md | ✅ Complete | /mode-review | ALL |
 
 ## Progress
-- [ ] Step 1: Schema Migration (Task 01)
-- [ ] Step 2: Services (Tasks 02 + 03, parallel)
-- [ ] Step 3: Orchestration Rewrite (Task 04)
-- [ ] Step 4: UI Components (Task 05)
-- [ ] Step 5: Integration Verification (Task 06)
+- [x] Step 1: Schema Migration (Task 01)
+- [x] Step 2: Services (Tasks 02 + 03, parallel)
+- [x] Step 3: Orchestration Rewrite (Task 04)
+- [x] Step 4: UI Components (Task 05)
+- [x] Step 5: Integration Verification (Task 06)
 
 ## Design Decisions
 - Gemini required for `googleSearch` grounding (native feature, can't use OpenRouter)
