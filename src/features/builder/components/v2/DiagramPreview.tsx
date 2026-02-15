@@ -24,6 +24,7 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
       startOnLoad: false,
       theme: theme,
       securityLevel: 'strict', // Sentinel: Force strict security to prevent XSS
+      suppressErrorRendering: true,
     });
   }, [theme]);
 
@@ -61,8 +62,12 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
         console.error('Mermaid render error:', err);
         if (mounted) {
           setError(err instanceof Error ? err.message : 'Failed to render diagram');
-          // Keep the old SVG if possible, or show error
+          // Sentinel: Cleanup Mermaid error elements to preventing layout issues
+          const d3Error = document.querySelector('#d3-mermaid-error-container');
+          if (d3Error) d3Error.remove();
+          document.querySelectorAll('[id^="d3-mermaid-error-"]').forEach(el => el.remove());
         }
+
       } finally {
         if (mounted) setIsLoading(false);
       }
