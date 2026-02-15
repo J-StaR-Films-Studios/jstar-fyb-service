@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J-Star Builder - Option 3: Workspace-First</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0a0f',
+                        primary: '#8b5cf6',
+                        accent: '#06b6d4',
+                        surface: '#12121a',
+                        panel: '#0e0e14',
+                    },
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { background: #0a0a0f; font-family: 'Inter', sans-serif; }
+        
+        /* Panel system */
+        .workspace-panel {
+            background: #12121a;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .workspace-panel:hover {
+            border-color: rgba(255,255,255,0.1);
+        }
+        
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.01);
+        }
+        
+        .panel-content {
+            padding: 16px;
+            overflow-y: auto;
+        }
+        
+        /* Collapsible panels */
+        .panel-collapsed .panel-content {
+            display: none;
+        }
+        
+        .panel-collapsed .panel-header {
+            border-bottom: none;
+        }
+        
+        .collapse-btn {
+            transition: transform 0.3s ease;
+        }
+        
+        .panel-collapsed .collapse-btn {
+            transform: rotate(-90deg);
+        }
+        
+        /* Tab system */
+        .tab-btn {
+            position: relative;
+            padding: 8px 16px;
+            font-size: 13px;
+            color: #6b7280;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-btn:hover {
+            color: #9ca3af;
+        }
+        
+        .tab-btn.active {
+            color: #fff;
+        }
+        
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+        }
+        
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Glow effects */
+        .glow-primary { box-shadow: 0 0 20px rgba(139,92,246,0.3); }
+        .glow-accent { box-shadow: 0 0 20px rgba(6,182,212,0.3); }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        
+        /* Status indicators */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+        
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Grid layout */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 320px;
+            gap: 1px;
+            background: rgba(255,255,255,0.05);
+            min-height: calc(100vh - 60px);
+        }
+        
+        @media (max-width: 1200px) {
+            .workspace-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .left-panel, .right-panel {
+                display: none;
+            }
+            
+            .left-panel.mobile-visible, .right-panel.mobile-visible {
+                display: block;
+                position: fixed;
+                top: 60px;
+                bottom: 0;
+                width: 320px;
+                z-index: 40;
+                background: #12121a;
+            }
+            
+            .left-panel.mobile-visible {
+                left: 0;
+            }
+            
+            .right-panel.mobile-visible {
+                right: 0;
+            }
+        }
+        
+        /* Safe area */
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Chapter item */
+        .chapter-item {
+            padding: 12px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .chapter-item:hover {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.08);
+        }
+        
+        .chapter-item.active {
+            background: rgba(139,92,246,0.1);
+            border-color: rgba(139,92,246,0.3);
+        }
+        
+        /* Document item */
+        .doc-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.01);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.2s ease;
+        }
+        
+        .doc-item:hover {
+            background: rgba(255,255,255,0.03);
+        }
+        
+        /* Button styles */
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(139,92,246,0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #d1d5db;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.2);
+        }
+        
+        /* Quick action */
+        .quick-action {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            font-size: 12px;
+            color: #9ca3af;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-action:hover {
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+        }
+        
+        /* Progress indicator */
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .progress-step.active {
+            background: rgba(139,92,246,0.15);
+            color: #a78bfa;
+        }
+        
+        .progress-step.completed {
+            color: #4ade80;
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen">
+    <!-- Top Bar -->
+    <header class="h-[60px] bg-surface border-b border-white/5 flex items-center justify-between px-4 sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <!-- Mobile menu buttons -->
+            <button onclick="toggleLeftPanel()" class="lg:hidden p-2 rounded-lg hover:bg-white/5 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+                </svg>
+            </button>
+            
+            <!-- Logo -->
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center font-display font-bold text-sm">
+                    J
+                </div>
+                <span class="font-display font-semibold hidden sm:inline">Project Builder</span>
+            </div>
+        </div>
+        
+        <!-- Center: Project Title -->
+        <div class="hidden md:flex items-center gap-3 absolute left-1/2 -translate-x-1/2">
+            <div class="text-center">
+                <p class="text-xs text-gray-500">Current Project</p>
+                <p class="text-sm font-medium text-white truncate max-w-[200px]">AI-Powered Fraud Detection</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <!-- Status -->
+            <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                <div class="status-dot bg-green-500"></div>
+                <span class="text-xs text-green-400">Auto-saving</span>
+            </div>
+            
+            <!-- Right panel toggle -->
+            <button onclick="toggleRightPanel()" class="lg:hidden p-2 rounded-lg hover:bg-white/5 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            
+            <!-- Notifications -->
+            <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400 relative">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                <span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+            </button>
+            
+            <!-- User -->
+            <button class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center font-semibold text-sm">
+                JD
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="workspace-grid">
+        
+        <!-- Left Panel: Navigation & Chapters -->
+        <aside class="left-panel workspace-panel flex flex-col" id="left-panel">
+            <!-- Progress Steps -->
+            <div class="panel-header">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Build Progress</span>
+                    <span class="text-xs text-primary">75%</span>
+                </div>
+            </div>
+            <div class="p-3 border-b border-white/5">
+                <div class="space-y-1">
+                    <div class="progress-step completed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Concept</span>
+                    </div>
+                    <div class="progress-step completed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Strategy</span>
+                    </div>
+                    <div class="progress-step active">
+                        <span class="w-4 h-4 flex items-center justify-center text-xs font-bold">3</span>
+                        <span>Blueprint</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chapter List -->
+            <div class="panel-header flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Chapters</span>
+                <span class="text-[10px] text-gray-600">5 total</span>
+            </div>
+            <div class="panel-content flex-1">
+                <div class="space-y-2">
+                    <div class="chapter-item active" onclick="selectChapter(1)">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-medium text-sm">Chapter 1</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Ready</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Introduction</p>
+                    </div>
+                    
+                    <div class="chapter-item" onclick="selectChapter(2)">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-medium text-sm">Chapter 2</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Ready</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Literature Review</p>
+                    </div>
+                    
+                    <div class="chapter-item" onclick="selectChapter(3)">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-medium text-sm">Chapter 3</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Ready</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Methodology</p>
+                    </div>
+                    
+                    <div class="chapter-item" onclick="selectChapter(4)">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-medium text-sm">Chapter 4</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Ready</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Implementation</p>
+                    </div>
+                    
+                    <div class="chapter-item" onclick="selectChapter(5)">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-medium text-sm">Chapter 5</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Ready</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Conclusion</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="p-3 border-t border-white/5">
+                <div class="grid grid-cols-2 gap-2">
+                    <button class="quick-action flex items-center justify-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Export
+                    </button>
+                    <button class="quick-action flex items-center justify-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                        </svg>
+                        Share
+                    </button>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Center Panel: Main Content -->
+        <main class="bg-dark flex flex-col min-h-0">
+            <!-- Tabs -->
+            <div class="flex items-center border-b border-white/5 bg-surface/50">
+                <button class="tab-btn active" onclick="switchTab('outline')">Outline</button>
+                <button class="tab-btn" onclick="switchTab('research')">Research</button>
+                <button class="tab-btn" onclick="switchTab('chapters')">Chapters</button>
+                <button class="tab-btn" onclick="switchTab('materials')">Materials</button>
+            </div>
+            
+            <!-- Content Area -->
+            <div class="flex-1 overflow-y-auto p-6" id="main-content">
+                <!-- Outline Tab Content -->
+                <div id="tab-outline" class="fade-in">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h1 class="text-2xl font-display font-bold">Project Outline</h1>
+                            <p class="text-sm text-gray-400 mt-1">Review and refine your project structure</p>
+                        </div>
+                        <button class="btn-primary flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            Edit Outline
+                        </button>
+                    </div>
+                    
+                    <!-- Abstract Card -->
+                    <div class="workspace-panel rounded-xl mb-6">
+                        <div class="panel-header flex items-center justify-between">
+                            <span class="text-sm font-medium">Abstract</span>
+                            <button class="text-xs text-gray-500 hover:text-white">Expand</button>
+                        </div>
+                        <div class="panel-content">
+                            <p class="text-sm text-gray-300 leading-relaxed">
+                                This research presents a novel approach to fraud detection using artificial intelligence and machine learning algorithms, integrated with blockchain technology for immutable audit trails. The system employs Zero-Knowledge Proofs to ensure privacy while maintaining transparency in financial transactions. Our proposed architecture combines supervised learning models with anomaly detection techniques to achieve high accuracy in identifying fraudulent activities...
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Paywall Banner -->
+                    <div class="workspace-panel rounded-xl mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
+                        <div class="panel-content">
+                            <div class="flex flex-col md:flex-row items-center gap-6">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                        </svg>
+                                        <span class="text-xs font-bold text-primary uppercase tracking-wider">Unlock Required</span>
+                                    </div>
+                                    <h3 class="text-lg font-bold mb-1">Full Chapter Generation</h3>
+                                    <p class="text-sm text-gray-400">Generate 10,000+ words across all 5 chapters with AI assistance.</p>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="text-right">
+                                        <span class="text-sm text-gray-500 line-through">₦25,000</span>
+                                        <p class="text-2xl font-bold gradient-text">₦15,000</p>
+                                    </div>
+                                    <button class="btn-primary whitespace-nowrap">
+                                        Unlock Now
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chapter Cards -->
+                    <div class="grid gap-4">
+                        <!-- Chapter 1 -->
+                        <div class="workspace-panel rounded-xl">
+                            <div class="p-4 flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg">
+                                    1
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold">Introduction</h3>
+                                    <p class="text-xs text-gray-500 mt-0.5">Background, problem statement, objectives, scope</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500">~2,500 words</span>
+                                    <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Chapter 2 -->
+                        <div class="workspace-panel rounded-xl">
+                            <div class="p-4 flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg">
+                                    2
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold">Literature Review</h3>
+                                    <p class="text-xs text-gray-500 mt-0.5">Related works, theoretical framework, critiques</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500">~3,000 words</span>
+                                    <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Chapter 3 -->
+                        <div class="workspace-panel rounded-xl">
+                            <div class="p-4 flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg">
+                                    3
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold">Methodology</h3>
+                                    <p class="text-xs text-gray-500 mt-0.5">System design, DFDs, architecture, tools</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500">~2,800 words</span>
+                                    <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Chapter 4 -->
+                        <div class="workspace-panel rounded-xl">
+                            <div class="p-4 flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg">
+                                    4
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold">Implementation & Results</h3>
+                                    <p class="text-xs text-gray-500 mt-0.5">Development, testing, evaluation</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500">~3,500 words</span>
+                                    <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Chapter 5 -->
+                        <div class="workspace-panel rounded-xl">
+                            <div class="p-4 flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg">
+                                    5
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold">Conclusion</h3>
+                                    <p class="text-xs text-gray-500 mt-0.5">Summary, recommendations, future work</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500">~1,500 words</span>
+                                    <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Right Panel: Actions & Info -->
+        <aside class="right-panel workspace-panel flex flex-col" id="right-panel">
+            <!-- Project Info -->
+            <div class="panel-header">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Project Details</span>
+            </div>
+            <div class="panel-content border-b border-white/5">
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-[10px] text-gray-500 uppercase">Topic</p>
+                        <p class="text-sm text-white">AI-Powered Fraud Detection</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-gray-500 uppercase">Track</p>
+                        <p class="text-sm text-accent">Paper</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-gray-500 uppercase">Status</p>
+                        <div class="flex items-center gap-2">
+                            <div class="status-dot bg-yellow-500"></div>
+                            <p class="text-sm text-yellow-400">Awaiting Payment</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Research Library -->
+            <div class="panel-header flex items-center justify-between cursor-pointer" onclick="togglePanel('research-panel')">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Research Library</span>
+                <svg class="w-4 h-4 text-gray-500 collapse-btn" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+            <div class="panel-content flex-1 overflow-y-auto" id="research-panel">
+                <div class="space-y-2">
+                    <div class="doc-item flex items-start gap-2">
+                        <svg class="w-4 h-4 text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <div class="min-w-0">
+                            <p class="text-xs font-medium text-white truncate">Fraud Detection using ML</p>
+                            <p class="text-[10px] text-gray-500">Academic • 234 citations</p>
+                        </div>
+                    </div>
+                    
+                    <div class="doc-item flex items-start gap-2">
+                        <svg class="w-4 h-4 text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <div class="min-w-0">
+                            <p class="text-xs font-medium text-white truncate">Blockchain Audit Systems</p>
+                            <p class="text-[10px] text-gray-500">Academic • 156 citations</p>
+                        </div>
+                    </div>
+                    
+                    <div class="doc-item flex items-start gap-2">
+                        <svg class="w-4 h-4 text-orange-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                        </svg>
+                        <div class="min-w-0">
+                            <p class="text-xs font-medium text-white truncate">Zero-Knowledge Proofs</p>
+                            <p class="text-[10px] text-gray-500">Web source</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="w-full mt-3 py-2 text-xs text-gray-400 hover:text-white border border-dashed border-white/10 rounded-lg hover:border-white/20 transition-colors">
+                    + Add Document
+                </button>
+            </div>
+            
+            <!-- AI Assistant -->
+            <div class="panel-header flex items-center justify-between cursor-pointer" onclick="togglePanel('ai-panel')">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">AI Assistant</span>
+                <svg class="w-4 h-4 text-gray-500 collapse-btn" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+            <div class="panel-content" id="ai-panel">
+                <div class="space-y-3">
+                    <div class="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-6 h-6 rounded-full bg-primary/30 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </div>
+                            <span class="text-xs font-medium text-primary">Monji</span>
+                        </div>
+                        <p class="text-xs text-gray-300">I'm here to help with your project! Ask me anything about your outline or research.</p>
+                    </div>
+                    
+                    <div class="relative">
+                        <input type="text" placeholder="Ask Monji..." class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 pr-8">
+                        <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-primary">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="p-4 border-t border-white/5 space-y-2">
+                <button class="w-full btn-primary text-sm">
+                    Unlock Project
+                </button>
+                <button class="w-full btn-secondary text-sm flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                    </svg>
+                    Contact Support
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Mobile Bottom Bar -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface border-t border-white/5 flex items-center justify-around z-50 safe-bottom">
+        <button class="flex flex-col items-center gap-0.5 text-gray-500">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+            </svg>
+            <span class="text-[9px]">Home</span>
+        </button>
+        
+        <button class="flex flex-col items-center gap-0.5 text-primary">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span class="text-[9px]">Build</span>
+        </button>
+        
+        <button class="flex flex-col items-center gap-0.5 text-gray-500">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <span class="text-[9px]">Research</span>
+        </button>
+        
+        <button class="flex flex-col items-center gap-0.5 text-gray-500">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            <span class="text-[9px]">Profile</span>
+        </button>
+    </nav>
+
+    <script>
+        function toggleLeftPanel() {
+            const panel = document.getElementById('left-panel');
+            panel.classList.toggle('mobile-visible');
+            document.getElementById('right-panel').classList.remove('mobile-visible');
+        }
+        
+        function toggleRightPanel() {
+            const panel = document.getElementById('right-panel');
+            panel.classList.toggle('mobile-visible');
+            document.getElementById('left-panel').classList.remove('mobile-visible');
+        }
+        
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            panel.parentElement.classList.toggle('panel-collapsed');
+        }
+        
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(tabName)) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+        
+        function selectChapter(num) {
+            document.querySelectorAll('.chapter-item').forEach((item, i) => {
+                item.classList.toggle('active', i === num - 1);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -223,6 +223,15 @@ model ResearchDocument {
   importedToFileSearch Boolean   @default(false)
   fileSearchFileId     String?
   importError          String?
+  // Hybrid Research Feature - Academic metadata from Semantic Scholar
+  sourceType           String    @default("WEB") // "ACADEMIC" or "WEB"
+  citationCount        Int?
+  openAccessUrl        String?
+  abstractText         String?
+  snippet              String?
+  authors              String? // Comma-separated author names
+  venue                String? // Journal/conference name
+  semanticScholarId    String? // Paper ID for deduplication
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   project              Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)

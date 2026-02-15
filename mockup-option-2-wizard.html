@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J-Star Builder - Option 2: Wizard-Focused</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0a0f',
+                        primary: '#8b5cf6',
+                        accent: '#06b6d4',
+                        surface: '#16161f',
+                    },
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { background: #0a0a0f; font-family: 'Inter', sans-serif; }
+        
+        .glass { 
+            background: rgba(255,255,255,0.03); 
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .glow-primary { box-shadow: 0 0 40px rgba(139,92,246,0.4); }
+        
+        /* Step timeline */
+        .step-timeline {
+            position: relative;
+        }
+        
+        .step-timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, rgba(139,92,246,0.5), rgba(6,182,212,0.2));
+            transform: translateX(-50%);
+        }
+        
+        @media (max-width: 768px) {
+            .step-timeline::before {
+                left: 24px;
+            }
+        }
+        
+        /* Step card */
+        .step-card {
+            position: relative;
+            transition: all 0.4s ease;
+        }
+        
+        .step-card.active {
+            transform: scale(1.02);
+        }
+        
+        .step-card::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 16px;
+            height: 16px;
+            background: #0a0a0f;
+            border: 2px solid rgba(139,92,246,0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        
+        .step-card.completed::before {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+        
+        .step-card.active::before {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 20px rgba(139,92,246,0.5);
+            animation: pulse-ring 2s infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(139,92,246,0.5); }
+            70% { box-shadow: 0 0 0 10px rgba(139,92,246,0); }
+            100% { box-shadow: 0 0 0 0 rgba(139,92,246,0); }
+        }
+        
+        @media (max-width: 768px) {
+            .step-card::before {
+                left: 24px;
+                top: 32px;
+                transform: translateY(-50%);
+            }
+        }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .slide-in-left { animation: slideInLeft 0.5s ease forwards; }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+        
+        .slide-in-right { animation: slideInRight 0.5s ease forwards; }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+        
+        /* Floating orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            pointer-events: none;
+            animation: float 20s infinite ease-in-out;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(20px, -20px); }
+            50% { transform: translate(-20px, 20px); }
+            75% { transform: translate(20px, 20px); }
+        }
+        
+        /* Safe area for mobile */
+        .safe-bottom { padding-bottom: calc(7rem + env(safe-area-inset-bottom)); }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        
+        /* Step navigation dots */
+        .step-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .step-dot.active {
+            background: #8b5cf6;
+            box-shadow: 0 0 15px rgba(139,92,246,0.5);
+        }
+        
+        .step-dot.completed {
+            background: #22c55e;
+        }
+        
+        /* Progress bar animation */
+        .progress-fill {
+            transition: width 0.8s ease;
+        }
+        
+        /* Glass morphism hover */
+        .glass-hover:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.15);
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen overflow-x-hidden">
+    <!-- Floating Background Orbs -->
+    <div class="orb w-96 h-96 bg-primary top-0 left-0" style="animation-delay: 0s;"></div>
+    <div class="orb w-80 h-80 bg-accent bottom-0 right-0" style="animation-delay: -10s;"></div>
+    
+    <!-- Mobile Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
+        <div class="flex items-center justify-between px-4 py-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center font-display font-bold">
+                    J
+                </div>
+                <div>
+                    <span class="font-display font-semibold text-sm">Project Builder</span>
+                    <p class="text-[10px] text-gray-500">Step 3 of 3</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Save Status -->
+                <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+                    <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                    <span class="text-[10px] text-green-400">Saved</span>
+                </div>
+                
+                <!-- Menu -->
+                <button class="p-2 rounded-lg hover:bg-white/5">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="h-1 bg-white/5">
+            <div class="h-full bg-gradient-to-r from-primary to-accent progress-fill" style="width: 75%;"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pt-20 safe-bottom">
+        <!-- Step Navigation Pills (Desktop) -->
+        <div class="hidden md:flex items-center justify-center gap-4 py-6 sticky top-0 z-40 bg-dark/80 backdrop-blur-xl border-b border-white/5">
+            <button onclick="goToStep(1)" class="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Concept
+            </button>
+            <div class="w-8 h-px bg-gradient-to-r from-green-500/50 to-primary/50"></div>
+            <button onclick="goToStep(2)" class="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Strategy
+            </button>
+            <div class="w-8 h-px bg-gradient-to-r from-primary/50 to-accent/50"></div>
+            <button class="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 text-primary text-sm font-medium">
+                <span class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">3</span>
+                Blueprint
+            </button>
+        </div>
+
+        <!-- Content Container -->
+        <div class="max-w-3xl mx-auto px-4 py-8">
+            
+            <!-- Current Step Header -->
+            <div class="text-center mb-12 fade-in">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20 mb-6">
+                    <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-display font-bold mb-3">
+                    <span class="gradient-text">Blueprint</span> Generated
+                </h1>
+                <p class="text-gray-400 max-w-md mx-auto leading-relaxed">
+                    We've crafted a distinction-grade abstract and chapter outline for your project. Review below.
+                </p>
+            </div>
+
+            <!-- Outline Preview Card -->
+            <div class="glass rounded-3xl overflow-hidden mb-6 slide-in-right">
+                <!-- Title Section -->
+                <div class="p-6 md:p-8 border-b border-white/5">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <span class="text-xs text-accent uppercase tracking-wider font-medium">Project Title</span>
+                            <h2 class="text-xl md:text-2xl font-bold mt-2">AI-Powered Fraud Detection System</h2>
+                        </div>
+                        <button class="p-2 rounded-lg glass-hover text-gray-400 hover:text-white shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Abstract Section -->
+                <div class="p-6 md:p-8 border-b border-white/5 bg-white/[0.01]">
+                    <span class="text-xs text-gray-500 uppercase tracking-wider">Abstract Preview</span>
+                    <p class="text-sm text-gray-300 mt-3 leading-relaxed">
+                        This research presents a novel approach to fraud detection using artificial intelligence and machine learning algorithms, integrated with blockchain technology for immutable audit trails. The system employs Zero-Knowledge Proofs to ensure privacy while maintaining transparency...
+                    </p>
+                    <button class="mt-3 text-xs text-primary hover:text-white transition-colors flex items-center gap-1">
+                        Read full abstract
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Chapter List -->
+                <div class="p-6 md:p-8">
+                    <div class="flex items-center justify-between mb-5">
+                        <h3 class="font-semibold text-lg">Chapter Structure</h3>
+                        <span class="text-xs text-gray-500">~13,000 words total</span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <!-- Chapter 1 -->
+                        <div class="group flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg shrink-0">
+                                1
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-white group-hover:text-primary transition-colors">Introduction</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Background, problem statement, objectives, scope</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="text-xs text-gray-400">~2,500</p>
+                                <p class="text-[10px] text-gray-600">words</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Chapter 2 -->
+                        <div class="group flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg shrink-0">
+                                2
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-white group-hover:text-primary transition-colors">Literature Review</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Related works, theoretical framework, critiques</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="text-xs text-gray-400">~3,000</p>
+                                <p class="text-[10px] text-gray-600">words</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Chapter 3 -->
+                        <div class="group flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg shrink-0">
+                                3
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-white group-hover:text-primary transition-colors">Methodology</p>
+                                <p class="text-xs text-gray-500 mt-0.5">System design, DFDs, architecture, tools</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="text-xs text-gray-400">~2,800</p>
+                                <p class="text-[10px] text-gray-600">words</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Chapter 4 -->
+                        <div class="group flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg shrink-0">
+                                4
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-white group-hover:text-primary transition-colors">Implementation & Results</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Development, testing, evaluation</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="text-xs text-gray-400">~3,500</p>
+                                <p class="text-[10px] text-gray-600">words</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Chapter 5 -->
+                        <div class="group flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center font-bold text-lg shrink-0">
+                                5
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-white group-hover:text-primary transition-colors">Conclusion</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Summary, recommendations, future work</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="text-xs text-gray-400">~1,500</p>
+                                <p class="text-[10px] text-gray-600">words</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paywall Gateway -->
+            <div class="glass rounded-3xl overflow-hidden relative mb-6 fade-in" style="animation-delay: 0.2s;">
+                <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/5"></div>
+                
+                <div class="relative p-6 md:p-8">
+                    <!-- Lock Icon -->
+                    <div class="flex justify-center mb-6">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-primary/20">
+                            <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mb-8">
+                        <h3 class="text-2xl font-display font-bold mb-2">Unlock Your Project</h3>
+                        <p class="text-gray-400 text-sm max-w-md mx-auto">
+                            Get full access to chapter generation, research tools, and defense materials.
+                        </p>
+                    </div>
+                    
+                    <!-- Features Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                        <div class="text-center p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                            <svg class="w-6 h-6 text-green-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <p class="text-xs text-gray-400">5 Chapters</p>
+                            <p class="text-[10px] text-gray-600">10k+ words</p>
+                        </div>
+                        
+                        <div class="text-center p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                            <svg class="w-6 h-6 text-blue-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <p class="text-xs text-gray-400">Deep Research</p>
+                            <p class="text-[10px] text-gray-600">AI-powered</p>
+                        </div>
+                        
+                        <div class="text-center p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                            <svg class="w-6 h-6 text-purple-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                            </svg>
+                            <p class="text-xs text-gray-400">AI Chat</p>
+                            <p class="text-[10px] text-gray-600">Monji assistant</p>
+                        </div>
+                        
+                        <div class="text-center p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                            <svg class="w-6 h-6 text-orange-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+                            </svg>
+                            <p class="text-xs text-gray-400">Defense</p>
+                            <p class="text-[10px] text-gray-600">Slides & script</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Pricing -->
+                    <div class="text-center mb-6">
+                        <div class="inline-block">
+                            <span class="text-gray-500 line-through text-sm">₦25,000</span>
+                            <span class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 uppercase">40% off</span>
+                            <div class="text-4xl font-display font-bold gradient-text">₦15,000</div>
+                        </div>
+                    </div>
+                    
+                    <!-- CTA Button -->
+                    <button class="w-full py-4 bg-gradient-to-r from-primary to-accent rounded-xl font-bold uppercase tracking-wide glow-primary hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                        </svg>
+                        Unlock Now
+                    </button>
+                    
+                    <!-- Trust Badges -->
+                    <div class="flex items-center justify-center gap-4 mt-4 text-xs text-gray-500">
+                        <span class="flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            Paystack
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Instant Access
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alternative: Concierge Option -->
+            <div class="glass rounded-3xl overflow-hidden relative fade-in" style="animation-delay: 0.4s;">
+                <div class="absolute top-0 right-0 p-4">
+                    <span class="px-2 py-1 rounded-full bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-wider">Recommended</span>
+                </div>
+                
+                <div class="p-6 md:p-8">
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
+                            <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg">Let J-Star Handle It</h3>
+                            <p class="text-sm text-gray-400 mt-1">Our team does the research and writing for you.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline Comparison -->
+                    <div class="space-y-3 mb-6">
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
+                            <span class="text-sm text-gray-400">DIY Timeline</span>
+                            <span class="text-sm text-yellow-400 font-medium">Stalled...</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-accent/10 border border-accent/20">
+                            <span class="text-sm text-white font-medium">Agency Speed</span>
+                            <span class="text-sm text-green-400 font-bold">Done in 5 days</span>
+                        </div>
+                    </div>
+                    
+                    <a href="#" class="flex items-center justify-center gap-2 py-3 bg-accent/20 border border-accent/30 rounded-xl font-medium text-accent hover:bg-accent/30 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        Contact via WhatsApp
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 glass border-t border-white/5 z-50" style="padding-bottom: env(safe-area-inset-bottom);">
+        <div class="flex items-center justify-around py-3">
+            <button class="flex flex-col items-center gap-1 p-2 text-gray-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                <span class="text-[10px]">Home</span>
+            </button>
+            
+            <button class="flex flex-col items-center gap-1 p-2 text-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span class="text-[10px]">Build</span>
+            </button>
+            
+            <!-- Center FAB -->
+            <button class="w-12 h-12 -mt-6 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center shadow-lg glow-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                </svg>
+            </button>
+            
+            <button class="flex flex-col items-center gap-1 p-2 text-gray-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+                <span class="text-[10px]">Files</span>
+            </button>
+            
+            <button class="flex flex-col items-center gap-1 p-2 text-gray-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span class="text-[10px]">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        function goToStep(step) {
+            // Simulated navigation
+            console.log('Going to step:', step);
+        }
+    </script>
+</body>
+</html>
