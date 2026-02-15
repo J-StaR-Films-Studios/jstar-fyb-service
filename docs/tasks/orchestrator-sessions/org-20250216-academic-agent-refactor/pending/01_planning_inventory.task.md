@@ -1,0 +1,160 @@
+# Task: Planning & Inventory
+
+**Session ID:** org-20250216-academic-agent-refactor  
+**Source:** Orchestrator  
+**Context:** Master Plan Phase 1  
+**Priority:** P0  
+**Dependencies:** None  
+**Created At:** 2026-02-16
+
+---
+
+## 📋 Objective
+
+Perform a comprehensive inventory of all existing code that will be affected by the refactor. Document current implementations, identify hidden dependencies, and create a detailed migration checklist. This task ensures we don't miss anything during implementation.
+
+---
+
+## 🎯 Scope
+
+**In Scope:**
+- Complete analysis of `src/lib/ai/academicTools.ts`
+- Analysis of `src/app/api/projects/[id]/chat/route.ts`
+- Analysis of `src/features/builder/components/v2/AcademicCopilot.tsx`
+- Analysis of `src/features/builder/components/v2/AcademicMessageBubble.tsx`
+- Analysis of `src/lib/ai/router.ts` and `src/lib/ai/providers.ts`
+- Analysis of `src/features/builder/components/v2/ToolResultCard.tsx`
+- Analysis of `src/features/builder/components/v2/EditSuggestionCard.tsx`
+- Analysis of `src/features/builder/components/v2/DiagramSuggestionCard.tsx`
+- Identification of all tool definitions and their dependencies
+- Documentation of current message flow and data structures
+- Identification of services used by tools (ChapterService, ProjectContextService, etc.)
+
+**Out of Scope:**
+- Code changes (this is research only)
+- Testing
+
+---
+
+## 📚 Context
+
+### Parent Task
+The master plan for refactoring the Monji chat system to use ToolLoopAgent.
+
+### Current State
+We have identified the following files as relevant:
+1. `src/lib/ai/academicTools.ts` - Current tool definitions
+2. `src/app/api/projects/[id]/chat/route.ts` - Current API route
+3. `src/features/builder/components/v2/AcademicCopilot.tsx` - Main chat component
+4. `src/lib/ai/router.ts` - Model selection logic
+
+However, we need a COMPLETE inventory to ensure nothing is missed.
+
+---
+
+## 🔍 Investigation Checklist
+
+### A. Tool Definitions (academicTools.ts)
+- [ ] List ALL tools and their names
+- [ ] Document each tool's input schema (parameters)
+- [ ] Document each tool's return type/shape
+- [ ] Identify external dependencies for each tool (services, DB calls, etc.)
+- [ ] Identify tools with special behavior (mutex, nested AI calls, etc.)
+- [ ] Document any shared context used by tools
+
+### B. API Route Analysis
+- [ ] Document the complete request flow
+- [ ] List all imports and their purposes
+- [ ] Document message format transformations
+- [ ] Document thread handling logic
+- [ ] Document context building logic
+- [ ] Document onFinish callback behavior
+- [ ] Document reasoning/thinking model handling
+
+### C. Frontend Components
+- [ ] Document useChat hook configuration
+- [ ] Document message rendering patterns
+- [ ] Document tool invocation handling
+- [ ] Document state management (threads, suggestions, etc.)
+- [ ] Document event handlers (onApplyEdit, onInsertDiagram, etc.)
+
+### D. Model Router
+- [ ] Document all model selection rules
+- [ ] Document provider configurations
+- [ ] Identify reasoning vs non-reasoning model handling
+- [ ] Document free tier model choices
+
+### E. Supporting Components
+- [ ] Analyze AcademicMessageBubble.tsx rendering logic
+- [ ] Analyze ToolResultCard.tsx for tool result display
+- [ ] Analyze EditSuggestionCard.tsx for edit flow
+- [ ] Analyze DiagramSuggestionCard.tsx for diagram flow
+
+### F. Services & Dependencies
+- [ ] Document ChapterService methods used
+- [ ] Document ProjectContextService methods used
+- [ ] Document GeminiFileSearchService usage
+- [ ] Document diagramService usage
+- [ ] Document any other services
+
+---
+
+## ✅ Definition of Done
+
+- [ ] Complete inventory document created with all findings
+- [ ] All tools listed with their schemas and dependencies
+- [ ] All frontend components analyzed and documented
+- [ ] All services and dependencies mapped
+- [ ] Potential issues or edge cases identified
+- [ ] Migration complexity assessment completed
+
+---
+
+## 📁 Expected Artifacts
+
+| File | Purpose |
+|------|---------|
+| `completed/01_planning_inventory.result.md` | Complete inventory document |
+
+---
+
+## 🚫 Constraints
+
+- ONLY perform research and documentation
+- Do NOT modify any code
+- Be thorough - missing something could cause issues later
+- Document actual code behavior, not assumptions
+
+---
+
+## 📝 Output Format
+
+Create a result file with the following sections:
+
+```markdown
+# Inventory Results
+
+## 1. Tool Definitions
+| Tool Name | Input Schema | Return Type | Dependencies | Special Notes |
+|-----------|--------------|-------------|--------------|---------------|
+| ... | ... | ... | ... | ... |
+
+## 2. API Route Flow
+[Detailed flow diagram or description]
+
+## 3. Frontend Components
+[Component analysis]
+
+## 4. Services Used
+[Service documentation]
+
+## 5. Potential Issues
+[Issues identified]
+
+## 6. Migration Complexity
+[Assessment per component]
+```
+
+---
+
+*Generated by vibe-orchestrator mode*
