@@ -59,8 +59,10 @@ DO return precise Dorks like "History of AI filetype:pdf site:.edu".
         if (!openrouter) throw new Error('OpenRouter provider is not configured (missing API key).');
 
         try {
+            // Use MIMO_V2_FLASH (trinity-large-preview) - supports structured output/tool calling
+            // StepFun models don't support JSON schema response_format
             const result = await generateObject({
-                model: openrouter(Models.FREE.REASONING), // tngtech/tng-r1t-chimera:free
+                model: openrouter(Models.FREE.MIMO_V2_FLASH),
                 schema: SearchQueriesSchema,
                 system: systemPrompt,
                 prompt: userPrompt,

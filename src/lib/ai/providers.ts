@@ -67,15 +67,15 @@ export const Models = {
     // FREE TIER - Validated from OpenRouter (Jan 2026)
     FREE: {
         // TIER 1: Primary Workhorses (Tool Calling + Reasoning)
-        MIMO_V2_FLASH: 'xiaomi/mimo-v2-flash:free', // #1 Weekly Usage - Academia/Science GOAT, 262k context
+        MIMO_V2_FLASH: 'arcee-ai/trinity-large-preview:free', // #1 Weekly Usage - Academia/Science GOAT, 262k context
         NVIDIA_3_NANO: 'nvidia/nemotron-3-nano-30b-a3b:free', // Solid tool-use, 131k context
 
         // TIER 2: Reasoning-Focused (use with OpenRouter reasoning param)
-        REASONING: 'tngtech/tng-r1t-chimera:free', // DeepSeek R1 derivative, FREE
+        REASONING: 'stepfun/step-3.5-flash:free', // DeepSeek R1 derivative, FREE
         GLM_AIR: 'z-ai/glm-4.5-air:free', // Hybrid thinking mode, 131k context
 
         // TIER 3: Code-Focused
-        DEVSTRAL: 'mistralai/devstral-2512:free', // #1 Agentic Coder, 262k context
+        QWEN_THINKING: 'qwen/qwen3-235b-a22b-thinking-2507', // #1 Agentic Coder, 262k context
         QWEN_CODER: 'qwen/qwen3-coder:free', // Qwen's specialist, 262k context
 
         // TIER 4: Vision & Multimodal

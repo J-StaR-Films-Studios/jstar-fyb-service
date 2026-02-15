@@ -53,7 +53,7 @@ export function ResearchProgress({ logs, currentStep }: ResearchProgressProps) {
                             "break-words",
                             log.step === 'failed' ? "text-red-400" :
                                 log.step === 'completed' ? "text-green-400" :
-                                    log.step === 'downloading' ? "text-blue-300" :
+                                    log.step === 'processing' ? "text-blue-300" :
                                         "text-gray-300"
                         )}>
                             {log.message}

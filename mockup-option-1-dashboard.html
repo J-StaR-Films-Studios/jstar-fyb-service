@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J-Star Builder - Option 1: Modern Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0a0f',
+                        primary: '#8b5cf6',
+                        accent: '#06b6d4',
+                        surface: '#16161f',
+                    },
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { background: #0a0a0f; font-family: 'Inter', sans-serif; }
+        
+        .glass { 
+            background: rgba(255,255,255,0.03); 
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        .glass-hover:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.12);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .glow-primary { box-shadow: 0 0 30px rgba(139,92,246,0.3); }
+        .glow-accent { box-shadow: 0 0 30px rgba(6,182,212,0.3); }
+        
+        .progress-ring { transition: stroke-dashoffset 0.5s ease; }
+        
+        .animate-pulse-slow { animation: pulse 3s infinite; }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .shimmer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        
+        /* Mobile bottom nav safe area */
+        .safe-bottom { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .slide-up { animation: slideUp 0.4s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Step indicator styles */
+        .step-active { 
+            background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(6,182,212,0.1));
+            border-color: rgba(139,92,246,0.5);
+        }
+        
+        .step-complete {
+            background: rgba(34,197,94,0.1);
+            border-color: rgba(34,197,94,0.3);
+        }
+        
+        /* Sidebar */
+        .sidebar { 
+            width: 280px; 
+            transition: transform 0.3s ease, width 0.3s ease;
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar { 
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 50;
+                transform: translateX(-100%);
+            }
+            .sidebar.open { transform: translateX(0); }
+        }
+        
+        /* Floating action button */
+        .fab {
+            position: fixed;
+            bottom: calc(6rem + env(safe-area-inset-bottom));
+            right: 1rem;
+            z-index: 40;
+        }
+        
+        @media (min-width: 768px) {
+            .fab { bottom: 2rem; right: 2rem; }
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen">
+    <!-- Mobile Header -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 z-40 glass border-b border-white/5">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-white/5">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <span class="font-display font-bold text-lg gradient-text">J-Star</span>
+            <button class="p-2 rounded-lg hover:bg-white/5 relative">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                <span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Sidebar Overlay -->
+    <div id="sidebar-overlay" class="lg:hidden fixed inset-0 bg-black/60 z-40 hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed lg:sticky top-0 h-screen glass border-r border-white/5 flex flex-col">
+        <!-- Logo -->
+        <div class="p-6 border-b border-white/5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center font-display font-bold text-lg">
+                    J
+                </div>
+                <div>
+                    <span class="font-display font-bold text-lg">J-Star</span>
+                    <p class="text-xs text-gray-500">Project Builder</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Info -->
+        <div class="p-4 border-b border-white/5">
+            <div class="glass rounded-xl p-4">
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Current Project</p>
+                <h3 class="font-semibold text-white truncate">AI-Powered Fraud Detection</h3>
+                <p class="text-xs text-gray-400 mt-1 truncate">Using Blockchain for audit trails...</p>
+            </div>
+        </div>
+
+        <!-- Navigation Steps -->
+        <nav class="flex-1 p-4 overflow-y-auto">
+            <p class="text-xs text-gray-500 uppercase tracking-wider mb-3 px-2">Build Steps</p>
+            
+            <div class="space-y-2">
+                <!-- Step 1: Topic -->
+                <button onclick="setStep(1)" id="nav-step-1" class="w-full flex items-center gap-3 p-3 rounded-xl glass-hover transition-all step-complete">
+                    <div class="w-8 h-8 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <div class="text-left flex-1">
+                        <p class="font-medium text-white text-sm">Concept</p>
+                        <p class="text-xs text-gray-500">Topic & unique angle</p>
+                    </div>
+                </button>
+
+                <!-- Step 2: Abstract -->
+                <button onclick="setStep(2)" id="nav-step-2" class="w-full flex items-center gap-3 p-3 rounded-xl glass-hover transition-all step-complete">
+                    <div class="w-8 h-8 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <div class="text-left flex-1">
+                        <p class="font-medium text-white text-sm">Strategy</p>
+                        <p class="text-xs text-gray-500">Abstract generated</p>
+                    </div>
+                </button>
+
+                <!-- Step 3: Blueprint -->
+                <button onclick="setStep(3)" id="nav-step-3" class="w-full flex items-center gap-3 p-3 rounded-xl glass-hover transition-all step-active">
+                    <div class="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-semibold text-sm">
+                        3
+                    </div>
+                    <div class="text-left flex-1">
+                        <p class="font-medium text-white text-sm">Blueprint</p>
+                        <p class="text-xs text-primary">In progress...</p>
+                    </div>
+                </button>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-white/5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-3 px-2">Quick Actions</p>
+                
+                <div class="space-y-1">
+                    <button class="w-full flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        </svg>
+                        <span class="text-sm">Chat with Jay</span>
+                    </button>
+                    
+                    <button class="w-full flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span class="text-sm">Export Project</span>
+                    </button>
+                    
+                    <button class="w-full flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span class="text-sm">Settings</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- User Profile -->
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center font-semibold">
+                    JD
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm truncate">John Doe</p>
+                    <p class="text-xs text-gray-500 truncate">john@example.com</p>
+                </div>
+                <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="lg:ml-[280px] pt-16 lg:pt-0 safe-bottom">
+        <!-- Desktop Header -->
+        <div class="hidden lg:block sticky top-0 z-30 glass border-b border-white/5">
+            <div class="flex items-center justify-between px-8 py-4">
+                <div>
+                    <h1 class="text-2xl font-display font-bold">Project Blueprint</h1>
+                    <p class="text-sm text-gray-400">Review your outline and choose your path forward</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <!-- Status Badge -->
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20">
+                        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <span class="text-sm text-green-400 font-medium">Auto-saving</span>
+                    </div>
+                    
+                    <!-- Notifications -->
+                    <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400 relative">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="p-4 lg:p-8 max-w-6xl mx-auto space-y-6 fade-in">
+            
+            <!-- Progress Overview Card -->
+            <div class="glass rounded-2xl p-6 relative overflow-hidden">
+                <div class="absolute -top-12 -right-12 w-48 h-48 bg-primary/10 blur-[80px] rounded-full"></div>
+                
+                <div class="relative flex flex-col md:flex-row md:items-center gap-6">
+                    <!-- Progress Circle -->
+                    <div class="flex-shrink-0 relative">
+                        <svg class="w-24 h-24 transform -rotate-90">
+                            <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="none"/>
+                            <circle cx="48" cy="48" r="40" stroke="url(#progress-gradient)" stroke-width="8" fill="none" 
+                                    stroke-dasharray="251.2" stroke-dashoffset="62.8" stroke-linecap="round" class="progress-ring"/>
+                            <defs>
+                                <linearGradient id="progress-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#8b5cf6"/>
+                                    <stop offset="100%" stop-color="#06b6d4"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-2xl font-bold">75%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Text -->
+                    <div class="flex-1">
+                        <h2 class="text-xl font-display font-bold mb-2">Structure Generated!</h2>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            We've crafted a distinction-grade abstract and outline for your project. 
+                            <span class="text-white">Unlock full access</span> to generate detailed chapter content, 
+                            project materials, and defense slides.
+                        </p>
+                    </div>
+                    
+                    <!-- Quick Action -->
+                    <div class="flex-shrink-0">
+                        <button onclick="showPaywall()" class="px-6 py-3 bg-gradient-to-r from-primary to-accent rounded-xl font-semibold hover:opacity-90 transition-opacity glow-primary">
+                            Unlock Full Access
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outline Preview -->
+            <div class="glass rounded-2xl overflow-hidden">
+                <div class="p-6 border-b border-white/5">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-accent uppercase tracking-wider font-medium">Project Title</span>
+                            <h2 class="text-xl font-bold mt-1">AI-Powered Fraud Detection System</h2>
+                        </div>
+                        <button class="p-2 rounded-lg glass-hover text-gray-400 hover:text-white">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <span class="text-xs text-gray-500 uppercase tracking-wider">Abstract Preview</span>
+                        <p class="text-sm text-gray-400 mt-2 leading-relaxed">
+                            This research presents a novel approach to fraud detection using artificial intelligence and machine learning algorithms, integrated with blockchain technology for immutable audit trails. The system employs Zero-Knowledge Proofs to ensure privacy while maintaining transparency...
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Chapter List -->
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold">Chapter Outline</h3>
+                        <span class="text-xs text-gray-500">5 chapters</span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                            <div class="w-10 h-10 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-semibold">1</div>
+                            <div class="flex-1">
+                                <p class="font-medium">Introduction</p>
+                                <p class="text-xs text-gray-500">Background, problem statement, objectives, scope</p>
+                            </div>
+                            <span class="text-xs text-gray-500">~2,500 words</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                            <div class="w-10 h-10 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-semibold">2</div>
+                            <div class="flex-1">
+                                <p class="font-medium">Literature Review</p>
+                                <p class="text-xs text-gray-500">Related works, theoretical framework, critiques</p>
+                            </div>
+                            <span class="text-xs text-gray-500">~3,000 words</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                            <div class="w-10 h-10 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-semibold">3</div>
+                            <div class="flex-1">
+                                <p class="font-medium">Methodology</p>
+                                <p class="text-xs text-gray-500">System design, DFDs, architecture, tools</p>
+                            </div>
+                            <span class="text-xs text-gray-500">~2,800 words</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                            <div class="w-10 h-10 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-semibold">4</div>
+                            <div class="flex-1">
+                                <p class="font-medium">Implementation & Results</p>
+                                <p class="text-xs text-gray-500">Development, testing, evaluation</p>
+                            </div>
+                            <span class="text-xs text-gray-500">~3,500 words</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                            <div class="w-10 h-10 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-semibold">5</div>
+                            <div class="flex-1">
+                                <p class="font-medium">Conclusion</p>
+                                <p class="text-xs text-gray-500">Summary, recommendations, future work</p>
+                            </div>
+                            <span class="text-xs text-gray-500">~1,500 words</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paywall Section -->
+            <div id="paywall-section" class="glass rounded-2xl overflow-hidden relative">
+                <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
+                
+                <!-- Locked Overlay -->
+                <div class="relative p-6 md:p-8">
+                    <div class="flex flex-col md:flex-row gap-8">
+                        <!-- Left: Value Props -->
+                        <div class="flex-1">
+                            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-4">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                                </svg>
+                                Premium Access Required
+                            </div>
+                            
+                            <h3 class="text-2xl font-display font-bold mb-3">Ready to Build?</h3>
+                            <p class="text-gray-400 text-sm mb-6 leading-relaxed">
+                                You've got the outline. Now unlock the full <strong class="text-white">Deep Research</strong>, 
+                                <strong class="text-white">5-Chapter Write-up</strong>, and <strong class="text-white">Project Materials</strong>.
+                            </p>
+                            
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-3 text-sm">
+                                    <div class="w-5 h-5 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </div>
+                                    <span>Detailed Chapter Content (10,000+ words)</span>
+                                </div>
+                                <div class="flex items-center gap-3 text-sm">
+                                    <div class="w-5 h-5 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </div>
+                                    <span>Complete Project Material & Datasets</span>
+                                </div>
+                                <div class="flex items-center gap-3 text-sm">
+                                    <div class="w-5 h-5 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </div>
+                                    <span>Defense Slides & Presentation Script</span>
+                                </div>
+                                <div class="flex items-center gap-3 text-sm">
+                                    <div class="w-5 h-5 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </div>
+                                    <span>AI Chat Assistant (Monji)</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right: Pricing Card -->
+                        <div class="md:w-80 flex-shrink-0">
+                            <div class="glass rounded-xl p-6 text-center">
+                                <div class="mb-4">
+                                    <span class="text-gray-500 text-sm line-through">₦25,000</span>
+                                    <div class="text-4xl font-display font-bold gradient-text">₦15,000</div>
+                                    <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 uppercase">Limited Time</span>
+                                </div>
+                                
+                                <button class="w-full py-4 bg-gradient-to-r from-primary to-accent rounded-xl font-bold uppercase tracking-wide glow-primary hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                                    </svg>
+                                    Unlock Now
+                                </button>
+                                
+                                <div class="flex items-center justify-center gap-2 mt-4 text-xs text-gray-500">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    <span>Secured by Paystack</span>
+                                </div>
+                                
+                                <!-- Discount Code -->
+                                <div class="mt-4 pt-4 border-t border-white/5">
+                                    <input type="text" placeholder="Have a discount code?" 
+                                           class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary/50">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode Selection (After Payment) -->
+            <div id="mode-section" class="hidden">
+                <div class="glass rounded-2xl p-6 md:p-8 relative overflow-hidden">
+                    <div class="absolute -top-12 -right-12 w-48 h-48 bg-green-500/10 blur-[80px] rounded-full"></div>
+                    
+                    <div class="relative">
+                        <div class="text-center mb-8">
+                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 text-green-400 mb-4">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-display font-bold">Project Unlocked!</h3>
+                            <p class="text-gray-400 mt-2">How would you like to proceed?</p>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <!-- DIY Option -->
+                            <button class="group p-6 rounded-xl glass-hover text-left transition-all hover:scale-[1.02]">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="p-3 rounded-xl bg-primary/20 text-primary">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <h4 class="font-bold text-lg group-hover:text-primary transition-colors">I'll Handle It</h4>
+                                <p class="text-sm text-gray-500 mt-2">Upload your own research papers and run the AI extraction yourself.</p>
+                                <div class="mt-4 text-xs text-primary font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                    Self-Service
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </div>
+                            </button>
+                            
+                            <!-- Concierge Option -->
+                            <button class="group p-6 rounded-xl glass-hover text-left transition-all hover:scale-[1.02] border-accent/30">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="p-3 rounded-xl bg-accent/20 text-accent">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                        </svg>
+                                    </div>
+                                    <span class="text-[10px] font-bold uppercase tracking-widest bg-accent/10 text-accent px-2 py-1 rounded-full">
+                                        Recommended
+                                    </span>
+                                </div>
+                                <h4 class="font-bold text-lg group-hover:text-accent transition-colors">Let J-Star Handle It</h4>
+                                <p class="text-sm text-gray-500 mt-2">Sit back while our team handles the research and writing for you.</p>
+                                <div class="mt-4 text-xs text-accent font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                    Full Service
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/5 z-40" style="padding-bottom: env(safe-area-inset-bottom);">
+        <div class="flex items-center justify-around py-2">
+            <button class="flex flex-col items-center gap-1 p-2 text-gray-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                <span class="text-[10px]">Home</span>
+            </button>
+            
+            <button class="flex flex-col items-center gap-1 p-2 text-primary">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span class="text-[10px]">Project</span>
+            </button>
+            
+            <button class="flex flex-col items-center gap-1 p-2 text-gray-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                </svg>
+                <span class="text-[10px]">Chat</span>
+            </button>
+            
+            <button class="flex flex-col items-center gap-1 p-2 text-gray-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span class="text-[10px]">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Floating Chat FAB -->
+    <button class="fab w-14 h-14 rounded-full bg-gradient-to-r from-primary to-accent shadow-lg flex items-center justify-center hover:scale-110 transition-transform glow-primary">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+        </svg>
+    </button>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('hidden');
+        }
+        
+        function setStep(step) {
+            // Update nav items
+            for (let i = 1; i <= 3; i++) {
+                const nav = document.getElementById(`nav-step-${i}`);
+                nav.classList.remove('step-active', 'step-complete');
+            }
+        }
+        
+        function showPaywall() {
+            document.getElementById('paywall-section').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
