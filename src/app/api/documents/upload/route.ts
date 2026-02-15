@@ -4,7 +4,6 @@ import { getCurrentUser } from "@/lib/auth-server";
 import { logger } from "@/lib/logger";
 import { GeminiFileSearchService } from "@/lib/gemini-file-search";
 import { extractPdfText } from "@/lib/pdf-parser";
-import { validateUrlSecurity } from "@/lib/security";
 import mammoth from "mammoth";
 
 // Security constants
@@ -92,7 +91,6 @@ export async function POST(req: Request) {
     try {
         const formData = await req.formData();
         const file = formData.get("file") as File | null;
-        const link = formData.get("link") as string | null;
         const projectId = formData.get("projectId") as string;
 
         // Input validation
@@ -124,44 +122,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
 
-        // Case 1: External Link
-        if (link) {
-            // CRITICAL SECURITY FIX: Use shared security validation for SSRF protection
-            try {
-                await validateUrlSecurity(link);
-            } catch (error: unknown) {
-                const errorMessage = error instanceof Error ? error.message : "Invalid URL";
-                // Safe logging: avoid query params
-                let safeLink = link;
-                try {
-                    const u = new URL(link);
-                    safeLink = `${u.origin}${u.pathname}`; // strip search/hash
-                } catch {
-                    safeLink = "invalid-url";
-                }
-                logger.warn(`Blocked unsafe URL: ${safeLink}. Error: ${errorMessage}`, "[DocumentUpload]");
-                return NextResponse.json({ error: errorMessage || "Invalid or unsafe URL provided" }, { status: 400 });
-            }
-
-            // CRITICAL: Actually download the file using ResearchService
-            // This ensures we get the PDF buffer/content for extraction, not just a link string
-            try {
-                const { ResearchService } = await import('@/features/research/services/researchService');
-                const doc = await ResearchService.downloadAndSaveSource(projectId, link, link); // Use link as title initially
-
-                if (!doc) {
-                    throw new Error("Failed to download or save document");
-                }
-
-                return NextResponse.json({ success: true, doc });
-            } catch (error: unknown) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                logger.error(`Link processing failed: ${errorMessage}`, "[DocumentUpload]");
-                return NextResponse.json({ error: "Failed to download content from link" }, { status: 500 });
-            }
-        }
-
-        // Case 2: File Upload
+        // File Upload
         if (file) {
             // Enhanced file validation
             const validation = validateFileSecurity(file);

@@ -20,8 +20,6 @@ const nextConfig: NextConfig = {
     'micromark-util-encode',
     'micromark-core-commonmark',
   ],
-  // Exclude scraping libraries from the bundle to fix path resolution issues
-  serverExternalPackages: ['got-scraping', 'header-generator'],
 
   // Security: Disable the X-Powered-By header to prevent information leakage
   poweredByHeader: false,

@@ -2,7 +2,6 @@ import { prisma } from '@/lib/prisma';
 import { ReasoningService } from './reasoningService';
 import { SemanticScholarService, SemanticScholarPaper } from './semanticScholarService';
 import { GeminiService, GroundedWebSource } from './geminiService';
-import { smartDownload } from '@/lib/network/smartBrowser';
 
 export interface ResearchProgress {
   step: 'planning' | 'searching' | 'processing' | 'completed' | 'failed';
@@ -181,98 +180,4 @@ export class ResearchService {
     });
   }
 
-  /**
-   * Helper: Transform landing page URLs to direct PDF links where possible
-   * Useful for students clicking through to open-access PDFs
-   */
-  static optimizeDownloadUrl(url: string): string {
-    let cleanUrl = url;
-
-    // ArXiv: /abs/ -> /pdf/
-    if (cleanUrl.includes('arxiv.org/abs/')) {
-      cleanUrl = cleanUrl.replace('arxiv.org/abs/', 'arxiv.org/pdf/') + '.pdf';
-    } else if (cleanUrl.includes('arxiv.org/pdf/') && !cleanUrl.toLowerCase().endsWith('.pdf')) {
-      cleanUrl += '.pdf';
-    }
-
-    // Preprints.org
-    if (cleanUrl.includes('preprints.org/manuscript/') && !cleanUrl.includes('/download')) {
-      if (/\/v\d+$/.test(cleanUrl)) {
-        cleanUrl += '/download';
-      }
-    }
-
-    // MDPI: /htm -> /pdf
-    if (cleanUrl.includes('mdpi.com') && cleanUrl.endsWith('/htm')) {
-      cleanUrl = cleanUrl.replace('/htm', '/pdf');
-    }
-
-    return cleanUrl;
-  }
-
-  /**
-   * Download a document from a URL and save to DB (for document uploads)
-   * This is separate from the hybrid research flow which is metadata-only
-   */
-  static async downloadAndSaveSource(projectId: string, url: string, title: string) {
-    // Validation
-    if (!url || !url.startsWith('http')) return null;
-
-    // Check if exists
-    const existing = await prisma.researchDocument.findFirst({
-      where: { projectId, fileUrl: url }
-    });
-    if (existing) return existing;
-
-    // Optimize URL for known academic repositories
-    const optimizedUrl = this.optimizeDownloadUrl(url);
-
-    try {
-      // Use High-Trust Smart Downloader
-      const buffer = await smartDownload(optimizedUrl);
-
-      // Inferred metadata
-      const isPdf = optimizedUrl.toLowerCase().endsWith('.pdf') || optimizedUrl.includes('/download');
-      const contentType = isPdf ? 'application/pdf' : 'text/html';
-
-      // Create Record
-      const doc = await prisma.researchDocument.create({
-        data: {
-          projectId,
-          title,
-          fileUrl: url,
-          fileName: title === url ? 'External Link' : title.substring(0, 100) + (isPdf ? '.pdf' : '.html'),
-          fileType: isPdf ? 'PDF' : 'WEB',
-          fileData: isPdf ? Buffer.from(buffer) : undefined,
-          mimeType: contentType,
-          status: 'PENDING'
-        }
-      });
-
-      return doc;
-    } catch (error: any) {
-      console.error(`Failed to download ${url}`, error);
-
-      // FALLBACK: Save the URL anyway as a reference
-      try {
-        const doc = await prisma.researchDocument.create({
-          data: {
-            projectId,
-            title,
-            fileUrl: url,
-            fileName: title.substring(0, 100) + '.html',
-            fileType: 'WEB',
-            fileData: undefined,
-            mimeType: 'application/x-web-reference',
-            status: 'ERROR',
-            importError: `Download failed: ${error.message}`
-          }
-        });
-        return doc;
-      } catch (dbError) {
-        console.error('Failed to save fallback reference', dbError);
-        return null;
-      }
-    }
-  }
 }
