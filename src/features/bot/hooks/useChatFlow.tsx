@@ -16,7 +16,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { saveLeadAction } from "../actions/chat";
-import { Models } from "@/lib/ai/providers";
+import { Models } from "@/lib/ai/models";
 
 import { Message, ChatState, ConfirmedTopic } from "./types";
 import { useChatPersistence } from "./useChatPersistence";
