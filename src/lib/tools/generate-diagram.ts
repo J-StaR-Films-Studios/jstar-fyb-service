@@ -60,8 +60,8 @@ export const generateDiagramTool = tool({
 
     inputSchema: generateDiagramSchema,
 
-    execute: async ({ title, type, description, relevantContext, explanation }, context): Promise<ToolResult<GenerateDiagramOutput>> => {
-        const executionContext = context as unknown as ToolExecutionContext | undefined;
+    execute: async ({ title, type, description, relevantContext, explanation }, { experimental_context }): Promise<ToolResult<GenerateDiagramOutput>> => {
+        const executionContext = (experimental_context as ToolExecutionContext) || {};
 
         console.log('[generateDiagram] Tool executing:', {
             type,

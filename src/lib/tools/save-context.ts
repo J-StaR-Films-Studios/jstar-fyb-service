@@ -46,8 +46,12 @@ export const saveUserContextTool = tool({
 
     inputSchema: saveUserContextSchema,
 
-    execute: async (data, context): Promise<ToolResult<SaveUserContextOutput>> => {
-        const { projectId } = context as unknown as ToolExecutionContext;
+    execute: async (data, { experimental_context }): Promise<ToolResult<SaveUserContextOutput>> => {
+        const { projectId } = (experimental_context as ToolExecutionContext) || {};
+
+        if (!projectId) {
+            return toolError('No project ID provided in context');
+        }
 
         try {
             // Only save non-empty values

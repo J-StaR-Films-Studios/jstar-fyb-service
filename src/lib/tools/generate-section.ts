@@ -114,9 +114,8 @@ The section will be appended to the chapter and saved to the database automatica
         content,
         instructions,
         context: additionalContext
-    }, context): Promise<ToolResult<GenerateSectionOutput>> => {
-        const executionContext = context as unknown as ToolExecutionContext | undefined;
-        const projectId = executionContext?.projectId;
+    }, { experimental_context }): Promise<ToolResult<GenerateSectionOutput>> => {
+        const { projectId } = (experimental_context as ToolExecutionContext) || {};
 
         // Validate projectId exists
         if (!projectId) {

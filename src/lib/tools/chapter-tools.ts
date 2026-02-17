@@ -34,9 +34,8 @@ export const listChaptersTool = tool({
 
     inputSchema: listChaptersSchema,
 
-    execute: async (_, context): Promise<ToolResult<ListChaptersOutput>> => {
-        const executionContext = context as unknown as ToolExecutionContext | undefined;
-        const projectId = executionContext?.projectId;
+    execute: async (_, { experimental_context }): Promise<ToolResult<ListChaptersOutput>> => {
+        const { projectId } = (experimental_context as ToolExecutionContext) || {};
 
         if (!projectId) {
             return toolError('No project ID provided in context');
@@ -88,9 +87,8 @@ export const loadChapterTool = tool({
 
     inputSchema: loadChapterSchema,
 
-    execute: async ({ chapterNumber }, context): Promise<ToolResult<LoadChapterOutput>> => {
-        const executionContext = context as unknown as ToolExecutionContext | undefined;
-        const projectId = executionContext?.projectId;
+    execute: async ({ chapterNumber }, { experimental_context }): Promise<ToolResult<LoadChapterOutput>> => {
+        const { projectId } = (experimental_context as ToolExecutionContext) || {};
 
         if (!projectId) {
             return toolError('No project ID provided in context');
@@ -151,9 +149,8 @@ export const addChapterTool = tool({
 
     inputSchema: addChapterSchema,
 
-    execute: async ({ number, title, initialContent }, context): Promise<ToolResult<AddChapterOutput>> => {
-        const executionContext = context as unknown as ToolExecutionContext | undefined;
-        const projectId = executionContext?.projectId;
+    execute: async ({ number, title, initialContent }, { experimental_context }): Promise<ToolResult<AddChapterOutput>> => {
+        const { projectId } = (experimental_context as ToolExecutionContext) || {};
 
         if (!projectId) {
             return toolError('No project ID provided in context');
@@ -207,9 +204,8 @@ export const generateChapterOutlineTool = tool({
 
     inputSchema: generateChapterOutlineSchema,
 
-    execute: async ({ focus }, context): Promise<ToolResult<GenerateChapterOutlineOutput>> => {
-        const executionContext = context as unknown as ToolExecutionContext | undefined;
-        const projectId = executionContext?.projectId;
+    execute: async ({ focus }, { experimental_context }): Promise<ToolResult<GenerateChapterOutlineOutput>> => {
+        const { projectId } = (experimental_context as ToolExecutionContext) || {};
 
         if (!projectId) {
             return toolError('No project ID provided in context');

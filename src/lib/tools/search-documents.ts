@@ -42,8 +42,12 @@ export const searchProjectDocumentsTool = tool({
 
     inputSchema: searchDocumentsSchema,
 
-    execute: async ({ query }, context): Promise<ToolResult<SearchDocumentsOutput>> => {
-        const { projectId } = context as unknown as ToolExecutionContext;
+    execute: async ({ query }, { experimental_context }): Promise<ToolResult<SearchDocumentsOutput>> => {
+        const { projectId } = (experimental_context as ToolExecutionContext) || {};
+
+        if (!projectId) {
+            return toolError('No project ID provided in context');
+        }
 
         try {
             // Get the file search store ID for this project

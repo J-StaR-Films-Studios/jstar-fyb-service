@@ -195,7 +195,12 @@ export function createAcademicAgent(config: AcademicAgentConfig = {}) {
         // Provider-specific options (for reasoning models)
         ...(providerOptions && { providerOptions }),
 
-        // Note: 'instructions' is set dynamically via prepareCall or passed in generate/stream
+        // Map runtime call options to agent settings
+        prepareCall: ({ options, ...settings }) => ({
+            ...settings,
+            instructions: options.instructions,
+            experimental_context: options.experimental_context,
+        }),
     });
 }
 
