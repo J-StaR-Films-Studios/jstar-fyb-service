@@ -50,7 +50,30 @@ export const suggestEditTool = tool({
     inputSchema: suggestEditSchema,
 
     execute: async ({ chapterNumber, currentContentToReplace, newContent, explanation }): Promise<ToolResult<SuggestEditOutput>> => {
-        console.log('[suggestEdit] Tool executed:', { chapterNumber, explanation });
+        console.log('[suggestEdit] Tool executed:', { chapterNumber, currentContentToReplace, newContent, explanation });
+
+        // Validate required fields - AI sometimes omits content fields
+        if (!currentContentToReplace || !newContent) {
+            const missingFields = [];
+            if (!currentContentToReplace) missingFields.push('currentContentToReplace (the exact text to replace)');
+            if (!newContent) missingFields.push('newContent (the replacement text)');
+
+            // Return a descriptive error that guides the model to retry
+            const errorMsg = `INCOMPLETE TOOL CALL: You must provide ALL parameters. Missing: ${missingFields.join(', ')}.
+            
+Please call suggestEdit again with:
+1. chapterNumber: ${chapterNumber}
+2. currentContentToReplace: The EXACT text from the chapter that needs to be changed
+3. newContent: The new text to replace it with
+4. explanation: ${explanation || 'Why this change is needed'}
+
+DO NOT proceed without providing the actual text content.`;
+
+            return {
+                success: false,
+                error: errorMsg,
+            };
+        }
 
         return toolSuccess<SuggestEditOutput>({
             chapterNumber,

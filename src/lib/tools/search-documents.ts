@@ -11,7 +11,8 @@ import { tool, type UIToolInvocation } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { GeminiFileSearchService } from '@/lib/gemini-file-search';
-import { ToolResult, toolSuccess, toolError, ToolExecutionContext } from './types';
+import { ToolResult, toolSuccess, toolError } from './types';
+import { validateToolContext } from './context-validation';
 
 /**
  * Input schema for searchProjectDocuments tool
@@ -43,11 +44,14 @@ export const searchProjectDocumentsTool = tool({
     inputSchema: searchDocumentsSchema,
 
     execute: async ({ query }, { experimental_context }): Promise<ToolResult<SearchDocumentsOutput>> => {
-        const { projectId } = (experimental_context as ToolExecutionContext) || {};
-
-        if (!projectId) {
-            return toolError('No project ID provided in context');
+        // Validate context first
+        const ctxResult = validateToolContext(experimental_context);
+        if (!ctxResult.success) {
+            console.error('[searchProjectDocuments] Context validation failed:', ctxResult.error);
+            return toolError(`Context error: ${ctxResult.error}`);
         }
+
+        const { projectId } = ctxResult.data;
 
         try {
             // Get the file search store ID for this project

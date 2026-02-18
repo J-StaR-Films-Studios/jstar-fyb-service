@@ -17,7 +17,7 @@ import { ChapterService } from '@/features/builder/services/chapterService';
 import { selectModel } from '@/lib/ai/router';
 import { COMMON_ACADEMIC_RULES, getChapterSpecificPrompt } from '@/features/bot/prompts/chapterPrompts';
 import { ToolResult, toolSuccess, toolError } from './types';
-import type { ToolExecutionContext } from './types';
+import { validateToolContext } from './context-validation';
 
 // ============================================================
 // MUTEX FOR SEQUENTIAL EXECUTION
@@ -115,12 +115,14 @@ The section will be appended to the chapter and saved to the database automatica
         instructions,
         context: additionalContext
     }, { experimental_context }): Promise<ToolResult<GenerateSectionOutput>> => {
-        const { projectId } = (experimental_context as ToolExecutionContext) || {};
-
-        // Validate projectId exists
-        if (!projectId) {
-            return toolError('Project ID is required. Please ensure you are working within a valid project.');
+        // Validate context first
+        const ctxResult = validateToolContext(experimental_context);
+        if (!ctxResult.success) {
+            console.error('[generateSection] Context validation failed:', ctxResult.error);
+            return toolError(`Context error: ${ctxResult.error}`);
         }
+
+        const { projectId } = ctxResult.data;
 
         // ACQUIRE LOCK - Ensures sequential execution
         const unlock = await sectionMutex.lock();

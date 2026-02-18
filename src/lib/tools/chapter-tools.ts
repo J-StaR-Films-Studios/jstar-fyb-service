@@ -10,7 +10,8 @@
 import { tool, type UIToolInvocation } from 'ai';
 import { z } from 'zod';
 import { ChapterService } from '@/features/builder/services/chapterService';
-import { ToolResult, toolSuccess, toolError, type ToolExecutionContext } from './types';
+import { ToolResult, toolSuccess, toolError } from './types';
+import { validateToolContext } from './context-validation';
 
 // ============================================================
 // LIST CHAPTERS TOOL
@@ -35,11 +36,14 @@ export const listChaptersTool = tool({
     inputSchema: listChaptersSchema,
 
     execute: async (_, { experimental_context }): Promise<ToolResult<ListChaptersOutput>> => {
-        const { projectId } = (experimental_context as ToolExecutionContext) || {};
-
-        if (!projectId) {
-            return toolError('No project ID provided in context');
+        // Validate context first
+        const ctxResult = validateToolContext(experimental_context);
+        if (!ctxResult.success) {
+            console.error('[listChapters] Context validation failed:', ctxResult.error);
+            return toolError(`Context error: ${ctxResult.error}`);
         }
+
+        const { projectId } = ctxResult.data;
 
         try {
             const chapters = await ChapterService.getChapters(projectId);
@@ -88,11 +92,14 @@ export const loadChapterTool = tool({
     inputSchema: loadChapterSchema,
 
     execute: async ({ chapterNumber }, { experimental_context }): Promise<ToolResult<LoadChapterOutput>> => {
-        const { projectId } = (experimental_context as ToolExecutionContext) || {};
-
-        if (!projectId) {
-            return toolError('No project ID provided in context');
+        // Validate context first
+        const ctxResult = validateToolContext(experimental_context);
+        if (!ctxResult.success) {
+            console.error('[loadChapter] Context validation failed:', ctxResult.error);
+            return toolError(`Context error: ${ctxResult.error}`);
         }
+
+        const { projectId } = ctxResult.data;
 
         try {
             const chapter = await ChapterService.getChapter(projectId, chapterNumber);
@@ -150,11 +157,14 @@ export const addChapterTool = tool({
     inputSchema: addChapterSchema,
 
     execute: async ({ number, title, initialContent }, { experimental_context }): Promise<ToolResult<AddChapterOutput>> => {
-        const { projectId } = (experimental_context as ToolExecutionContext) || {};
-
-        if (!projectId) {
-            return toolError('No project ID provided in context');
+        // Validate context first
+        const ctxResult = validateToolContext(experimental_context);
+        if (!ctxResult.success) {
+            console.error('[addChapter] Context validation failed:', ctxResult.error);
+            return toolError(`Context error: ${ctxResult.error}`);
         }
+
+        const { projectId } = ctxResult.data;
 
         try {
             await ChapterService.createChapter(projectId, {
@@ -205,11 +215,14 @@ export const generateChapterOutlineTool = tool({
     inputSchema: generateChapterOutlineSchema,
 
     execute: async ({ focus }, { experimental_context }): Promise<ToolResult<GenerateChapterOutlineOutput>> => {
-        const { projectId } = (experimental_context as ToolExecutionContext) || {};
-
-        if (!projectId) {
-            return toolError('No project ID provided in context');
+        // Validate context first
+        const ctxResult = validateToolContext(experimental_context);
+        if (!ctxResult.success) {
+            console.error('[generateChapterOutline] Context validation failed:', ctxResult.error);
+            return toolError(`Context error: ${ctxResult.error}`);
         }
+
+        const { projectId } = ctxResult.data;
 
         try {
             // Service fetches topic from DB

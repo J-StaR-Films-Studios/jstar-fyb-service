@@ -9,7 +9,8 @@
 
 import { tool, type UIToolInvocation } from 'ai';
 import { z } from 'zod';
-import { ToolResult, toolSuccess, toolError, type ToolExecutionContext } from './types';
+import { ToolResult, toolSuccess, toolError } from './types';
+import { validateToolContext } from './context-validation';
 
 /**
  * Supported diagram types
@@ -61,7 +62,14 @@ export const generateDiagramTool = tool({
     inputSchema: generateDiagramSchema,
 
     execute: async ({ title, type, description, relevantContext, explanation }, { experimental_context }): Promise<ToolResult<GenerateDiagramOutput>> => {
-        const executionContext = (experimental_context as ToolExecutionContext) || {};
+        // Validate context first
+        const ctxResult = validateToolContext(experimental_context);
+        if (!ctxResult.success) {
+            console.error('[generateDiagram] Context validation failed:', ctxResult.error);
+            return toolError(`Context error: ${ctxResult.error}`);
+        }
+
+        const executionContext = ctxResult.data;
 
         console.log('[generateDiagram] Tool executing:', {
             type,
@@ -78,7 +86,7 @@ export const generateDiagramTool = tool({
             const { generateDiagramCode } = await import('@/lib/ai/diagramService');
 
             // Use provided context or fall back to chapters text from context
-            const projectContext = relevantContext || executionContext?.chaptersText?.slice(0, 2000) || '';
+            const projectContext = relevantContext || executionContext.chaptersText?.slice(0, 2000) || '';
 
             const result = await generateDiagramCode({
                 diagramType: type,

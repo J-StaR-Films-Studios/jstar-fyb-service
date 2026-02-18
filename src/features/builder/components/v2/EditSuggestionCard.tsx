@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, X, Pencil, RotateCcw } from 'lucide-react';
+import { ArrowRight, Check, X, Pencil, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -9,23 +9,26 @@ import { DiagramPreview } from './DiagramPreview';
 
 interface EditSuggestionCardProps {
     chapterNumber: number;
-    originalContent: string;
-    newContent: string;
-    explanation: string;
+    originalContent?: string;
+    newContent?: string;
+    explanation?: string;
     onApply: (content: string) => void;
     onReject: () => void;
 }
 
 export function EditSuggestionCard({
     chapterNumber,
-    originalContent,
-    newContent,
-    explanation,
+    originalContent = '',
+    newContent = '',
+    explanation = 'No explanation provided',
     onApply,
     onReject
 }: EditSuggestionCardProps) {
     const [mode, setMode] = useState<'preview' | 'edit'>('preview');
     const [editedContent, setEditedContent] = useState(newContent);
+
+    // Guard against missing content - show error state
+    const hasMissingContent = !originalContent || !newContent;
 
     return (
         <motion.div
@@ -43,7 +46,18 @@ export function EditSuggestionCard({
             <div className="p-4 space-y-4">
                 <p className="text-sm text-gray-300 italic">{explanation}</p>
 
-                {mode === 'preview' ? (
+                {/* Error state for missing content */}
+                {hasMissingContent ? (
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-sm text-yellow-200 flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-medium">Incomplete Edit Suggestion</p>
+                            <p className="text-xs text-yellow-300/70 mt-1">
+                                The AI did not provide the full edit content. Please ask it to try again with specific text to replace.
+                            </p>
+                        </div>
+                    </div>
+                ) : mode === 'preview' ? (
                     <div className="space-y-3">
                         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-xs text-red-200 opacity-60 line-through">
                             {originalContent.slice(0, 150)}{originalContent.length > 150 ? '...' : ''}
@@ -106,39 +120,43 @@ export function EditSuggestionCard({
                     className="flex-1 text-gray-400 hover:text-white hover:bg-white/5"
                 >
                     <X className="w-4 h-4 mr-2" />
-                    Reject
+                    {hasMissingContent ? 'Dismiss' : 'Reject'}
                 </Button>
 
-                {mode === 'preview' ? (
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setMode('edit')}
-                        className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
-                    >
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Modify
-                    </Button>
-                ) : (
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setMode('preview')}
-                        className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
-                    >
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        Preview
-                    </Button>
+                {!hasMissingContent && (
+                    <>
+                        {mode === 'preview' ? (
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setMode('edit')}
+                                className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
+                            >
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Modify
+                            </Button>
+                        ) : (
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setMode('preview')}
+                                className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
+                            >
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                                Preview
+                            </Button>
+                        )}
+
+                        <Button
+                            size="sm"
+                            onClick={() => onApply(editedContent)}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white border-0"
+                        >
+                            <Check className="w-4 h-4 mr-2" />
+                            Apply
+                        </Button>
+                    </>
                 )}
-
-                <Button
-                    size="sm"
-                    onClick={() => onApply(editedContent)}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white border-0"
-                >
-                    <Check className="w-4 h-4 mr-2" />
-                    Apply
-                </Button>
             </div>
         </motion.div>
     );

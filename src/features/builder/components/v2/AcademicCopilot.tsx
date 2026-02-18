@@ -225,15 +225,24 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     }, [messages]);
 
     const handleSaveDiagram = async (diagram: any, alsoInsert: boolean = false) => {
+        // Extract diagram data - handle both direct and nested result structure
+        const diagramData = diagram?.data || diagram;
+        const mermaidCode = diagramData?.mermaidCode || diagram?.mermaidCode;
+
+        if (!mermaidCode) {
+            toast.error('No diagram code found to save');
+            return;
+        }
+
         try {
             const res = await fetch(`/api/projects/${projectId}/diagrams`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title: diagram.title || 'Untitled Diagram',
-                    diagramType: diagram.type || 'flowchart',
-                    mermaidCode: diagram.mermaidCode,
-                    description: diagram.explanation || 'AI Generated Diagram'
+                    title: diagramData.title || diagram.title || 'Untitled Diagram',
+                    diagramType: diagramData.type || diagram.type || 'flowchart',
+                    mermaidCode: mermaidCode,
+                    description: diagramData.explanation || diagram.explanation || 'AI Generated Diagram'
                 })
             });
             if (res.ok) {

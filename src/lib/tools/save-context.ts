@@ -10,7 +10,8 @@ import { tool, type UIToolInvocation } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getChapterSpecificPrompt } from '@/features/bot/prompts/chapterPrompts';
-import { ToolResult, toolSuccess, toolError, type ToolExecutionContext } from './types';
+import { ToolResult, toolSuccess, toolError } from './types';
+import { validateToolContext } from './context-validation';
 
 // ============================================================
 // SAVE USER CONTEXT TOOL
@@ -47,11 +48,14 @@ export const saveUserContextTool = tool({
     inputSchema: saveUserContextSchema,
 
     execute: async (data, { experimental_context }): Promise<ToolResult<SaveUserContextOutput>> => {
-        const { projectId } = (experimental_context as ToolExecutionContext) || {};
-
-        if (!projectId) {
-            return toolError('No project ID provided in context');
+        // Validate context first
+        const ctxResult = validateToolContext(experimental_context);
+        if (!ctxResult.success) {
+            console.error('[saveUserContext] Context validation failed:', ctxResult.error);
+            return toolError(`Context error: ${ctxResult.error}`);
         }
+
+        const { projectId } = ctxResult.data;
 
         try {
             // Only save non-empty values
