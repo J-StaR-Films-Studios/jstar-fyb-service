@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { GeminiFileSearchService } from "@/lib/gemini-file-search";
 import { NextResponse } from "next/server";
+import { synthesizeDocumentText } from "@/lib/synthesize-document";
 
 export async function POST(
     req: Request,
@@ -33,22 +34,39 @@ export async function POST(
         }
 
         // 3. Sync unsynced documents
-        const unsyncedDocs = project.documents.filter(d => !d.importedToFileSearch && d.fileData);
+        // Include BOTH binary docs (user uploads) AND metadata-only docs (deep research)
+        const unsyncedDocs = project.documents.filter(d =>
+            !d.importedToFileSearch && (d.fileData || d.abstractText || d.snippet)
+        );
         const results = [];
 
         for (const doc of unsyncedDocs) {
             try {
-                // Ensure we have mimeType and valid fileData
-                if (!doc.mimeType || !doc.fileData) {
-                    results.push({ id: doc.id, success: false, error: 'Missing file data or mime type' });
-                    continue;
+                let fileBuffer: Buffer;
+                let mimeType: string;
+                let fileName: string;
+
+                if (doc.fileData) {
+                    // Binary document (user upload) — use original file data
+                    if (!doc.mimeType) {
+                        results.push({ id: doc.id, success: false, error: 'Missing mime type' });
+                        continue;
+                    }
+                    fileBuffer = doc.fileData;
+                    mimeType = doc.mimeType;
+                    fileName = doc.fileName;
+                } else {
+                    // Metadata-only document (deep research) — synthesize text
+                    fileBuffer = synthesizeDocumentText(doc);
+                    mimeType = 'text/plain';
+                    fileName = `${doc.title || doc.fileName} (Research Metadata).txt`;
                 }
 
                 const uploadResult = await GeminiFileSearchService.uploadDocument(
                     storeId!,
-                    doc.fileData,
-                    doc.fileName,
-                    doc.mimeType
+                    fileBuffer,
+                    fileName,
+                    mimeType
                 );
 
                 if (uploadResult.success) {

@@ -5,11 +5,14 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bot, Zap, Check, ArrowRight, Loader2, Sparkles, X, BookOpen, Globe,
-  Search, FileText, Quote, Download, Lock, ExternalLink, AlertCircle
+  Search, FileText, Quote, Download, Lock, ExternalLink, AlertCircle,
+  ListChecks, CheckSquare, Square, Filter
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ResearchClient, ResearchPlan } from '@/services/researchClient';
+import { ResearchClient, ResearchPlan, SearchResults } from '@/services/researchClient';
 import { ResearchProgress as ProgressType } from '../services/researchService';
+import { SemanticScholarPaper } from '../services/semanticScholarService';
+import { GroundedWebSource } from '../services/geminiService';
 import { useBuilderStore } from '@/features/builder/store/useBuilderStore';
 
 interface ResearchModalProps {
@@ -20,7 +23,7 @@ interface ResearchModalProps {
   onComplete?: () => void;
 }
 
-type Step = 'configure' | 'planning' | 'review' | 'executing';
+type Step = 'configure' | 'planning' | 'review' | 'executing' | 'curate';
 
 export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComplete }: ResearchModalProps) {
   const [step, setStep] = useState<Step>('configure');
@@ -30,13 +33,20 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
   const [logs, setLogs] = useState<ProgressType[]>([]);
   const [currentStep, setCurrentStep] = useState<ProgressType['step']>('planning');
 
+  // Curation state
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
+  const [selectedPaperIds, setSelectedPaperIds] = useState<Set<string>>(new Set());
+  const [selectedWebIds, setSelectedWebIds] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
   // Get project data
   const projectData = useBuilderStore((state) => state.data);
 
   const handleGeneratePlan = async () => {
     setIsLoading(true);
     setStep('planning');
-    
+
     try {
       const plan = await ResearchClient.generatePlan(projectId);
       setGeneratedPlan(plan);
@@ -66,7 +76,8 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
 
       const goal = customGoal || projectTopic || projectData.topic || 'Academic research';
 
-      await ResearchClient.executeResearch(
+      // Use searchOnly() — does NOT save to DB
+      const results = await ResearchClient.searchOnly(
         projectId,
         { queries, deepGoal: goal },
         (progress: ProgressType) => {
@@ -75,8 +86,103 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
         }
       );
 
+      // Store results and select ALL by default
+      setSearchResults(results);
+      setSelectedPaperIds(new Set(results.academic.map(p => p.paperId)));
+      setSelectedWebIds(new Set(results.web.map(w => w.url)));
+      setStep('curate');
+
     } catch (error) {
       setLogs(prev => [...prev, { step: 'failed', message: 'Research execution failed unexpectedly.' }]);
+    }
+  };
+
+  // --- Curation Helpers ---
+
+  const togglePaper = (paperId: string) => {
+    setSelectedPaperIds(prev => {
+      const next = new Set(prev);
+      if (next.has(paperId)) next.delete(paperId);
+      else next.add(paperId);
+      return next;
+    });
+  };
+
+  const toggleWeb = (url: string) => {
+    setSelectedWebIds(prev => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (!searchResults) return;
+    setSelectedPaperIds(new Set(searchResults.academic.map(p => p.paperId)));
+    setSelectedWebIds(new Set(searchResults.web.map(w => w.url)));
+  };
+
+  const deselectAll = () => {
+    setSelectedPaperIds(new Set());
+    setSelectedWebIds(new Set());
+  };
+
+  const deselectPaywalled = () => {
+    if (!searchResults) return;
+    setSelectedPaperIds(prev => {
+      const next = new Set(prev);
+      for (const paper of searchResults.academic) {
+        if (!paper.openAccessPdfUrl) {
+          next.delete(paper.paperId);
+        }
+      }
+      return next;
+    });
+  };
+
+  const selectFreeOnly = () => {
+    if (!searchResults) return;
+    // Select only academic papers with open access, and all web sources
+    const freePaperIds = searchResults.academic
+      .filter(p => p.openAccessPdfUrl)
+      .map(p => p.paperId);
+    setSelectedPaperIds(new Set(freePaperIds));
+    setSelectedWebIds(new Set(searchResults.web.map(w => w.url)));
+  };
+
+  const deselectWeb = () => {
+    setSelectedWebIds(new Set());
+  };
+
+  const totalSelected = selectedPaperIds.size + selectedWebIds.size;
+  const totalResults = (searchResults?.academic.length || 0) + (searchResults?.web.length || 0);
+
+  const handleSaveSelected = async (syncAfter: boolean) => {
+    if (!searchResults) return;
+    setIsSaving(true);
+
+    try {
+      const selectedPapers = searchResults.academic.filter(p => selectedPaperIds.has(p.paperId));
+      const selectedSources = searchResults.web.filter(w => selectedWebIds.has(w.url));
+
+      await ResearchClient.saveSelected(projectId, selectedPapers, selectedSources);
+
+      if (syncAfter) {
+        setIsSyncing(true);
+        try {
+          await fetch(`/api/projects/${projectId}/research/sync`, { method: 'POST' });
+        } catch (e) {
+          console.error('Sync failed:', e);
+        }
+        setIsSyncing(false);
+      }
+
+      onComplete?.();
+      onClose();
+    } catch (error) {
+      console.error('Save failed:', error);
+      setIsSaving(false);
     }
   };
 
@@ -87,6 +193,11 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
       setLogs([]);
       setGeneratedPlan(null);
       setCustomGoal('');
+      setSearchResults(null);
+      setSelectedPaperIds(new Set());
+      setSelectedWebIds(new Set());
+      setIsSaving(false);
+      setIsSyncing(false);
     }
   }, [isOpen]);
 
@@ -136,31 +247,32 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
 
         {/* Progress Steps */}
         <div className="px-5 py-3 border-b border-white/5 bg-white/[0.01]">
-          <div className="flex items-center justify-between max-w-xs mx-auto">
-            {['configure', 'planning', 'review', 'executing'].map((s, i) => (
+          <div className="flex items-center justify-between max-w-sm mx-auto">
+            {['configure', 'planning', 'review', 'executing', 'curate'].map((s, i) => (
               <div key={s} className="flex items-center">
                 <div className={cn(
                   "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
                   step === s ? "bg-purple-500 text-white" :
-                  ['planning', 'review', 'executing'].indexOf(step) > i ? "bg-green-500 text-white" :
-                  "bg-white/10 text-gray-500"
+                    ['planning', 'review', 'executing', 'curate'].indexOf(step) > i ? "bg-green-500 text-white" :
+                      "bg-white/10 text-gray-500"
                 )}>
-                  {['planning', 'review', 'executing'].indexOf(step) > i ? <Check className="w-3 h-3" /> : i + 1}
+                  {['planning', 'review', 'executing', 'curate'].indexOf(step) > i ? <Check className="w-3 h-3" /> : i + 1}
                 </div>
-                {i < 3 && (
+                {i < 4 && (
                   <div className={cn(
-                    "w-12 h-0.5 transition-colors",
-                    ['planning', 'review', 'executing'].indexOf(step) > i ? "bg-green-500" : "bg-white/10"
+                    "w-8 h-0.5 transition-colors",
+                    ['planning', 'review', 'executing', 'curate'].indexOf(step) > i ? "bg-green-500" : "bg-white/10"
                   )} />
                 )}
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between max-w-xs mx-auto mt-1.5">
-            <span className="text-[10px] text-gray-500 w-12 text-center">Setup</span>
-            <span className="text-[10px] text-gray-500 w-12 text-center">Plan</span>
-            <span className="text-[10px] text-gray-500 w-12 text-center">Review</span>
-            <span className="text-[10px] text-gray-500 w-12 text-center">Search</span>
+          <div className="flex items-center justify-between max-w-sm mx-auto mt-1.5">
+            <span className="text-[10px] text-gray-500 w-10 text-center">Setup</span>
+            <span className="text-[10px] text-gray-500 w-10 text-center">Plan</span>
+            <span className="text-[10px] text-gray-500 w-10 text-center">Review</span>
+            <span className="text-[10px] text-gray-500 w-10 text-center">Search</span>
+            <span className="text-[10px] text-gray-500 w-10 text-center">Curate</span>
           </div>
         </div>
 
@@ -186,7 +298,7 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                     <div>
                       <h4 className="text-sm font-medium text-white mb-1">Hybrid Search</h4>
                       <p className="text-xs text-gray-400 leading-relaxed">
-                        Searches <span className="text-blue-300">Semantic Scholar</span> for academic papers 
+                        Searches <span className="text-blue-300">Semantic Scholar</span> for academic papers
                         and <span className="text-purple-300">Gemini Grounding</span> for web sources simultaneously.
                         Results are saved as metadata — no file downloads.
                       </p>
@@ -284,7 +396,7 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
 
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
                   <p className="text-xs text-blue-200">
-                    <strong>{Object.values(generatedPlan).flat().length} search queries</strong> will be executed 
+                    <strong>{Object.values(generatedPlan).flat().length} search queries</strong> will be executed
                     across Semantic Scholar and Gemini Grounding in parallel.
                   </p>
                 </div>
@@ -327,9 +439,9 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                         <span className={cn(
                           "break-words",
                           log.step === 'failed' ? "text-red-400" :
-                          log.step === 'completed' ? "text-green-400" :
-                          log.step === 'processing' ? "text-blue-300" :
-                          "text-gray-300"
+                            log.step === 'completed' ? "text-green-400" :
+                              log.step === 'processing' ? "text-blue-300" :
+                                "text-gray-300"
                         )}>
                           {log.message}
                         </span>
@@ -355,6 +467,157 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                     <p className="text-sm text-white font-medium">Research Complete!</p>
                     <p className="text-xs text-gray-400 mt-1">Documents saved to your Research Library</p>
                   </motion.div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Curate Step */}
+            {step === 'curate' && searchResults && (
+              <motion.div
+                key="curate"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-4"
+              >
+                {/* Stats bar */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <ListChecks className="w-4 h-4 text-purple-400" />
+                    <span className="text-white font-medium">
+                      {totalSelected} of {totalResults} selected
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bulk action buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={selectAll}
+                    className="px-3 py-1.5 text-[11px] bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-colors"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={deselectAll}
+                    className="px-3 py-1.5 text-[11px] bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-colors"
+                  >
+                    Deselect All
+                  </button>
+                  <button
+                    onClick={deselectPaywalled}
+                    className="px-3 py-1.5 text-[11px] bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 rounded-lg text-orange-300 transition-colors flex items-center gap-1.5"
+                  >
+                    <Lock className="w-3 h-3" />
+                    Deselect Paywalled
+                  </button>
+                  <button
+                    onClick={selectFreeOnly}
+                    className="px-3 py-1.5 text-[11px] bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-lg text-green-300 transition-colors flex items-center gap-1.5"
+                  >
+                    <Download className="w-3 h-3" />
+                    Free Only
+                  </button>
+                  <button
+                    onClick={deselectWeb}
+                    className="px-3 py-1.5 text-[11px] bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg text-blue-300 transition-colors flex items-center gap-1.5"
+                  >
+                    <Globe className="w-3 h-3" />
+                    Deselect Web
+                  </button>
+                </div>
+
+                {/* Academic Papers */}
+                {searchResults.academic.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
+                      <BookOpen className="w-3 h-3" />
+                      Academic Papers ({searchResults.academic.length})
+                    </h4>
+                    <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                      {searchResults.academic.map((paper) => {
+                        const isSelected = selectedPaperIds.has(paper.paperId);
+                        const hasOpen = !!paper.openAccessPdfUrl;
+                        return (
+                          <button
+                            key={paper.paperId}
+                            onClick={() => togglePaper(paper.paperId)}
+                            className={cn(
+                              "w-full text-left px-3 py-2.5 rounded-lg border transition-all",
+                              isSelected
+                                ? "bg-purple-500/10 border-purple-500/30"
+                                : "bg-white/[0.02] border-white/5 opacity-50"
+                            )}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <div className={cn(
+                                "mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors",
+                                isSelected ? "bg-purple-500 border-purple-500" : "border-white/20"
+                              )}>
+                                {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs text-white font-medium leading-snug line-clamp-2">{paper.title}</p>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  {paper.year && <span className="text-[10px] text-gray-500">{paper.year}</span>}
+                                  {paper.citationCount > 0 && (
+                                    <span className="text-[10px] text-gray-500">{paper.citationCount} citations</span>
+                                  )}
+                                  {hasOpen ? (
+                                    <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">Free PDF</span>
+                                  ) : (
+                                    <span className="text-[10px] text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                      <Lock className="w-2.5 h-2.5" /> Paywalled
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Web Sources */}
+                {searchResults.web.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
+                      <Globe className="w-3 h-3" />
+                      Web Sources ({searchResults.web.length})
+                    </h4>
+                    <div className="space-y-1.5 max-h-[150px] overflow-y-auto pr-1">
+                      {searchResults.web.map((source) => {
+                        const isSelected = selectedWebIds.has(source.url);
+                        return (
+                          <button
+                            key={source.url}
+                            onClick={() => toggleWeb(source.url)}
+                            className={cn(
+                              "w-full text-left px-3 py-2.5 rounded-lg border transition-all",
+                              isSelected
+                                ? "bg-blue-500/10 border-blue-500/30"
+                                : "bg-white/[0.02] border-white/5 opacity-50"
+                            )}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <div className={cn(
+                                "mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors",
+                                isSelected ? "bg-blue-500 border-blue-500" : "border-white/20"
+                              )}>
+                                {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs text-white font-medium leading-snug line-clamp-2">{source.title}</p>
+                                <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1">{source.snippet}</p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
               </motion.div>
             )}
@@ -392,23 +655,44 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
             </>
           )}
 
-          {step === 'executing' && (isDone || hasError) && (
+          {step === 'executing' && hasError && (
             <button
-              onClick={() => {
-                if (isDone) {
-                  onComplete?.();
-                }
-                onClose();
-              }}
-              className={cn(
-                "px-5 py-2.5 rounded-xl text-sm font-medium transition-colors",
-                isDone
-                  ? "bg-white text-black hover:bg-white/90"
-                  : "bg-white/10 text-white hover:bg-white/20"
-              )}
+              onClick={onClose}
+              className="bg-white/10 text-white hover:bg-white/20 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
             >
-              {isDone ? 'Done' : 'Close'}
+              Close
             </button>
+          )}
+
+          {step === 'curate' && (
+            <>
+              <button
+                onClick={() => setStep('executing')}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => handleSaveSelected(false)}
+                disabled={totalSelected === 0 || isSaving}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : `Save ${totalSelected} Selected`}
+              </button>
+              <button
+                onClick={() => handleSaveSelected(true)}
+                disabled={totalSelected === 0 || isSaving}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+              >
+                {isSyncing ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Syncing...</>
+                ) : isSaving ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Save & Sync to AI</>
+                )}
+              </button>
+            </>
           )}
         </div>
       </motion.div>
