@@ -93,48 +93,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // 2. RESOLVE/CREATE THREAD
     // --------------------------------------------------------
 
-    // Ensure all messages have IDs for AI SDK v6 validation
-    // AI SDK v6 expects tool parts in format: tool-{toolName} with proper state
+    // FIX: Simplified message sanitization
+    // Strip all tool parts from history messages — only keep text parts.
+    // The AI doesn't need old tool results in message history; they cause round-trip validation errors.
     const messages = rawMessages.map(m => {
-        const parts = (m.parts || [])
-            .filter((p: any) => {
-                // Filter out internal SDK markers that aren't valid in history parts
-                if (['step-start', 'step-finish', 'step-destination', 'call', 'result', 'tool-invocation'].includes(p.type)) {
-                    return false;
-                }
-                return true;
-            })
-            .map((p: any) => {
-                // Ensure tool parts have correct AI SDK v6 format
-                // Valid types: tool-input-available, tool-output-available, or tool-{toolName}
-                if (p.type.startsWith('tool-') && !['tool-input-start', 'tool-input-delta', 'tool-input-available', 'tool-input-error', 'tool-output-available', 'tool-output-error', 'tool-output-denied', 'tool-approval-request'].includes(p.type)) {
-                    // This is a custom tool-{toolName} part - ensure it has correct structure
-                    const toolName = p.toolName || p.type.replace('tool-', '');
-                    const toolCallId = p.toolCallId || generateId();
-                    const input = p.input || p.args || {};
-                    const output = p.output || p.result;
-                    const hasOutput = p.state === 'output-available' || !!output;
+        const textParts: any[] = [];
 
-                    // Return in AI SDK v6 format for custom tool parts
-                    return {
-                        type: `tool-${toolName}`,
-                        toolCallId,
-                        toolName,
-                        input,
-                        output,
-                        state: hasOutput ? 'output-available' : 'input-available',
-                    };
-                }
-                return p;
-            });
+        // Extract text from content string if present
+        if (typeof m.content === 'string' && m.content) {
+            textParts.push({ type: 'text', text: m.content });
+        }
 
-        // Ensure content is consistent with parts if parts exist
-        // (AI SDK usually prioritizes parts if present)
+        // Also extract text from parts array (for DB-loaded messages with parts format)
+        if (Array.isArray(m.parts)) {
+            for (const p of m.parts) {
+                if (p.type === 'text' && p.text) {
+                    textParts.push({ type: 'text', text: p.text });
+                }
+                // Note: tool parts are intentionally stripped
+            }
+        }
+
         return {
             id: m.id || generateId(),
             role: m.role,
             content: typeof m.content === 'string' ? m.content : undefined,
-            parts: parts.length > 0 ? parts : undefined,
+            parts: textParts.length > 0 ? textParts : undefined,
         };
     });
 
@@ -238,62 +222,64 @@ ${c.content ? c.content.slice(0, 3000) + (c.content.length > 3000 ? '...[truncat
         },
 
         // onFinish callback for persistence
+        // NOTE: This is UIMessageStreamOnFinishCallback, NOT StreamTextOnFinishCallback.
+        // It receives { messages, responseMessage, isContinuation, isAborted, finishReason }
         onFinish: async (event: any) => {
             console.log('[Chat API] onFinish:', {
-                hasSteps: !!event.steps,
-                stepsCount: event.steps?.length || 0,
+                hasResponseMessage: !!event.responseMessage,
+                partsCount: event.responseMessage?.parts?.length || 0,
+                isAborted: event.isAborted,
             });
 
-            if (!activeConversationId) return;
+            if (!activeConversationId || event.isAborted) return;
 
             // Save user message
             const userMsg = messages[messages.length - 1];
             if (userMsg?.role === 'user') {
+                const textContent = typeof userMsg.content === 'string' && userMsg.content
+                    ? userMsg.content
+                    : Array.isArray(userMsg.parts)
+                        ? userMsg.parts.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('')
+                        : '';
+
                 await prisma.projectChatMessage.create({
                     data: {
                         conversationId: activeConversationId,
                         role: 'user',
-                        content: (() => {
-                            if (typeof userMsg.content === 'string' && userMsg.content) return userMsg.content;
-                            if (Array.isArray(userMsg.parts)) {
-                                return userMsg.parts.map((p: any) => p.text || '').join('');
-                            }
-                            return '';
-                        })(),
+                        content: textContent,
                     },
                 });
             }
 
-            // Extract reasoning if available
-            let reasoningText: string | null = null;
-            if (event.reasoning && Array.isArray(event.reasoning) && event.reasoning.length > 0) {
-                reasoningText = event.reasoning
-                    .map((r: any) => r.text || r.content || '')
-                    .filter(Boolean)
-                    .join('\n');
-            }
+            // Extract data from the assistant's UIMessage response parts
+            const responseParts: any[] = event.responseMessage?.parts || [];
 
-            // Extract tool invocations from steps
+            // 1. Extract text content from TextUIPart entries
+            const assistantText = responseParts
+                .filter((p: any) => p.type === 'text')
+                .map((p: any) => p.text || '')
+                .filter(Boolean)
+                .join('\n\n');
+
+            // 2. Extract reasoning from ReasoningUIPart entries
+            const reasoningText = responseParts
+                .filter((p: any) => p.type === 'reasoning')
+                .map((p: any) => p.text || '')
+                .filter(Boolean)
+                .join('\n') || null;
+
+            // 3. Extract tool invocations from ToolUIPart entries (type: 'tool-{toolName}')
             const toolInvocations: any[] = [];
-            if (event.steps && Array.isArray(event.steps)) {
-                for (const step of event.steps) {
-                    const content = step.content || [];
-                    const toolCalls = content.filter((c: any) => c.type === 'tool-call');
-                    const toolResults = content.filter((c: any) => c.type === 'tool-result');
-
-                    for (const toolCall of toolCalls) {
-                        const matchingResult = toolResults.find(
-                            (r: any) => r.toolCallId === toolCall.toolCallId
-                        );
-
-                        toolInvocations.push({
-                            toolCallId: toolCall.toolCallId,
-                            toolName: toolCall.toolName,
-                            args: toolCall.input || toolCall.args,
-                            result: matchingResult?.result || matchingResult?.output || matchingResult?.content || null,
-                            state: matchingResult ? 'completed' : 'pending',
-                        });
-                    }
+            for (const part of responseParts) {
+                // ToolUIPart has type starting with 'tool-' and a toolName property
+                if (part.type?.startsWith('tool-') && part.toolName) {
+                    toolInvocations.push({
+                        toolCallId: part.toolCallId,
+                        toolName: part.toolName,
+                        args: part.input || {},
+                        result: part.output || null,
+                        state: part.state === 'output-available' ? 'completed' : 'pending',
+                    });
                 }
             }
 
@@ -302,7 +288,7 @@ ${c.content ? c.content.slice(0, 3000) + (c.content.length > 3000 ? '...[truncat
                 data: {
                     conversationId: activeConversationId,
                     role: 'assistant',
-                    content: event.text || '',
+                    content: assistantText,
                     reasoning: reasoningText || undefined,
                     toolInvocations: toolInvocations.length > 0 ? toolInvocations : undefined,
                 },

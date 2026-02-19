@@ -76,14 +76,14 @@ export function ToolResultCard({
             return (
                 <EditSuggestionCard
                     chapterNumber={output.chapterNumber as number}
-                    originalContent={output.original as string}
-                    newContent={output.replacement as string}
+                    originalContent={(output.original || output.currentContentToReplace || output.currentContent) as string}
+                    newContent={(output.replacement || output.newContent || output.newText) as string}
                     explanation={output.explanation as string}
                     onApply={(content) => {
                         if (onApplyEdit) {
                             onApplyEdit(
                                 output.chapterNumber as number,
-                                output.original as string,
+                                (output.original || output.currentContentToReplace) as string,
                                 content
                             );
                         }

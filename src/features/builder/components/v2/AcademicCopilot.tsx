@@ -213,13 +213,17 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             // Handle Suggest Edit
             const editResult = findToolResult('suggestEdit');
             if (editResult) {
-                setSuggestion(editResult);
+                // Unwrap ToolSuccess wrapper: { success: true, data: {...} } → extract .data
+                const unwrapped = editResult?.data ?? editResult;
+                setSuggestion(unwrapped);
             }
 
             // Handle Generate Diagram
             const diagramResult = findToolResult('generateDiagram');
             if (diagramResult) {
-                setDiagramSuggestion(diagramResult);
+                // Unwrap ToolSuccess wrapper
+                const unwrapped = diagramResult?.data ?? diagramResult;
+                setDiagramSuggestion(unwrapped);
             }
         }
     }, [messages]);

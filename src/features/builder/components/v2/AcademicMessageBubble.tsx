@@ -250,6 +250,11 @@ export function AcademicMessageBubble({
                                         // Extract input from the part (tool invocations have input property)
                                         const input = (part as { input?: Record<string, unknown> }).input || {};
 
+                                        // Skip suggestEdit/generateDiagram in bubble when no handler —
+                                        // AcademicCopilot renders its own standalone card with working handlers
+                                        if (toolName === 'suggestEdit' && !onApplyEdit) return null;
+                                        if (toolName === 'generateDiagram' && !onInsertDiagram) return null;
+
                                         // Handle ToolError case
                                         if (isToolError(output)) {
                                             return (
