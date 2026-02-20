@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
  * Displays count and mini preview list, with buttons to view all or add new
  */
 export function ResearchSourcesCard() {
-    const { openResearchPanel } = useBuilderLayout();
+    const { openResearchPanel, openUploadModal } = useBuilderLayout();
     const projectId = useBuilderStore((s) => s.data.projectId);
 
     const [documents, setDocuments] = useState<any[]>([]);
@@ -183,7 +183,7 @@ export function ResearchSourcesCard() {
                     <ArrowRight className="w-3 h-3" />
                 </button>
                 <button
-                    onClick={openResearchPanel}
+                    onClick={openUploadModal}
                     className="py-2 px-3 rounded-lg text-xs font-medium bg-white/5 text-gray-300 hover:bg-white/10 flex items-center justify-center gap-1 transition-colors"
                 >
                     <Plus className="w-3 h-3" />

@@ -15,6 +15,9 @@ import { usePaymentVerification } from "@/features/builder/hooks/usePaymentVerif
 import { BuilderBottomNav } from "@/features/builder/components/BuilderBottomNav";
 import { FloatingChatFAB } from "@/features/builder/components/FloatingChatFAB";
 import { FloatingResearchPanel } from "@/features/builder/components/FloatingResearchPanel";
+import { ProgressStepper } from "@/features/builder/components/ProgressStepper";
+import { UploadDocumentModal } from "@/features/builder/components/UploadDocumentModal";
+import { useBuilderLayout } from "@/features/builder/context/BuilderLayoutContext";
 
 interface BuilderClientProps {
     serverProject?: Partial<ProjectData> | null;
@@ -25,8 +28,9 @@ interface BuilderClientProps {
 export function BuilderClient({ serverProject, serverIsPaid = false, serverIsReferred = false }: BuilderClientProps) {
     const { data: session, isPending } = useSession();
     const router = useRouter();
-    const { step, updateData, syncWithUser, hydrateFromChat, loadProject, isPaid, unlockPaywall } = useBuilderStore();
+    const { step, updateData, syncWithUser, hydrateFromChat, loadProject, isPaid, unlockPaywall, data: storeData } = useBuilderStore();
     const searchParams = useSearchParams();
+    const { isUploadModalOpen, closeUploadModal } = useBuilderLayout();
 
     // CRITICAL: Track local hydration state to prevent rendering with stale data
     const [isHydrated, setIsHydrated] = useState(false);
@@ -151,11 +155,13 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
                 </div>
             )}
 
-            {/* Progress Stepper is now in BuilderHeader (Task 2) */}
-            {/* This component focuses on step content rendering */}
+            {/* Progress Section */}
+            <div id="progress-header" className="mb-6 relative z-10 transition-all duration-500 max-w-7xl mx-auto px-4 w-full pt-20">
+                <ProgressStepper />
+            </div>
 
             {/* Main Content Area - with enhanced step transitions */}
-            <main className="relative">
+            <main className="relative px-4 md:px-8 max-w-7xl mx-auto min-h-screen flex flex-col">
                 <AnimatePresence mode="wait">
                     {step === 'TOPIC' && (
                         <motion.div
@@ -203,6 +209,16 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
 
             {/* Floating Research Panel - Research panel for the builder */}
             <FloatingResearchPanel />
+
+            {/* Upload Modal rendered globally */}
+            {storeData?.projectId && (
+                <UploadDocumentModal
+                    isOpen={isUploadModalOpen}
+                    onClose={closeUploadModal}
+                    projectId={storeData.projectId}
+                    onUploadSuccess={() => { }}
+                />
+            )}
         </div>
     );
 }

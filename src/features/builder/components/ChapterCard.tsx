@@ -176,10 +176,9 @@ export function ChapterCard({
                 ) : (
                     <button
                         onClick={onGenerate}
-                        className="px-6 py-2 rounded-lg border border-white/5 bg-white/5 text-gray-500 text-sm font-medium cursor-not-allowed w-full md:w-auto"
-                        disabled
+                        className="px-6 py-2 rounded-lg border border-accent/30 bg-accent/10 text-accent hover:bg-accent/20 transition-colors text-sm font-medium w-full md:w-auto"
                     >
-                        Queue
+                        Generate
                     </button>
                 )}
             </div>

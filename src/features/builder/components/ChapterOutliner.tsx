@@ -163,7 +163,7 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
     const streamedChapters = object?.chapters || [];
     const displayChapters = streamedChapters.length > 0 ? streamedChapters : (data.outline || []);
     const displayTitle = object?.title || data.topic || "Project Title";
-    const abstractPreview = data.abstract ? data.abstract.slice(0, 180) + '...' : "Loading abstract...";
+    const abstractPreview = data.abstract || "Loading abstract...";
     const isStreaming = isLoading;
 
     // Fetch stored outline if we have a project ID and no outline yet
@@ -350,12 +350,7 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
                             </div>
                         </motion.div>
 
-                        {/* Document Upload - Optional, below secondary actions */}
-                        {data.projectId && (
-                            <motion.div variants={itemVariants} className="mt-16">
-                                <DocumentUpload projectId={data.projectId} />
-                            </motion.div>
-                        )}
+                        {/* Document Upload - Moved to FloatingResearchPanel */}
 
                         {/* Upsell Bridge - Preserved at bottom */}
                         <motion.div variants={itemVariants} className="mt-20 mb-10">

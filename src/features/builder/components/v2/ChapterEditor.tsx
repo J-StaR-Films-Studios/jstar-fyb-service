@@ -38,9 +38,9 @@ interface Chapter {
 interface ChapterEditorProps {
     projectId: string;
     initialData?: {
-        project: any;
         chapters: any;
     };
+    initialTab?: string;
 }
 
 // Helper defined outside component to prevent recreation
@@ -50,7 +50,12 @@ const parseSubsections = (content: string) => {
 };
 
 const CHAPTER_TITLES = ["Introduction", "Literature Review", "Methodology", "Implementation", "Conclusion"];
-export function ChapterEditor({ projectId }: ChapterEditorProps) {
+export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEditorProps) {
+    // Determine initial states based on tab
+    const parsedTab = ['research', 'chat', 'diagrams'].includes(initialTab)
+        ? (initialTab as 'research' | 'chat' | 'diagrams')
+        : 'research';
+
     // State
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [activeChapterNumber, setActiveChapterNumber] = useState(1);
@@ -63,11 +68,11 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
     const pendingContentRef = useRef<string | null>(null);
 
     // Right Panel State
-    const [activeTab, setActiveTab] = useState<'research' | 'chat' | 'diagrams'>('research');
+    const [activeTab, setActiveTab] = useState<'research' | 'chat' | 'diagrams'>(parsedTab);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Mobile State
-    const [mobileView, setMobileView] = useState<'timeline' | 'editor' | 'context'>('timeline');
+    const [mobileView, setMobileView] = useState<'timeline' | 'editor' | 'context'>(parsedTab !== 'research' ? 'context' : 'timeline');
     const [activeSection, setActiveSection] = useState<{ title: string; content: string } | null>(null);
     const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -79,7 +84,7 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
     const [contentToEnhance, setContentToEnhance] = useState('');
 
     // Export State
-    const [showExportModal, setShowExportModal] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(initialTab === 'export');
     const [isExporting, setIsExporting] = useState(false);
 
     // Editor Ref for Inline Insertion
@@ -277,10 +282,13 @@ export function ChapterEditor({ projectId }: ChapterEditorProps) {
         }
     }, [projectId]);
 
-    // Initial Load
+    // Initial Load & Tab Handling
     useEffect(() => {
         fetchData(false);
-    }, [fetchData]);
+        if (initialTab === 'slides') {
+            toast.info('Slides generation is coming soon!');
+        }
+    }, [fetchData, initialTab]);
 
     // Polling Interval (every 30 seconds)
     useEffect(() => {

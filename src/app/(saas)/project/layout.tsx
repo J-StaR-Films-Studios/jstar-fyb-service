@@ -25,13 +25,20 @@ export default async function ProjectLayout({
 
     return (
         <BuilderLayoutProvider>
-            <SaasShell
-                user={user}
-                headerContent={isBuilderRoute ? <BuilderHeader /> : undefined}
-                hideBottomNav={isBuilderRoute}
-            >
-                {children}
-            </SaasShell>
+            {isBuilderRoute ? (
+                <div className="bg-dark min-h-screen text-white font-sans pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0 flex flex-col relative w-full overflow-hidden">
+                    <BuilderHeader />
+                    <div className="flex-1 w-full mx-auto relative h-full">
+                        {children}
+                    </div>
+                </div>
+            ) : (
+                <SaasShell
+                    user={user}
+                >
+                    {children}
+                </SaasShell>
+            )}
         </BuilderLayoutProvider>
     );
 }

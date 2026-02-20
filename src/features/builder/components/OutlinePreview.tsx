@@ -86,17 +86,18 @@ export function OutlinePreview({
 
                     {/* Abstract Preview - Truncated */}
                     <div className="mb-6">
-                        <p className="text-gray-400 text-sm leading-relaxed max-w-3xl">
+                        <p className="text-gray-400 text-sm leading-relaxed">
                             {showFullAbstract || !needsTruncation ? abstractPreview : truncatedAbstract}
-                            {needsTruncation && !showFullAbstract && (
-                                <button
-                                    onClick={() => setShowFullAbstract(true)}
-                                    className="text-primary hover:text-primary/80 cursor-pointer text-xs ml-1 font-bold transition-colors"
-                                >
-                                    Read Abstract
-                                </button>
-                            )}
                         </p>
+                        {needsTruncation && (
+                            <button
+                                onClick={() => setShowFullAbstract(!showFullAbstract)}
+                                className="text-primary hover:text-primary/80 cursor-pointer text-xs font-bold transition-colors mt-2 flex items-center gap-1"
+                            >
+                                {showFullAbstract ? "Show Less" : "Read Abstract"}
+                                {showFullAbstract ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </button>
+                        )}
                     </div>
 
                     {/* Chapter Pills - Horizontal Scroll */}

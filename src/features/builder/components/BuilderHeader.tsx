@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useBuilderLayout } from '../context/BuilderLayoutContext';
 import { ProgressStepper } from './ProgressStepper';
 import { ChevronLeft, BookOpen, MoreVertical } from 'lucide-react';
@@ -22,11 +23,27 @@ export function BuilderHeader() {
     // Get project title (truncate on mobile)
     const projectTitle = projectData.topic || 'Untitled Project';
 
-    // TODO: Get research count from store when research feature is implemented
-    const researchCount = 0;
+    const [researchCount, setResearchCount] = useState(0);
+
+    // Fetch initial document count 
+    useEffect(() => {
+        if (!projectData.projectId) return;
+        const fetchCount = async () => {
+            try {
+                const res = await fetch(`/api/documents?projectId=${projectData.projectId}`);
+                if (res.ok) {
+                    const result = await res.json();
+                    setResearchCount(result.documents?.length || 0);
+                }
+            } catch (err) {
+                console.error('Failed to fetch research count', err);
+            }
+        };
+        fetchCount();
+    }, [projectData.projectId]);
 
     return (
-        <div className="flex items-center justify-between w-full gap-2">
+        <header className="fixed top-0 w-full z-40 transition-all duration-300 backdrop-blur-md border-b border-white/5 bg-dark/80 h-16 flex items-center justify-between px-4">
             {/* Left Section: Back + Title + Save Status */}
             <div className="flex items-center gap-3 overflow-hidden shrink-0">
                 {/* Back Button */}
@@ -73,16 +90,6 @@ export function BuilderHeader() {
                 </div>
             </div>
 
-            {/* Progress Stepper - Center Section (hidden on mobile, shown as compact dots) */}
-            <div className="hidden md:flex flex-1 justify-center px-4">
-                <ProgressStepper />
-            </div>
-
-            {/* Mobile: Show compact stepper in the flow */}
-            <div className="md:hidden flex-1 flex justify-center">
-                <ProgressStepper />
-            </div>
-
             {/* Right Section: Research Button + Menu */}
             <div className="flex items-center gap-2 shrink-0">
                 {/* Research Toggle Button */}
@@ -117,6 +124,6 @@ export function BuilderHeader() {
                     <MoreVertical className="w-4 h-4" />
                 </button>
             </div>
-        </div>
+        </header>
     );
 }

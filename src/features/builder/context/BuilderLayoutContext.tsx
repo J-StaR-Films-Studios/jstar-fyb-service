@@ -20,9 +20,16 @@ import { useBuilderStore, ProjectData } from '../store/useBuilderStore';
 interface BuilderLayoutContextValue {
     // Research panel state
     isResearchPanelOpen: boolean;
+    isResearchUploadOpen: boolean;
     toggleResearchPanel: () => void;
     openResearchPanel: () => void;
+    // openResearchUpload opens the panel AND changes it to the upload state
+    openResearchUpload: () => void;
     closeResearchPanel: () => void;
+
+    isUploadModalOpen: boolean;
+    openUploadModal: () => void;
+    closeUploadModal: () => void;
 
     // Project data (derived from useBuilderStore)
     projectData: ProjectData;
@@ -41,19 +48,44 @@ interface BuilderLayoutProviderProps {
 export function BuilderLayoutProvider({ children }: BuilderLayoutProviderProps) {
     // Research panel state
     const [isResearchPanelOpen, setIsResearchPanelOpen] = useState(false);
+    const [isResearchUploadOpen, setIsResearchUploadOpen] = useState(false);
+
+    // Upload modal state
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
     // Get data from useBuilderStore
     const { data: projectData, isPaid, saveStatus } = useBuilderStore();
 
-    const toggleResearchPanel = () => setIsResearchPanelOpen(prev => !prev);
-    const openResearchPanel = () => setIsResearchPanelOpen(true);
-    const closeResearchPanel = () => setIsResearchPanelOpen(false);
+    const toggleResearchPanel = () => {
+        setIsResearchPanelOpen(prev => !prev);
+        if (isResearchUploadOpen) setIsResearchUploadOpen(false);
+    };
+    const openResearchPanel = () => {
+        setIsResearchPanelOpen(true);
+        setIsResearchUploadOpen(false);
+    };
+    const openResearchUpload = () => {
+        setIsResearchPanelOpen(true);
+        setIsResearchUploadOpen(true);
+    };
+    const closeResearchPanel = () => {
+        setIsResearchPanelOpen(false);
+        setIsResearchUploadOpen(false);
+    };
+
+    const openUploadModal = () => setIsUploadModalOpen(true);
+    const closeUploadModal = () => setIsUploadModalOpen(false);
 
     const value: BuilderLayoutContextValue = {
         isResearchPanelOpen,
+        isResearchUploadOpen,
         toggleResearchPanel,
         openResearchPanel,
+        openResearchUpload,
         closeResearchPanel,
+        isUploadModalOpen,
+        openUploadModal,
+        closeUploadModal,
         projectData,
         isPaid,
         saveStatus,
