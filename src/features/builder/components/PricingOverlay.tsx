@@ -1,4 +1,5 @@
-import { Lock, Sparkles, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Lock, Sparkles, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface PricingOverlayProps {
     onUnlock: () => void;
@@ -6,62 +7,65 @@ interface PricingOverlayProps {
 
 export function PricingOverlay({ onUnlock }: PricingOverlayProps) {
     return (
-        <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-primary/20 bg-dark/50 backdrop-blur-xl p-4 md:p-8">
-            {/* Background Effects */}
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-[100px] rounded-full" />
-            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-accent/10 blur-[100px] rounded-full" />
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-dark/30 backdrop-blur-xl p-6 md:p-8 animate-in fade-in duration-500">
+            {/* Background Gradient Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
 
-            <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 md:gap-8">
-                {/* Value Prop */}
-                <div className="flex-1 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-4">
-                        <Sparkles className="w-3 h-3" />
-                        Premium Access
-                    </div>
-                    <h3 className="text-2xl font-display font-bold text-white mb-2">
-                        Ready to Build the Real Thing?
-                    </h3>
-                    <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-                        You've got the outline. Now unlock the full <strong className="text-white">Deep Research</strong>, <strong className="text-white">5-Chapter Write-up</strong>, and <strong className="text-white">Project Materials</strong>.
-                    </p>
+            {/* Ambient Background Blobs */}
+            <div className="absolute -top-32 -right-32 w-80 h-80 bg-primary/20 blur-[120px] rounded-full" />
+            <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-accent/15 blur-[120px] rounded-full" />
 
-                    <ul className="space-y-2 text-sm text-gray-300">
-                        <li className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                            <span>Detailed Chapter Content (10,000+ words)</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                            <span>Complete Project Material & Datasets</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                            <span>Defense Slides & Script</span>
-                        </li>
-                    </ul>
+            <div className="relative z-10 flex flex-col items-center text-center">
+                {/* Lock Icon in Circle with Purple Glow */}
+                <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6 shadow-lg shadow-purple-500/20">
+                    <Lock className="w-8 h-8 text-primary" />
                 </div>
 
-                {/* CTA Card */}
-                <div className="w-full md:w-80 bg-white/5 border border-white/10 rounded-xl p-6 text-center shadow-2xl">
-                    <div className="mb-6">
-                        <span className="text-gray-400 text-sm line-through">₦25,000</span>
-                        <div className="text-4xl font-display font-bold text-white">₦15,000</div>
-                        <span className="text-xs text-primary font-bold">LIMITED TIME OFFER</span>
-                    </div>
-
-                    <button
-                        onClick={onUnlock}
-                        className="w-full py-4 bg-primary hover:bg-primary/90 rounded-lg font-bold text-white uppercase tracking-wide transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/25 mb-4 flex items-center justify-center gap-2"
-                    >
-                        <Lock className="w-4 h-4" />
-                        Unlock Now
-                    </button>
-
-                    <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                        <ShieldCheck className="w-3 h-3" />
-                        <span>Secured by Paystack</span>
-                    </div>
+                {/* Unlock Required Badge */}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-4">
+                    <Sparkles className="w-3 h-3" />
+                    Unlock Required
                 </div>
+
+                {/* Heading */}
+                <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">
+                    Generate Full Content
+                </h2>
+
+                {/* Description */}
+                <p className="text-gray-400 max-w-lg mx-auto mb-8 text-lg">
+                    Unlock the AI Chapter Generator to draft your entire 15,000-word project in minutes. Includes citations, formatting, and unlimited edits.
+                </p>
+
+                {/* Price Display */}
+                <div className="flex items-center justify-center gap-4 mb-8">
+                    <span className="text-2xl font-bold text-gray-500 line-through decoration-red-500/50">
+                        ₦15,000
+                    </span>
+                    <span className="text-4xl font-display font-bold text-white">
+                        ₦5,000
+                    </span>
+                </div>
+
+                {/* Unlock Now CTA Button */}
+                <button
+                    onClick={onUnlock}
+                    className={cn(
+                        "px-8 py-4 bg-gradient-to-r from-primary to-accent rounded-xl",
+                        "font-bold font-display uppercase tracking-wide text-sm",
+                        "shadow-xl shadow-primary/20 hover:shadow-primary/40",
+                        "hover:scale-105 transition-all w-full md:w-auto min-w-[200px]",
+                        "flex items-center justify-center gap-2"
+                    )}
+                >
+                    <Lock className="w-4 h-4" />
+                    Unlock Now
+                </button>
+
+                {/* Trust Indicators */}
+                <p className="mt-4 text-xs text-gray-500">
+                    Secure payment via Paystack • 100% Money-back guarantee
+                </p>
             </div>
         </div>
     );

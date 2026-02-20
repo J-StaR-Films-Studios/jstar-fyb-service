@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { BookOpen, Loader2, Download, ChevronDown, ChevronRight, Sparkles, CheckCircle2, FileText, FileType } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { Zap, Download } from 'lucide-react';
 import { generateMarkdownBlob, generateDocxBlob, downloadFile, sanitizeFilename } from '@/lib/export-service';
+import { ChapterCard, ChapterStatus } from './ChapterCard';
+import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
+import { ExportOptions } from '@/lib/export-service';
 
 interface ChapterGeneratorProps {
     projectId: string;
@@ -14,17 +16,15 @@ interface GeneratedChapter {
     title: string;
     content: string;
     isGenerating: boolean;
+    progress?: number;
 }
 
-import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
-import { ExportOptions } from '@/lib/export-service';
-
 const CHAPTER_INFO = [
-    { number: 1, title: 'Introduction', description: 'Background, problem statement, objectives, scope' },
-    { number: 2, title: 'Literature Review', description: 'Related works, theoretical framework, critiques' },
-    { number: 3, title: 'Methodology', description: 'System design, DFDs, architecture, tools' },
-    { number: 4, title: 'Implementation & Results', description: 'Development, testing, evaluation' },
-    { number: 5, title: 'Conclusion', description: 'Summary, recommendations, future work' },
+    { number: 1, title: 'Introduction', description: 'Background, problem statement, objectives, scope', estimatedWords: 2500 },
+    { number: 2, title: 'Literature Review', description: 'Related works, theoretical framework, critiques', estimatedWords: 2800 },
+    { number: 3, title: 'Methodology', description: 'System design, DFDs, architecture, tools', estimatedWords: 2800 },
+    { number: 4, title: 'Implementation & Results', description: 'Development, testing, evaluation', estimatedWords: 3000 },
+    { number: 5, title: 'Conclusion', description: 'Summary, recommendations, future work', estimatedWords: 2000 },
 ];
 
 export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
@@ -83,7 +83,8 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
                 number: chapterNumber,
                 title: CHAPTER_INFO[chapterNumber - 1].title,
                 content: '',
-                isGenerating: true
+                isGenerating: true,
+                progress: 0
             }
         }));
 
@@ -115,13 +116,14 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
                     const chunk = decoder.decode(value, { stream: true });
                     content += chunk;
 
-                    // Update state with streamed content
+                    // Update state with streamed content and simulated progress
                     setChapters(prev => ({
                         ...prev,
                         [chapterNumber]: {
                             ...prev[chapterNumber],
                             content,
-                            isGenerating: true
+                            isGenerating: true,
+                            progress: Math.min(90, (prev[chapterNumber]?.progress || 0) + 5)
                         }
                     }));
                 }
@@ -133,7 +135,8 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
                 [chapterNumber]: {
                     ...prev[chapterNumber],
                     content,
-                    isGenerating: false
+                    isGenerating: false,
+                    progress: 100
                 }
             }));
 
@@ -146,7 +149,8 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
                 ...prev,
                 [chapterNumber]: {
                     ...prev[chapterNumber],
-                    isGenerating: false
+                    isGenerating: false,
+                    progress: 0
                 }
             }));
         }
@@ -219,19 +223,36 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
 
 
     const completedCount = Object.values(chapters).filter(c => c.content && !c.isGenerating).length;
+    const generatingCount = Object.values(chapters).filter(c => c.isGenerating).length;
+    const readyCount = completedCount;
+
+    // Determine chapter status
+    const getChapterStatus = (chapterNumber: number): ChapterStatus => {
+        const chapter = chapters[chapterNumber];
+        if (chapter?.isGenerating) return 'generating';
+        if (chapter?.content) return 'complete';
+        return 'queued';
+    };
+
+    // Get word count from content
+    const getWordCount = (content: string): number => {
+        return content ? content.split(/\s+/).filter(Boolean).length : 0;
+    };
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                        <Sparkles className="w-6 h-6 text-primary" />
-                        Chapter Generator
-                    </h2>
-                    <p className="text-gray-400 text-sm mt-1">
-                        Generate full academic content for each chapter
-                    </p>
+            {/* Header with Lightning Bolt Icon */}
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <Zap className="w-4 h-4 text-yellow-300 fill-yellow-300" />
+                    </div>
+                    <h2 className="text-2xl font-display font-bold">Generate Chapters</h2>
+                    {readyCount > 0 && (
+                        <span className="ml-2 px-2 py-0.5 rounded bg-green-500/20 text-green-400 text-[10px] font-bold uppercase border border-green-500/30">
+                            {readyCount}/5 Ready
+                        </span>
+                    )}
                 </div>
 
                 {completedCount > 0 && (
@@ -256,90 +277,31 @@ export function ChapterGenerator({ projectId }: ChapterGeneratorProps) {
             <div className="space-y-4">
                 {CHAPTER_INFO.map((info) => {
                     const chapter = chapters[info.number];
-                    const isGenerating = chapter?.isGenerating;
-                    const isGenerated = chapter?.content && !isGenerating;
+                    const status = getChapterStatus(info.number);
                     const isExpanded = expandedChapter === info.number;
 
                     return (
-                        <div
+                        <ChapterCard
                             key={info.number}
-                            className="glass-panel rounded-2xl overflow-hidden"
-                        >
-                            {/* Chapter Header */}
-                            <div className="p-3 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-                                <button
-                                    onClick={() => setExpandedChapter(isExpanded ? null : info.number)}
-                                    className="flex items-center gap-3 md:gap-4 w-full md:flex-1 text-left"
-                                    disabled={!isGenerated}
-                                >
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${isGenerated ? 'bg-green-500/20 text-green-400' :
-                                        isGenerating ? 'bg-primary/20 text-primary' :
-                                            'bg-white/5 text-gray-500'
-                                        }`}>
-                                        {isGenerating ? (
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                        ) : isGenerated ? (
-                                            <CheckCircle2 className="w-5 h-5" />
-                                        ) : (
-                                            info.number
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <h3 className="font-bold text-white">
-                                            Chapter {info.number}: {info.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-500">{info.description}</p>
-                                    </div>
-
-                                    {isGenerated && (
-                                        isExpanded ? (
-                                            <ChevronDown className="w-5 h-5 text-gray-500 ml-auto" />
-                                        ) : (
-                                            <ChevronRight className="w-5 h-5 text-gray-500 ml-auto" />
-                                        )
-                                    )}
-                                </button>
-
-                                <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto md:ml-4 border-t border-white/5 pt-2.5 md:pt-0 md:border-t-0">
-                                    {isGenerated && (
-                                        <button
-                                            onClick={() => setDownloadModal({ isOpen: true, target: 'single', chapter })}
-                                            className="p-2 text-gray-400 hover:text-accent transition-colors"
-                                            title="Download options"
-                                        >
-                                            <Download className="w-5 h-5" />
-                                        </button>
-                                    )}
-
-                                    {!isGenerating && (
-                                        <button
-                                            onClick={() => generateChapter(info.number)}
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all ${isGenerated
-                                                ? 'border border-white/10 text-gray-400 hover:border-white/20'
-                                                : 'bg-primary text-white hover:bg-primary/90'
-                                                }`}
-                                        >
-                                            <BookOpen className="w-4 h-4" />
-                                            {isGenerated ? 'Regenerate' : 'Generate'}
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Expanded Content */}
-                            {(isExpanded || isGenerating) && chapter?.content && (
-                                <div className="px-5 pb-5 border-t border-white/5">
-                                    <div className="mt-4 prose prose-invert prose-sm max-w-none max-h-[500px] overflow-y-auto">
-                                        <ReactMarkdown>{chapter.content}</ReactMarkdown>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                            number={info.number}
+                            title={chapter?.title || info.title}
+                            description={info.description}
+                            status={status}
+                            wordCount={chapter?.content ? getWordCount(chapter.content) : undefined}
+                            generatedTime={chapter?.content ? '2m ago' : undefined}
+                            progress={chapter?.progress}
+                            estimatedRemaining={chapter?.isGenerating ? '45s' : undefined}
+                            estimatedWords={info.estimatedWords}
+                            content={chapter?.content}
+                            isExpanded={isExpanded}
+                            onToggleExpand={() => setExpandedChapter(isExpanded ? null : info.number)}
+                            onView={() => setExpandedChapter(isExpanded ? null : info.number)}
+                            onDownload={() => setDownloadModal({ isOpen: true, target: 'single', chapter })}
+                            onGenerate={() => generateChapter(info.number)}
+                        />
                     );
                 })}
             </div>
-
 
             <DownloadOptionsModal
                 isOpen={downloadModal.isOpen}
