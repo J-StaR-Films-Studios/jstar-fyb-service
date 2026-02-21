@@ -42,16 +42,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const savedCount = await ResearchService.saveSelected(
+        const savedDocs = await ResearchService.saveSelected(
             projectId,
             selectedPapers || [],
-            selectedWebSources || []
+            selectedWebSources || [],
+            { autoSync: false } // Client will orchestrate auto-sync
         );
 
         return NextResponse.json({
             success: true,
-            savedCount,
-            message: `Saved ${savedCount} documents to your Research Library`
+            savedCount: savedDocs.length,
+            savedDocs,
+            message: `Saved ${savedDocs.length} documents to your Research Library`
         });
 
     } catch (error: any) {

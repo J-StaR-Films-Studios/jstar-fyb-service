@@ -16,6 +16,35 @@ export interface HybridSearchResults {
   web: GroundedWebSource[];
 }
 
+export interface SaveOptions {
+  autoSync?: boolean; // If true, triggers RAG sync after saving
+}
+
+/**
+ * Trigger the RAG sync API for a project
+ * Called internally when autoSync is enabled
+ */
+async function triggerAutoSync(projectId: string): Promise<void> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000';
+
+    const response = await fetch(`${baseUrl}/api/projects/${projectId}/research/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      console.error('[ResearchService] Auto-sync failed:', response.status);
+    } else {
+      console.log('[ResearchService] Auto-sync triggered successfully');
+    }
+  } catch (error) {
+    console.error('[ResearchService] Auto-sync error:', error);
+  }
+}
+
 export class ResearchService {
   /**
    * Step 1: Generate a research plan (queries) based on project context.
@@ -38,12 +67,14 @@ export class ResearchService {
   /**
    * Execute Hybrid Research: Semantic Scholar (academic) + Gemini Grounding (web) in parallel.
    * Returns the total count of saved documents.
+   * @param options.autoSync - If true, triggers RAG sync after saving (default: true)
    */
   static async executeHybridResearch(
     projectId: string,
     queries: string[],
     deepGoal: string,
-    onProgress?: ProgressCallback
+    onProgress?: ProgressCallback,
+    options?: SaveOptions
   ): Promise<number> {
     try {
       onProgress?.({
@@ -109,6 +140,20 @@ export class ResearchService {
         }
       }
 
+      // Auto-sync to RAG if enabled (default: true)
+      const shouldAutoSync = options?.autoSync !== false;
+      if (shouldAutoSync && savedCount > 0) {
+        onProgress?.({
+          step: 'processing',
+          message: `Syncing ${savedCount} documents to AI context...`,
+          details: { total: savedCount }
+        });
+        // Fire and forget - don't block on sync
+        triggerAutoSync(projectId).catch(err =>
+          console.error('[ResearchService] Auto-sync error:', err)
+        );
+      }
+
       onProgress?.({
         step: 'completed',
         message: `Research complete. Saved ${savedCount} documents.`,
@@ -117,8 +162,9 @@ export class ResearchService {
 
       return savedCount;
 
-    } catch (error: any) {
-      onProgress?.({ step: 'failed', message: error.message || 'Hybrid Research failed' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Hybrid Research failed';
+      onProgress?.({ step: 'failed', message });
       throw error;
     }
   }
@@ -187,17 +233,21 @@ export class ResearchService {
   /**
    * Save only user-selected research results to the database.
    * Called after the user curates results from searchOnly().
+   * @param options.autoSync - If true, triggers RAG sync after saving (default: true)
    */
   static async saveSelected(
     projectId: string,
     academicPapers: SemanticScholarPaper[],
-    webSources: GroundedWebSource[]
-  ): Promise<number> {
+    webSources: GroundedWebSource[],
+    options?: SaveOptions
+  ): Promise<any[]> {
+    const savedDocs = [];
     let savedCount = 0;
 
     for (const paper of academicPapers) {
       try {
-        await this.saveAcademicPaper(projectId, paper);
+        const doc = await this.saveAcademicPaper(projectId, paper);
+        if (doc) savedDocs.push(doc);
         savedCount++;
       } catch (e) {
         console.error(`[ResearchService] Failed to save paper: ${paper.title}`, e);
@@ -206,14 +256,24 @@ export class ResearchService {
 
     for (const source of webSources) {
       try {
-        await this.saveWebSource(projectId, source);
+        const doc = await this.saveWebSource(projectId, source);
+        if (doc) savedDocs.push(doc);
         savedCount++;
       } catch (e) {
         console.error(`[ResearchService] Failed to save web source: ${source.title}`, e);
       }
     }
 
-    return savedCount;
+    // Auto-sync to RAG if enabled (default: true)
+    const shouldAutoSync = options?.autoSync !== false;
+    if (shouldAutoSync && savedCount > 0) {
+      // Fire and forget - don't block on sync
+      triggerAutoSync(projectId).catch(err =>
+        console.error('[ResearchService] Auto-sync error:', err)
+      );
+    }
+
+    return savedDocs;
   }
 
   /**

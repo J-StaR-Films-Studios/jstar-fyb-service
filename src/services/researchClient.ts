@@ -155,7 +155,7 @@ export class ResearchClient {
     projectId: string,
     selectedPapers: SemanticScholarPaper[],
     selectedWebSources: GroundedWebSource[]
-  ): Promise<{ success: boolean; savedCount: number; message: string }> {
+  ): Promise<{ success: boolean; savedCount: number; savedDocs: any[]; message: string }> {
     const response = await fetch('/api/research/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -20,7 +20,7 @@ interface ResearchModalProps {
   onClose: () => void;
   projectId: string;
   projectTopic?: string;
-  onComplete?: () => void;
+  onComplete?: (savedDocs?: any[], syncAfter?: boolean) => void;
 }
 
 type Step = 'configure' | 'planning' | 'review' | 'executing' | 'curate';
@@ -166,19 +166,11 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
       const selectedPapers = searchResults.academic.filter(p => selectedPaperIds.has(p.paperId));
       const selectedSources = searchResults.web.filter(w => selectedWebIds.has(w.url));
 
-      await ResearchClient.saveSelected(projectId, selectedPapers, selectedSources);
+      const data = await ResearchClient.saveSelected(projectId, selectedPapers, selectedSources);
 
-      if (syncAfter) {
-        setIsSyncing(true);
-        try {
-          await fetch(`/api/projects/${projectId}/research/sync`, { method: 'POST' });
-        } catch (e) {
-          console.error('Sync failed:', e);
-        }
-        setIsSyncing(false);
-      }
-
-      onComplete?.();
+      // The parent component (FloatingResearchPanel) will handle the synchronization
+      // to avoid Vercel timeouts and Gemini rate limits by processing one by one
+      onComplete?.(data.savedDocs, syncAfter);
       onClose();
     } catch (error) {
       console.error('Save failed:', error);

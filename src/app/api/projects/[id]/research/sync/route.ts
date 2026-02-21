@@ -75,6 +75,7 @@ export async function POST(
                         data: {
                             importedToFileSearch: true,
                             fileSearchFileId: uploadResult.fileId,
+                            status: 'PROCESSED', // Mark as AI Ready for metadata-only docs
                             importError: null
                         }
                     });

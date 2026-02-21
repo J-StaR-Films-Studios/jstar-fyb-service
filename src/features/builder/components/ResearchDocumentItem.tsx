@@ -17,7 +17,8 @@ import {
     BrainCircuit,
     Sparkles,
     Loader2,
-    RefreshCw
+    RefreshCw,
+    DownloadCloud
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,12 +27,14 @@ export function DocumentItem({
     onView,
     onDelete,
     onRetry,
+    onManualFetch,
     isExtracting = false,
 }: {
     doc: any;
     onView: () => void;
     onDelete: () => void;
     onRetry?: () => void;
+    onManualFetch?: () => void;
     isExtracting?: boolean;
 }) {
     const isAcademic = doc.sourceType === 'ACADEMIC';
@@ -171,7 +174,7 @@ export function DocumentItem({
                 )}
 
                 {/* View (for processed documents) */}
-                {(doc.status === 'PROCESSED' || doc.status === 'PENDING' || doc.status === 'PROCESSING') && (
+                {(doc.status === 'PROCESSED' || doc.status === 'PENDING' || doc.status === 'PROCESSING' || doc.status === 'INDEXED' || doc.status === 'UPLOADED') && (
                     <button
                         onClick={onView}
                         className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-gray-400 text-[10px] transition-colors"
@@ -201,7 +204,24 @@ export function DocumentItem({
                         className="flex items-center gap-1 px-2 py-1 rounded-md bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 text-[10px] transition-colors"
                     >
                         <RefreshCw className={cn("w-3 h-3", isExtracting && "animate-spin")} />
-                        Retry
+                        Retry Sync
+                    </button>
+                )}
+
+                {/* Manual Fetch PDF */}
+                {onManualFetch && hasOpenAccess && doc.status !== 'PENDING' && doc.status !== 'PROCESSING' && (
+                    <button
+                        onClick={onManualFetch}
+                        disabled={isExtracting}
+                        className="flex items-center gap-1 px-2 py-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-[10px] font-medium transition-colors ml-1"
+                        title="Manually force a PDF download attempt"
+                    >
+                        {isExtracting ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                            <DownloadCloud className="w-3 h-3" />
+                        )}
+                        {doc.fileData ? 'Refetch PDF' : 'Fetch PDF'}
                     </button>
                 )}
 

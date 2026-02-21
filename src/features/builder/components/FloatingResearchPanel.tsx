@@ -55,12 +55,14 @@ export function FloatingResearchPanel() {
     const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; docId: string | null }>({ isOpen: false, docId: null });
     const [isDeleting, setIsDeleting] = useState(false);
     const [extractingDocs, setExtractingDocs] = useState<Record<string, boolean>>({});
+    const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 
     // Fetch documents
     const fetchDocuments = useCallback(async () => {
         if (!projectId) return;
         try {
-            const res = await fetch(`/api/documents?projectId=${projectId}`);
+            // Append timestamp to bypass Next.js API caching
+            const res = await fetch(`/api/documents?projectId=${projectId}&t=${Date.now()}`);
             if (res.ok) {
                 const data = await res.json();
                 setDocuments(data.documents || []);
@@ -100,6 +102,19 @@ export function FloatingResearchPanel() {
         window.addEventListener('keydown', handleEscape);
         return () => window.removeEventListener('keydown', handleEscape);
     }, [isResearchPanelOpen, closeResearchPanel]);
+
+    // Prevent page closing during extraction or batch processing
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            const isWorking = isProcessingBatch || Object.values(extractingDocs).some(Boolean) || uploadingFiles.length > 0;
+            if (isWorking) {
+                e.preventDefault();
+                e.returnValue = ''; // Trigger browser confirmation dialog
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isProcessingBatch, extractingDocs, uploadingFiles]);
 
     // Categorize documents
     const { academicPapers, webSources, uploadedDocs, counts } = useMemo(() => {
@@ -194,12 +209,70 @@ export function FloatingResearchPanel() {
         }
     }, [fetchDocuments]);
 
+    const handleManualFetch = useCallback(async (documentId: string) => {
+        setExtractingDocs(prev => ({ ...prev, [documentId]: true }));
+        try {
+            // 1. Fetch PDF
+            await fetch(`/api/documents/${documentId}/fetch-pdf`, { method: "POST" });
+            // 2. Extract and Sync
+            await fetch(`/api/documents/${documentId}/extract`, { method: "POST" });
+            await fetchDocuments();
+        } catch (error) {
+            console.error("Manual fetch error:", error);
+            await fetchDocuments();
+        } finally {
+            setExtractingDocs(prev => ({ ...prev, [documentId]: false }));
+        }
+    }, [fetchDocuments]);
+
     const handleUploadSuccess = useCallback(async (doc: any) => {
         await fetchDocuments();
         if (doc && doc.id) {
             handleExtract(doc.id);
         }
     }, [fetchDocuments, handleExtract]);
+
+    const handleResearchComplete = useCallback(async (savedDocs?: any[], shouldSync?: boolean) => {
+        await fetchDocuments();
+        setIsResearchModalOpen(false);
+
+        if (shouldSync && savedDocs && savedDocs.length > 0) {
+            setIsProcessingBatch(true);
+            const processDocs = async () => {
+                try {
+                    for (const doc of savedDocs) {
+                        setExtractingDocs(prev => ({ ...prev, [doc.id]: true }));
+                        try {
+                            // 1. Fetch PDF if available
+                            if (doc.openAccessUrl) {
+                                await fetch(`/api/documents/${doc.id}/fetch-pdf`, { method: "POST" });
+                            }
+
+                            // 2. Extract text and Sync to Gemini RAG
+                            await fetch(`/api/documents/${doc.id}/extract`, { method: "POST" });
+
+                            // Update UI to show the 'AI Ready' state for this specific paper
+                            await fetchDocuments();
+                        } catch (error) {
+                            console.error(`[Orchestrator] Error processing document ${doc.id}:`, error);
+                        } finally {
+                            setExtractingDocs(prev => ({ ...prev, [doc.id]: false }));
+                        }
+
+                        // Strictly honor Gemini API rate limits with 1.5s delay
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                    }
+                } finally {
+                    setIsProcessingBatch(false);
+                    // One final fetch just to be absolutely sure everything is up to date
+                    await fetchDocuments();
+                }
+            };
+
+            // Run processing lazily in background
+            processDocs();
+        }
+    }, [fetchDocuments]);
 
     const tabs = [
         { id: 'all' as ViewMode, label: 'All', count: counts.all },
@@ -237,7 +310,7 @@ export function FloatingResearchPanel() {
                         className="fixed top-0 right-0 w-full md:w-[400px] h-full bg-[#111118] border-l border-white/10 z-50 flex flex-col shadow-2xl"
                     >
                         {/* Header */}
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111118]/95 backdrop-blur-md sticky top-0">
+                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111118]/95 backdrop-blur-md sticky top-0 z-10">
                             <div>
                                 <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
                                     <FileText className="w-5 h-5 text-purple-400" />
@@ -254,6 +327,27 @@ export function FloatingResearchPanel() {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
+
+                        {/* Processing Banner */}
+                        <AnimatePresence>
+                            {(isProcessingBatch || Object.values(extractingDocs).some(Boolean) || uploadingFiles.length > 0) && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden bg-purple-500/10 border-b border-purple-500/20"
+                                >
+                                    <div className="px-6 py-2.5 flex items-center justify-between">
+                                        <div className="flex items-center gap-2.5">
+                                            <Loader2 className="w-4 h-4 text-purple-400 animate-spin shrink-0" />
+                                            <span className="text-xs font-medium text-purple-200">
+                                                AI is processing documents. Please do not close the page.
+                                            </span>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Tabs */}
                         <div className="px-6 py-4 flex gap-2 border-b border-white/5 overflow-x-auto custom-scrollbar">
@@ -343,6 +437,7 @@ export function FloatingResearchPanel() {
                                             onView={() => setSelectedDocument(doc)}
                                             onDelete={() => setDeleteModal({ isOpen: true, docId: doc.id })}
                                             onRetry={() => handleExtract(doc.id)}
+                                            onManualFetch={() => handleManualFetch(doc.id)}
                                             isExtracting={!!extractingDocs[doc.id]}
                                         />
                                     ))}
@@ -398,10 +493,7 @@ export function FloatingResearchPanel() {
                             onClose={() => setIsResearchModalOpen(false)}
                             projectId={projectId}
                             projectTopic={useBuilderStore.getState().data.topic}
-                            onComplete={() => {
-                                fetchDocuments();
-                                setIsResearchModalOpen(false);
-                            }}
+                            onComplete={handleResearchComplete}
                         />
                     )}
 
