@@ -25,6 +25,13 @@ interface ResearchModalProps {
 
 type Step = 'configure' | 'planning' | 'review' | 'executing' | 'curate';
 
+// ── Selection Caps ──────────────────────────────────────
+const CAPS = {
+  FREE_PAPERS: 10,
+  PAYWALLED_PAPERS: 10,
+  WEB: 5,
+} as const;
+
 export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComplete }: ResearchModalProps) {
   const [step, setStep] = useState<Step>('configure');
   const [isLoading, setIsLoading] = useState(false);
@@ -86,10 +93,19 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
         }
       );
 
-      // Store results and select ALL by default
+      // Store results and auto-select up to caps
       setSearchResults(results);
-      setSelectedPaperIds(new Set(results.academic.map(p => p.paperId)));
-      setSelectedWebIds(new Set(results.web.map(w => w.url)));
+
+      // Split academic into free vs paywalled, pick top N of each
+      const freePapers = results.academic.filter(p => p.openAccessPdfUrl);
+      const paywalledPapers = results.academic.filter(p => !p.openAccessPdfUrl);
+      const autoSelectedPaperIds = [
+        ...freePapers.slice(0, CAPS.FREE_PAPERS).map(p => p.paperId),
+        ...paywalledPapers.slice(0, CAPS.PAYWALLED_PAPERS).map(p => p.paperId),
+      ];
+      setSelectedPaperIds(new Set(autoSelectedPaperIds));
+      setSelectedWebIds(new Set(results.web.slice(0, CAPS.WEB).map(w => w.url)));
+
       setStep('curate');
 
     } catch (error) {
@@ -97,13 +113,33 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
     }
   };
 
-  // --- Curation Helpers ---
+  // --- Curation Helpers (with cap enforcement) ---
+
+  // Helpers to count selected free vs paywalled
+  const getSelectedCounts = (paperIds: Set<string>) => {
+    if (!searchResults) return { free: 0, paywalled: 0 };
+    let free = 0, paywalled = 0;
+    for (const id of paperIds) {
+      const paper = searchResults.academic.find(p => p.paperId === id);
+      if (paper?.openAccessPdfUrl) free++;
+      else paywalled++;
+    }
+    return { free, paywalled };
+  };
 
   const togglePaper = (paperId: string) => {
     setSelectedPaperIds(prev => {
       const next = new Set(prev);
-      if (next.has(paperId)) next.delete(paperId);
-      else next.add(paperId);
+      if (next.has(paperId)) {
+        next.delete(paperId);
+      } else {
+        // Enforce cap: check if this paper is free or paywalled
+        const paper = searchResults?.academic.find(p => p.paperId === paperId);
+        const counts = getSelectedCounts(prev);
+        if (paper?.openAccessPdfUrl && counts.free >= CAPS.FREE_PAPERS) return prev;
+        if (!paper?.openAccessPdfUrl && counts.paywalled >= CAPS.PAYWALLED_PAPERS) return prev;
+        next.add(paperId);
+      }
       return next;
     });
   };
@@ -111,16 +147,25 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
   const toggleWeb = (url: string) => {
     setSelectedWebIds(prev => {
       const next = new Set(prev);
-      if (next.has(url)) next.delete(url);
-      else next.add(url);
+      if (next.has(url)) {
+        next.delete(url);
+      } else {
+        if (prev.size >= CAPS.WEB) return prev; // Enforce cap
+        next.add(url);
+      }
       return next;
     });
   };
 
   const selectAll = () => {
     if (!searchResults) return;
-    setSelectedPaperIds(new Set(searchResults.academic.map(p => p.paperId)));
-    setSelectedWebIds(new Set(searchResults.web.map(w => w.url)));
+    const freePapers = searchResults.academic.filter(p => p.openAccessPdfUrl);
+    const paywalledPapers = searchResults.academic.filter(p => !p.openAccessPdfUrl);
+    setSelectedPaperIds(new Set([
+      ...freePapers.slice(0, CAPS.FREE_PAPERS).map(p => p.paperId),
+      ...paywalledPapers.slice(0, CAPS.PAYWALLED_PAPERS).map(p => p.paperId),
+    ]));
+    setSelectedWebIds(new Set(searchResults.web.slice(0, CAPS.WEB).map(w => w.url)));
   };
 
   const deselectAll = () => {
@@ -143,12 +188,12 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
 
   const selectFreeOnly = () => {
     if (!searchResults) return;
-    // Select only academic papers with open access, and all web sources
     const freePaperIds = searchResults.academic
       .filter(p => p.openAccessPdfUrl)
+      .slice(0, CAPS.FREE_PAPERS)
       .map(p => p.paperId);
     setSelectedPaperIds(new Set(freePaperIds));
-    setSelectedWebIds(new Set(searchResults.web.map(w => w.url)));
+    setSelectedWebIds(new Set(searchResults.web.slice(0, CAPS.WEB).map(w => w.url)));
   };
 
   const deselectWeb = () => {
@@ -157,6 +202,8 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
 
   const totalSelected = selectedPaperIds.size + selectedWebIds.size;
   const totalResults = (searchResults?.academic.length || 0) + (searchResults?.web.length || 0);
+  const selectedCounts = getSelectedCounts(selectedPaperIds);
+  const totalCap = CAPS.FREE_PAPERS + CAPS.PAYWALLED_PAPERS + CAPS.WEB;
 
   const handleSaveSelected = async (syncAfter: boolean) => {
     if (!searchResults) return;
@@ -477,8 +524,18 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                   <div className="flex items-center gap-2 text-sm">
                     <ListChecks className="w-4 h-4 text-purple-400" />
                     <span className="text-white font-medium">
-                      {totalSelected} of {totalResults} selected
+                      {totalSelected} selected
                     </span>
+                    <span className="text-[10px] text-gray-500">
+                      (max {totalCap})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <span className="text-green-400">{selectedCounts.free}/{CAPS.FREE_PAPERS} free</span>
+                    <span className="text-gray-600">·</span>
+                    <span className="text-orange-400">{selectedCounts.paywalled}/{CAPS.PAYWALLED_PAPERS} paywalled</span>
+                    <span className="text-gray-600">·</span>
+                    <span className="text-blue-400">{selectedWebIds.size}/{CAPS.WEB} web</span>
                   </div>
                 </div>
 
@@ -525,6 +582,9 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                     <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
                       <BookOpen className="w-3 h-3" />
                       Academic Papers ({searchResults.academic.length})
+                      <span className="text-[10px] font-normal text-gray-500 normal-case">
+                        — max {CAPS.FREE_PAPERS} free + {CAPS.PAYWALLED_PAPERS} paywalled
+                      </span>
                     </h4>
                     <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
                       {searchResults.academic.map((paper) => {
@@ -578,6 +638,9 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                     <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
                       <Globe className="w-3 h-3" />
                       Web Sources ({searchResults.web.length})
+                      <span className="text-[10px] font-normal text-gray-500 normal-case">
+                        — max {CAPS.WEB}
+                      </span>
                     </h4>
                     <div className="space-y-1.5 max-h-[150px] overflow-y-auto pr-1">
                       {searchResults.web.map((source) => {
