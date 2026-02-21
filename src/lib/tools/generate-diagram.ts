@@ -11,6 +11,7 @@ import { tool, type UIToolInvocation } from 'ai';
 import { z } from 'zod';
 import { ToolResult, toolSuccess, toolError } from './types';
 import { validateToolContext } from './context-validation';
+import { generateDiagramCode } from '@/lib/ai/diagramService';
 
 /**
  * Supported diagram types
@@ -82,9 +83,6 @@ export const generateDiagramTool = tool({
         }
 
         try {
-            // Dynamic import to avoid circular dependencies
-            const { generateDiagramCode } = await import('@/lib/ai/diagramService');
-
             // Use provided context or fall back to chapters text from context
             const projectContext = relevantContext || executionContext.chaptersText?.slice(0, 2000) || '';
 

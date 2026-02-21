@@ -9,6 +9,8 @@
 
 import type { ToolExecutionContext } from './types';
 
+const EXPECTED_CONTEXT_FIELDS = ['projectId', 'conversationId', 'chaptersText', 'activeChapterNumber', 'userId'];
+
 /**
  * Result of successful context validation
  */
@@ -98,8 +100,7 @@ export function validateToolContext(context: unknown): ContextValidationResult {
     }
 
     // Log warning for unexpected fields (but don't fail)
-    const expectedFields = ['projectId', 'conversationId', 'chaptersText', 'activeChapterNumber', 'userId'];
-    const unexpectedFields = Object.keys(ctx).filter(key => !expectedFields.includes(key));
+    const unexpectedFields = Object.keys(ctx).filter(key => !EXPECTED_CONTEXT_FIELDS.includes(key));
     if (unexpectedFields.length > 0) {
         console.warn('[validateToolContext] Unexpected fields in context:', unexpectedFields);
     }

@@ -10,7 +10,7 @@
 import { tool, type UIToolInvocation } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { GeminiFileSearchService } from '@/lib/gemini-file-search';
+import { GeminiFileSearchService, type GroundingChunk } from '@/lib/gemini-file-search';
 import { ToolResult, toolSuccess, toolError } from './types';
 import { validateToolContext } from './context-validation';
 
@@ -26,11 +26,7 @@ const searchDocumentsSchema = z.object({
  */
 interface SearchDocumentsOutput {
     text: string;
-    sources: Array<{
-        title?: string;
-        uri?: string;
-        [key: string]: unknown;
-    }>;
+    sources: GroundingChunk[];
     hasDocuments: boolean;
 }
 

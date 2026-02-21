@@ -225,9 +225,8 @@ export const generateChapterOutlineTool = tool({
         const { projectId } = ctxResult.data;
 
         try {
-            // Service fetches topic from DB
+            // Service fetches topic from DB if omitted
             const outline = await ChapterService.generateOutline(projectId, {
-                topic: '',
                 focus,
             });
 

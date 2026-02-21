@@ -1,6 +1,6 @@
+import { GroundedWebSource } from '@/features/research/services/geminiService';
 import { ResearchProgress } from "@/features/research/services/researchService";
 import { SemanticScholarPaper } from '@/features/research/services/semanticScholarService';
-import { GroundedWebSource } from '@/features/research/services/geminiService';
 
 export interface ResearchPlan {
   core_problem_queries: string[];
