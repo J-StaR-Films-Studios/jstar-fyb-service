@@ -97,11 +97,11 @@ export async function POST(req: Request) {
         logger.info(`Processing ${modelMessages.length} messages.`, '[Chat API]');
 
         // Select model using Router
+        // Note: Tool loop is handled by streamText, not the router
         const { model: selectedModel, modelId } = selectModel({
             quality: (quality as any) || 'standard',
             // Default to Kimi K2 for Jay, unless override is present (Retry)
             forceModel: modelOverride || Models.GROQ.KIMI_K2_0905,
-            tools: true,
         });
 
         logger.info(`Using model: ${modelId}`, '[Chat API]');

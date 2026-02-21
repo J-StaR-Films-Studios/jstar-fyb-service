@@ -1,0 +1,187 @@
+# Task: Update ResearchClient with New Methods
+
+**Session ID:** org-20250219-research-curation-sync
+**Source:** Orchestrator
+**Priority:** P0
+**Dependencies:** Task 02 (`02_backend_api_routes.task.md`) must be completed first
+**Created At:** 2026-02-19T01:00:00+01:00
+
+---
+
+## 📋 Objective
+
+Add two new client-side methods to `ResearchClient` that call the new API routes:
+1. `searchOnly()` — streams progress and returns raw search results
+2. `saveSelected()` — sends selected papers to be saved
+
+## 🎯 Target File
+
+**`src/services/researchClient.ts`** (currently 80 lines)
+
+## 📚 Current File Contents
+
+```typescript
+import { ResearchProgress } from "@/features/research/services/researchService";
+
+export interface ResearchPlan {
+  core_problem_queries: string[];
+  technical_queries: string[];
+  context_queries: string[];
+}
+
+export class ResearchClient {
+  static async generatePlan(projectId: string): Promise<ResearchPlan> {
+    // ... existing method (14-25)
+  }
+
+  static async executeResearch(
+    projectId: string,
+    params: { queries: string[]; deepGoal: string },
+    onProgress: (progress: ResearchProgress) => void
+  ): Promise<void> {
+    // ... existing method (31-78)
+  }
+}
+```
+
+## ✅ Changes to Make
+
+### 1. Add imports for the search result types
+
+Add these imports at the top of the file (after existing import):
+
+```typescript
+import { SemanticScholarPaper } from '@/features/research/services/semanticScholarService';
+import { GroundedWebSource } from '@/features/research/services/geminiService';
+```
+
+### 2. Add `SearchResults` interface
+
+Add this after the `ResearchPlan` interface:
+
+```typescript
+export interface SearchResults {
+  academic: SemanticScholarPaper[];
+  web: GroundedWebSource[];
+}
+```
+
+### 3. Add `searchOnly()` method
+
+Add this method to `ResearchClient` (after `executeResearch`):
+
+```typescript
+/**
+ * Search-only mode: Finds papers but does NOT save them.
+ * Streams progress updates and returns the raw results for curation.
+ */
+static async searchOnly(
+  projectId: string,
+  params: { queries: string[]; deepGoal: string },
+  onProgress: (progress: ResearchProgress) => void
+): Promise<SearchResults> {
+  const response = await fetch('/api/research/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      projectId,
+      queries: params.queries,
+      deepGoal: params.deepGoal
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Search failed: ${response.statusText}`);
+  }
+
+  if (!response.body) {
+    throw new Error('No response body');
+  }
+
+  let searchResults: SearchResults = { academic: [], web: [] };
+
+  // Handle Streaming Response (NDJSON-like lines)
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // Process lines
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const parsed = JSON.parse(line);
+
+        // Check if this is the final results line
+        if (parsed.step === 'results' && parsed.results) {
+          searchResults = parsed.results;
+        } else {
+          onProgress(parsed);
+        }
+      } catch (e) {
+        console.warn('Failed to parse progress update:', line);
+      }
+    }
+  }
+
+  return searchResults;
+}
+```
+
+### 4. Add `saveSelected()` method
+
+Add this method after `searchOnly()`:
+
+```typescript
+/**
+ * Save only the user-selected papers and web sources to the database.
+ */
+static async saveSelected(
+  projectId: string,
+  selectedPapers: SemanticScholarPaper[],
+  selectedWebSources: GroundedWebSource[]
+): Promise<{ success: boolean; savedCount: number; message: string }> {
+  const response = await fetch('/api/research/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      projectId,
+      selectedPapers,
+      selectedWebSources
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Save failed: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+```
+
+## 🚫 Constraints
+
+- Do NOT modify existing methods (`generatePlan`, `executeResearch`)
+- Do NOT remove any existing code
+- The `searchOnly` streaming logic MUST match the pattern in `executeResearch` (NDJSON line parsing) but also extract the `results` payload from the final line
+- Type imports must come from the actual service files (not re-typed)
+
+## ✅ Definition of Done
+
+- [ ] `SearchResults` interface exported
+- [ ] `searchOnly()` method added — streams progress, returns `SearchResults`
+- [ ] `saveSelected()` method added — sends selected items, returns save count
+- [ ] Type imports for `SemanticScholarPaper` and `GroundedWebSource` added
+- [ ] `npx tsc --noEmit` passes
+
+---
+
+*Generated by /mode-orchestrator*

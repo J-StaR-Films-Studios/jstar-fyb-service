@@ -1,8 +1,8 @@
 /**
  * AI Model Router
  * 
- * Smart routing logic to select the best model based on request requirements.
- * Prioritizes FREE tier models for cost savings, falls back to premium when needed.
+ * Simplified routing logic for the ToolLoopAgent architecture.
+ * Selects the optimal model based on request requirements.
  * 
  * @module lib/ai/router
  */
@@ -17,14 +17,14 @@ export type ModelQuality = 'premium' | 'high' | 'standard' | 'free';
 
 export interface RouteConfig {
     /**
-     * Does the request use tools? (requires native Gemini)
-     */
-    tools?: boolean;
-
-    /**
      * Does the request need file grounding? (requires native Gemini)
      */
     grounding?: boolean;
+
+    /**
+     * Does the request require reasoning/chain-of-thought?
+     */
+    reasoning?: boolean;
 
     /**
      * Quality tier preference
@@ -41,11 +41,6 @@ export interface RouteConfig {
     vision?: boolean;
 
     /**
-     * Does the request require reasoning/chain-of-thought?
-     */
-    reasoning?: boolean;
-
-    /**
      * Force a specific model ID (bypasses other logic)
      */
     forceModel?: string;
@@ -57,7 +52,6 @@ export interface RouteResult {
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     model: any;
-
 
     /**
      * Which provider was selected
@@ -85,7 +79,10 @@ export interface RouteResult {
 // ============================================================
 
 /**
- * Select the optimal model based on request configuration
+ * Select the optimal model based on request configuration.
+ * 
+ * Simplified for ToolLoopAgent architecture - the agent handles
+ * tool loop internally, so we just need to return the right model.
  * 
  * @param config - Routing configuration
  * @returns Model selection with metadata
@@ -98,46 +95,21 @@ export interface RouteResult {
  * // For standard chapter generation (use FREE tier)
  * const { model } = selectModel({ quality: 'high' });
  * 
- * // For simple formatting (use any free model)
- * const { model } = selectModel({ quality: 'free' });
+ * // For reasoning tasks
+ * const { model } = selectModel({ reasoning: true });
+ * 
+ * // For vision tasks
+ * const { model } = selectModel({ vision: true });
  * ```
  */
 export function selectModel(config: RouteConfig = {}): RouteResult {
-    const { tools, grounding, quality = 'standard', vision, reasoning, forceModel } = config;
+    const { grounding, reasoning, quality = 'standard', vision, forceModel } = config;
 
     // --------------------------------------------------------
     // OVERRIDE: Force specific model
     // --------------------------------------------------------
     if (forceModel) {
-        // Detect provider based on known ID patterns or Models constants
-        if (forceModel.includes('gemini') && hasGemini()) {
-            return {
-                model: gemini!(forceModel),
-                provider: 'gemini',
-                modelId: forceModel,
-                isFree: false,
-                reason: 'Forced model override (Gemini)',
-            };
-        }
-        if ((Object.values(Models.GROQ) as string[]).includes(forceModel) && hasGroq()) {
-            return {
-                model: groq!(forceModel),
-                provider: 'groq',
-                modelId: forceModel,
-                isFree: false,
-                reason: 'Forced model override (Groq)',
-            };
-        }
-        // Default to OpenRouter for everything else (including Free tier)
-        if (hasOpenRouter()) {
-            return {
-                model: openrouter!(forceModel),
-                provider: 'openrouter',
-                modelId: forceModel,
-                isFree: true, // Assumption for overrides, but doesn't matter much for routing
-                reason: 'Forced model override (OpenRouter)',
-            };
-        }
+        return selectForcedModel(forceModel);
     }
 
     // --------------------------------------------------------
@@ -157,8 +129,7 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     }
 
     // --------------------------------------------------------
-    // RULE 2: Reasoning tasks prefer models with thinking traces
-    // (Check this BEFORE tools to prioritize reasoning models that support tools)
+    // RULE 2: Reasoning/Thinking models
     // --------------------------------------------------------
     if (reasoning) {
         if (hasOpenRouter()) {
@@ -167,59 +138,17 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
                 provider: 'openrouter',
                 modelId: Models.FREE.REASONING,
                 isFree: true,
-                reason: 'Reasoning task using TNG Chimera (free R1 derivative)',
+                reason: 'Reasoning task using free thinking model',
             };
         }
-        // Fallback if no OpenRouter but reasoning requested
-    }
-
-    // --------------------------------------------------------
-    // RULE 3: Tools work best on native Gemini, but allow others if configured
-    // --------------------------------------------------------
-    if (tools) {
-        // Priority 1: OpenRouter Free Tier (Cost Savings)
-        // Use if quality is NOT premium
-        if (quality !== 'premium' && hasOpenRouter()) {
-
-            // Sub-rule: If Reasoning is ALSO requested (redundant if caught by Rule 2, but safe)
-            if (reasoning) {
-                return {
-                    model: openrouter!(Models.FREE.REASONING),
-                    provider: 'openrouter',
-                    modelId: Models.FREE.REASONING,
-                    isFree: true,
-                    reason: 'Reasoning + Tool calling using TNG Chimera',
-                };
-            }
-
-            return {
-                model: openrouter!(Models.FREE.NVIDIA_3_NANO), // Nvidia Nemotron 3 Nano
-                provider: 'openrouter',
-                modelId: Models.FREE.NVIDIA_3_NANO,
-                isFree: true,
-                reason: 'Tool calling using capable free model (Nvidia Nemotron 3 Nano)',
-            };
-        }
-
-        // Priority 2: Gemini (Native Tool Support - Premium/Fallback)
+        // Fallback to Gemini if OpenRouter not available
         if (hasGemini()) {
             return {
                 model: gemini!(Models.GEMINI_FLASH),
                 provider: 'gemini',
                 modelId: Models.GEMINI_FLASH,
                 isFree: false,
-                reason: 'Tool calling optimized for native Gemini',
-            };
-        }
-
-        // Priority 3: Groq Fallback
-        if (hasGroq()) {
-            return {
-                model: groq!(Models.GROQ.KIMI_K2_0905),
-                provider: 'groq',
-                modelId: Models.GROQ.KIMI_K2_0905,
-                isFree: false,
-                reason: 'Tool calling fallback to Groq',
+                reason: 'Reasoning fallback to Gemini',
             };
         }
     }
@@ -234,7 +163,7 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
                 provider: 'openrouter',
                 modelId: Models.FREE.NEMOTRON_VL,
                 isFree: true,
-                reason: 'Vision task using free Nemotron model',
+                reason: 'Vision task using free vision model',
             };
         }
         if (hasGemini()) {
@@ -243,15 +172,13 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
                 provider: 'gemini',
                 modelId: Models.GEMINI_FLASH,
                 isFree: false,
-                reason: 'Vision fallback to Gemini (no free vision available)',
+                reason: 'Vision fallback to Gemini',
             };
         }
     }
 
-    // (Reasoning rule moved up)
-
     // --------------------------------------------------------
-    // RULE 5: Quality-based routing (FREE TIER PRIORITY)
+    // RULE 4: Quality-based routing (default)
     // --------------------------------------------------------
 
     // Premium: Always Gemini
@@ -268,54 +195,33 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
         };
     }
 
-    // High: Best free models (DeepSeek V3, Kimi K2)
-    if (quality === 'high') {
-        if (hasOpenRouter()) {
-            return {
-                model: openrouter!(Models.FREE.NVIDIA_3_NANO),
-                provider: 'openrouter',
-                modelId: Models.FREE.NVIDIA_3_NANO,
-                isFree: true,
-                reason: 'High quality using free Nvidia Nemotron 3 Nano',
-            };
-        }
-        // Fallback to Groq
-        if (hasGroq()) {
-            return {
-                model: groq!(Models.GROQ.GPT_OSS_120B),
-                provider: 'groq',
-                modelId: Models.GROQ.GPT_OSS_120B,
-                isFree: false,
-                reason: 'High quality fallback to Groq Kimi K2',
-            };
-        }
+    // High/Standard/Free: Use OpenRouter free tier
+    if (hasOpenRouter()) {
+        const modelId = quality === 'high'
+            ? Models.FREE.NVIDIA_3_NANO
+            : Models.FREE.MIMO_V2_FLASH;
+
+        return {
+            model: openrouter!(modelId),
+            provider: 'openrouter',
+            modelId,
+            isFree: true,
+            reason: `${quality} quality using free tier model`,
+        };
     }
 
-    // Standard: Reliable free models
-    if (quality === 'standard' || quality === 'free') {
-        if (hasOpenRouter()) {
-            return {
-                model: openrouter!(Models.FREE.MIMO_V2_FLASH),
-                provider: 'openrouter',
-                modelId: Models.FREE.MIMO_V2_FLASH,
-                isFree: true,
-                reason: `${quality} quality using free MiMo V2 Flash`,
-            };
-        }
-        if (hasGroq()) {
-            return {
-                model: groq!(Models.GROQ.KIMI_K2),
-                provider: 'groq',
-                modelId: Models.GROQ.KIMI_K2,
-                isFree: false,
-                reason: `${quality} quality fallback to Groq`,
-            };
-        }
+    // Fallback to Groq
+    if (hasGroq()) {
+        return {
+            model: groq!(Models.GROQ.KIMI_K2),
+            provider: 'groq',
+            modelId: Models.GROQ.KIMI_K2,
+            isFree: false,
+            reason: 'Fallback to Groq',
+        };
     }
 
-    // --------------------------------------------------------
-    // FALLBACK: Use whatever is available
-    // --------------------------------------------------------
+    // Last resort: Gemini
     if (hasGemini()) {
         return {
             model: gemini!(Models.GEMINI_FLASH),
@@ -329,26 +235,73 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     throw new Error('No AI providers configured. Please set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY');
 }
 
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
+
 /**
- * Get a model specifically for text generation (no tools/grounding)
- * Always prefers FREE tier
+ * Handle forced model selection.
+ */
+function selectForcedModel(forceModel: string): RouteResult {
+    if (forceModel.includes('gemini') && hasGemini()) {
+        return {
+            model: gemini!(forceModel),
+            provider: 'gemini',
+            modelId: forceModel,
+            isFree: false,
+            reason: 'Forced model override (Gemini)',
+        };
+    }
+
+    if ((Object.values(Models.GROQ) as string[]).includes(forceModel) && hasGroq()) {
+        return {
+            model: groq!(forceModel),
+            provider: 'groq',
+            modelId: forceModel,
+            isFree: false,
+            reason: 'Forced model override (Groq)',
+        };
+    }
+
+    if (hasOpenRouter()) {
+        return {
+            model: openrouter!(forceModel),
+            provider: 'openrouter',
+            modelId: forceModel,
+            isFree: true,
+            reason: 'Forced model override (OpenRouter)',
+        };
+    }
+
+    throw new Error(`Cannot force model ${forceModel}: no suitable provider available`);
+}
+
+/**
+ * Get a model for text generation (no special requirements).
+ * Always prefers FREE tier.
  */
 export function getTextGenerationModel() {
     return selectModel({ quality: 'high' });
 }
 
 /**
- * Get a model for chat with tools
- * Uses premium Gemini for best tool support
- */
-export function getChatWithToolsModel() {
-    return selectModel({ tools: true });
-}
-
-/**
- * Get a model for grounded generation
- * MUST use native Gemini
+ * Get a model for grounded generation.
+ * MUST use native Gemini.
  */
 export function getGroundedModel() {
     return selectModel({ grounding: true });
+}
+
+/**
+ * Get a reasoning/thinking model.
+ */
+export function getReasoningModel() {
+    return selectModel({ reasoning: true });
+}
+
+/**
+ * Get a vision-capable model.
+ */
+export function getVisionModel() {
+    return selectModel({ vision: true });
 }

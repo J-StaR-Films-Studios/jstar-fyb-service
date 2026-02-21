@@ -5,15 +5,17 @@ import { useEffect, useRef } from "react";
 import { Check, Loader2, RefreshCw, FileText, Pencil } from "lucide-react";
 import { toast } from 'sonner';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
+import { motion } from 'framer-motion';
 import { outlineSchema, Chapter } from '../schemas/outlineSchema';
 import { PricingOverlay } from "@/features/builder/components/PricingOverlay";
-import { ProjectActionCenter } from "./ProjectActionCenter";
+import { QuickActions } from "./QuickActions";
 import { ModeSelection } from "./ModeSelection";
 import { ConciergeWaiting } from "./ConciergeWaiting";
 import { ChapterGenerator } from "./ChapterGenerator";
 import { UpsellBridge } from "./UpsellBridge";
 import { DocumentUpload } from "./DocumentUpload";
 import { OutlinePreview } from "./OutlinePreview";
+import { ResearchSourcesCard } from "./ResearchSourcesCard";
 import { usePaymentVerification } from "../hooks/usePaymentVerification";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
@@ -22,6 +24,30 @@ import { TopicLockModal } from "@/features/billing/components/TopicLockModal";
 import { TopicChangeWarningModal } from "./TopicChangeWarningModal";
 import { AbstractEditorModal } from "./AbstractEditorModal";
 import { TopicResetWarningModal } from "./TopicResetWarningModal";
+
+// Animation variants for staggered fade-in
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.1
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.4,
+            ease: [0.25, 0.1, 0.25, 1] as const // easeOut cubic-bezier
+        }
+    }
+};
 
 export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
     const { data, isPaid, unlockPaywall, updateData, setMode } = useBuilderStore();
@@ -137,7 +163,7 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
     const streamedChapters = object?.chapters || [];
     const displayChapters = streamedChapters.length > 0 ? streamedChapters : (data.outline || []);
     const displayTitle = object?.title || data.topic || "Project Title";
-    const abstractPreview = data.abstract ? data.abstract.slice(0, 180) + '...' : "Loading abstract...";
+    const abstractPreview = data.abstract || "Loading abstract...";
     const isStreaming = isLoading;
 
     // Fetch stored outline if we have a project ID and no outline yet
@@ -223,8 +249,13 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
 
     return (
         <>
-            {/* Success State Header */}
-            <div className="text-center mb-10">
+            {/* Success State Header - with fade-in animation */}
+            <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="text-center mb-10"
+            >
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 text-green-500 mb-4 border border-green-500/20">
                     {isLoading ? (
                         <Loader2 className="w-8 h-8 animate-spin" />
@@ -246,7 +277,7 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
                     isProjectLocked ? (
                         <button
                             onClick={() => setShowAbstractEditor(true)}
-                            className="mt-4 text-xs text-primary hover:text-white flex items-center gap-1 transition-colors"
+                            className="mt-4 text-xs text-primary hover:text-white flex items-center gap-1 transition-colors mx-auto"
                         >
                             <FileText className="w-3 h-3" />
                             Edit Abstract
@@ -254,65 +285,80 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
                     ) : (
                         <button
                             onClick={() => isPaid ? setShowTopicResetWarning(true) : setShowTopicResetWarning(true)}
-                            className="mt-4 text-xs text-gray-500 hover:text-white underline transition-colors"
+                            className="mt-4 text-xs text-gray-500 hover:text-white underline transition-colors mx-auto"
                         >
                             Change Topic
                         </button>
                     )
                 )}
-            </div >
+            </motion.div>
 
-            {/* The Content */}
-            < div className="relative" >
-                <OutlinePreview
-                    displayTitle={displayTitle}
-                    abstractPreview={abstractPreview}
-                    displayChapters={displayChapters}
-                    isStreaming={isStreaming}
-                />
+            {/* The Content - with staggered animations and safe bottom padding for mobile nav */}
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="relative pb-20 md:pb-6"
+            >
+                {/* Outline Preview - Always visible */}
+                <motion.div variants={itemVariants}>
+                    <OutlinePreview
+                        displayTitle={displayTitle}
+                        abstractPreview={abstractPreview}
+                        displayChapters={displayChapters}
+                        isStreaming={isStreaming}
+                    />
+                </motion.div>
 
-                {/* Pricing Overlay - Show if not paid */}
-                {
-                    !isPaid ? (
-                        <div className="mt-8">
-                            <PricingOverlay onUnlock={handleUnlock} />
-                        </div>
-                    ) : data.mode === null ? (
-                        <div className="mt-16">
-                            <ModeSelection
-                                projectId={data.projectId!}
-                                onModeSelected={(mode) => setMode(mode)}
-                            />
-                        </div>
-                    ) : data.mode === "CONCIERGE" ? (
-                        <div className="mt-16">
-                            <ConciergeWaiting projectId={data.projectId!} status={data.status} />
-                        </div>
-                    ) : (
-                        <>
-                            <div className="mt-16">
-                                <ProjectActionCenter projectId={data.projectId!} />
+                {/* State-Based Rendering */}
+                {!isPaid ? (
+                    /* LOCKED STATE: Paywall */
+                    <motion.div variants={itemVariants} className="mt-8">
+                        <PricingOverlay onUnlock={handleUnlock} />
+                    </motion.div>
+                ) : data.mode === null ? (
+                    /* MODE SELECTION STATE */
+                    <motion.div variants={itemVariants} className="mt-16">
+                        <ModeSelection
+                            projectId={data.projectId!}
+                            onModeSelected={(mode) => setMode(mode)}
+                        />
+                    </motion.div>
+                ) : data.mode === "CONCIERGE" ? (
+                    /* CONCIERGE MODE STATE */
+                    <motion.div variants={itemVariants} className="mt-16">
+                        <ConciergeWaiting projectId={data.projectId!} status={data.status} />
+                    </motion.div>
+                ) : (
+                    /* UNLOCKED DIY STATE: Full builder experience */
+                    <>
+                        {/* Chapter Generator - PRIMARY ACTION */}
+                        {data.projectId && (
+                            <motion.div variants={itemVariants} className="mt-16">
+                                <ChapterGenerator projectId={data.projectId} />
+                            </motion.div>
+                        )}
+
+                        {/* Secondary Actions Grid - 2 columns on desktop, 1 on mobile */}
+                        <motion.div variants={itemVariants} className="mt-16">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Research Sources Card */}
+                                <ResearchSourcesCard />
+
+                                {/* Quick Actions */}
+                                <QuickActions projectId={data.projectId!} />
                             </div>
+                        </motion.div>
 
-                            {data.projectId && (
-                                <div className="mt-16">
-                                    <DocumentUpload projectId={data.projectId} />
-                                </div>
-                            )}
+                        {/* Document Upload - Moved to FloatingResearchPanel */}
 
-                            {data.projectId && (
-                                <div className="mt-16">
-                                    <ChapterGenerator projectId={data.projectId} />
-                                </div>
-                            )}
-
-                            <div className="mt-20 mb-10">
-                                <UpsellBridge projectId={data.projectId} />
-                            </div>
-                        </>
-                    )
-                }
-            </div >
+                        {/* Upsell Bridge - Preserved at bottom */}
+                        <motion.div variants={itemVariants} className="mt-20 mb-10">
+                            <UpsellBridge projectId={data.projectId} />
+                        </motion.div>
+                    </>
+                )}
+            </motion.div>
 
 
             <TopicLockModal

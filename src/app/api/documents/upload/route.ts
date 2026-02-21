@@ -192,7 +192,7 @@ export async function POST(req: Request) {
                 // Continue with upload even if extraction fails - can retry later
             }
 
-            const doc = await prisma.researchDocument.create({
+const doc = await prisma.researchDocument.create({
                 data: {
                     projectId,
                     fileName: sanitizedFileName,
@@ -200,6 +200,7 @@ export async function POST(req: Request) {
                     mimeType: file.type,
                     fileData: buffer,
                     extractedContent, // Now populated with actual text!
+                    sourceType: "USER_UPLOAD", // FIX: Set source type so uploads appear in "Uploaded" tab
                     status: extractedContent ? "PENDING" : "EXTRACTION_FAILED"
                 }
             });

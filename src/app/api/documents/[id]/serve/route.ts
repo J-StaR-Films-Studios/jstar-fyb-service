@@ -32,8 +32,9 @@ export async function GET(
         // Set appropriate headers
         const headers = new Headers();
         headers.set('Content-Type', doc.mimeType || 'application/octet-stream');
-        // Force download behavior to prevent "opens in new tab" effectively, and ensure correct filename
-        headers.set('Content-Disposition', `attachment; filename="${doc.fileName}"`);
+        // Use encodeURIComponent to support non-ASCII characters safely in HTTP headers
+        const safeFileName = encodeURIComponent(doc.fileName || 'document');
+        headers.set('Content-Disposition', `attachment; filename*=UTF-8''${safeFileName}`);
         headers.set('Cache-Control', 'public, max-age=31536000');
 
         // Case A: Serve from DB (Binary)

@@ -11,7 +11,7 @@ interface WorkspacePageProps {
 
 export default async function WorkspacePage({ params, searchParams }: WorkspacePageProps) {
     const { id } = await params;
-    const { reference } = await searchParams; // Extract Paystack reference
+    const { reference, tab } = await searchParams; // Extract Paystack reference and tab
 
     // CANONICAL UNLOCK CHECK: Use `isUnlocked` field as the single source of truth.
     // This supports: normal payments, 100% discounts, admin overrides, etc.
@@ -53,6 +53,9 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
     }
 
     return (
-        <ChapterEditor projectId={id} />
+        <ChapterEditor
+            projectId={id}
+            initialTab={typeof tab === 'string' ? tab : 'research'}
+        />
     );
 }

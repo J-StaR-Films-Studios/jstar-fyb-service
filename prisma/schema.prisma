@@ -223,8 +223,8 @@ model ResearchDocument {
   importedToFileSearch Boolean   @default(false)
   fileSearchFileId     String?
   importError          String?
-  // Hybrid Research Feature - Academic metadata from Semantic Scholar
-  sourceType           String    @default("WEB") // "ACADEMIC" or "WEB"
+// Hybrid Research Feature - Academic metadata from Semantic Scholar
+  sourceType           String    @default("WEB") // "ACADEMIC", "WEB", or "USER_UPLOAD"
   citationCount        Int?
   openAccessUrl        String?
   abstractText         String?
