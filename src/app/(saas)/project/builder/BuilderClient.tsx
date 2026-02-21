@@ -16,7 +16,6 @@ import { BuilderBottomNav } from "@/features/builder/components/BuilderBottomNav
 import { FloatingChatFAB } from "@/features/builder/components/FloatingChatFAB";
 import { FloatingResearchPanel } from "@/features/builder/components/FloatingResearchPanel";
 import { ProgressStepper } from "@/features/builder/components/ProgressStepper";
-import { UploadDocumentModal } from "@/features/builder/components/UploadDocumentModal";
 import { useBuilderLayout } from "@/features/builder/context/BuilderLayoutContext";
 
 interface BuilderClientProps {
@@ -30,7 +29,7 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
     const router = useRouter();
     const { step, updateData, syncWithUser, hydrateFromChat, loadProject, isPaid, unlockPaywall, data: storeData } = useBuilderStore();
     const searchParams = useSearchParams();
-    const { isUploadModalOpen, closeUploadModal } = useBuilderLayout();
+    const { } = useBuilderLayout();
 
     // CRITICAL: Track local hydration state to prevent rendering with stale data
     const [isHydrated, setIsHydrated] = useState(false);
@@ -209,16 +208,6 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
 
             {/* Floating Research Panel - Research panel for the builder */}
             <FloatingResearchPanel />
-
-            {/* Upload Modal rendered globally */}
-            {storeData?.projectId && (
-                <UploadDocumentModal
-                    isOpen={isUploadModalOpen}
-                    onClose={closeUploadModal}
-                    projectId={storeData.projectId}
-                    onUploadSuccess={() => { }}
-                />
-            )}
         </div>
     );
 }

@@ -28,8 +28,9 @@ import { ResearchModal } from '@/features/research/components/ResearchModal';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DocumentViewerModal } from './DocumentViewerModal';
 import { DocumentItem } from './ResearchDocumentItem';
+import { DirectUploadWrapper } from './DirectUploadWrapper';
 
-type ViewMode = 'all' | 'papers' | 'uploaded';
+type ViewMode = 'all' | 'papers' | 'web' | 'uploaded';
 type AccessFilter = 'all' | 'open' | 'paywalled';
 
 /**
@@ -44,6 +45,7 @@ export function FloatingResearchPanel() {
 
     // Local state
     const [documents, setDocuments] = useState<any[]>([]);
+    const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
     const [viewMode, setViewMode] = useState<ViewMode>('all');
     const [accessFilter, setAccessFilter] = useState<AccessFilter>('all');
     const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +54,7 @@ export function FloatingResearchPanel() {
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
     const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; docId: string | null }>({ isOpen: false, docId: null });
     const [isDeleting, setIsDeleting] = useState(false);
+    const [extractingDocs, setExtractingDocs] = useState<Record<string, boolean>>({});
 
     // Fetch documents
     const fetchDocuments = useCallback(async () => {
@@ -123,7 +126,8 @@ export function FloatingResearchPanel() {
             uploadedDocs: uploaded,
             counts: {
                 all: documents.length,
-                papers: academic.length + web.length,
+                papers: academic.length,
+                web: web.length,
                 uploaded: uploaded.length,
             },
         };
@@ -134,13 +138,16 @@ export function FloatingResearchPanel() {
         let docs: any[] = [];
         switch (viewMode) {
             case 'papers':
-                docs = [...academicPapers, ...webSources];
+                docs = academicPapers;
                 if (accessFilter !== 'all') {
                     docs = docs.filter(doc => {
                         const hasOpen = doc.openAccessUrl && doc.openAccessUrl.length > 0;
                         return accessFilter === 'open' ? hasOpen : !hasOpen;
                     });
                 }
+                break;
+            case 'web':
+                docs = webSources;
                 break;
             case 'uploaded':
                 docs = uploadedDocs;
@@ -173,10 +180,32 @@ export function FloatingResearchPanel() {
         }
     };
 
+    const handleExtract = useCallback(async (documentId: string) => {
+        setExtractingDocs(prev => ({ ...prev, [documentId]: true }));
+        try {
+            const res = await fetch(`/api/documents/${documentId}/extract`, { method: "POST" });
+            if (!res.ok) throw new Error("Extraction failed");
+            await fetchDocuments();
+        } catch (error) {
+            console.error("Extraction error:", error);
+            await fetchDocuments();
+        } finally {
+            setExtractingDocs(prev => ({ ...prev, [documentId]: false }));
+        }
+    }, [fetchDocuments]);
+
+    const handleUploadSuccess = useCallback(async (doc: any) => {
+        await fetchDocuments();
+        if (doc && doc.id) {
+            handleExtract(doc.id);
+        }
+    }, [fetchDocuments, handleExtract]);
+
     const tabs = [
-        { id: 'all' as ViewMode, label: 'All Sources', count: counts.all },
-        { id: 'papers' as ViewMode, label: 'Papers', count: counts.papers },
-        { id: 'uploaded' as ViewMode, label: 'Uploaded', count: counts.uploaded },
+        { id: 'all' as ViewMode, label: 'All', count: counts.all },
+        { id: 'papers' as ViewMode, label: 'Papers', count: counts.papers, icon: BookOpen },
+        { id: 'web' as ViewMode, label: 'Web', count: counts.web, icon: Globe },
+        { id: 'uploaded' as ViewMode, label: 'Uploaded', count: counts.uploaded, icon: Upload },
     ];
 
     const accessFilters = [
@@ -210,7 +239,10 @@ export function FloatingResearchPanel() {
                         {/* Header */}
                         <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111118]/95 backdrop-blur-md sticky top-0">
                             <div>
-                                <h2 className="text-xl font-display font-bold text-white">Research Library</h2>
+                                <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
+                                    <FileText className="w-5 h-5 text-purple-400" />
+                                    Research Library
+                                </h2>
                                 <p className="text-xs text-gray-400 mt-1">
                                     {counts.all} relevant {counts.all === 1 ? 'source' : 'sources'} found
                                 </p>
@@ -224,24 +256,26 @@ export function FloatingResearchPanel() {
                         </div>
 
                         {/* Tabs */}
-                        <div className="px-6 py-4 flex gap-2 border-b border-white/5 overflow-x-auto">
+                        <div className="px-6 py-4 flex gap-2 border-b border-white/5 overflow-x-auto custom-scrollbar">
                             {tabs.map((tab) => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setViewMode(tab.id)}
                                     className={cn(
-                                        'px-4 py-1.5 text-xs font-semibold rounded-full transition-all whitespace-nowrap',
+                                        'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap flex items-center gap-1.5',
                                         viewMode === tab.id
-                                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                                            : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                                            ? 'bg-purple-500/10 text-white border border-purple-500/20'
+                                            : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
                                     )}
                                 >
+                                    {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
                                     {tab.label}
-                                    {tab.count > 0 && (
-                                        <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-white/10 text-[10px]">
-                                            {tab.count}
-                                        </span>
-                                    )}
+                                    <span className={cn(
+                                        "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
+                                        viewMode === tab.id ? "bg-purple-500/30 text-purple-200" : "bg-white/10 text-gray-400"
+                                    )}>
+                                        {tab.count}
+                                    </span>
                                 </button>
                             ))}
                         </div>
@@ -287,15 +321,32 @@ export function FloatingResearchPanel() {
                                 <div className="flex items-center justify-center py-12">
                                     <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
                                 </div>
-                            ) : filteredDocs.length > 0 ? (
-                                filteredDocs.map((doc) => (
-                                    <DocumentItem
-                                        key={doc.id}
-                                        doc={doc}
-                                        onView={() => setSelectedDocument(doc)}
-                                        onDelete={() => setDeleteModal({ isOpen: true, docId: doc.id })}
-                                    />
-                                ))
+                            ) : filteredDocs.length > 0 || uploadingFiles.length > 0 ? (
+                                <>
+                                    {uploadingFiles.map((fileName, idx) => (
+                                        <div key={`uploading-${idx}`} className="group bg-white/[0.02] border border-white/5 rounded-xl p-3 mb-3 transition-all duration-200 animate-pulse">
+                                            <div className="flex items-start gap-3">
+                                                <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-purple-500/10">
+                                                    <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                                                </div>
+                                                <div className="flex-1 min-w-0 flex flex-col justify-center min-h-[36px]">
+                                                    <p className="text-sm font-medium text-white line-clamp-1">{fileName}</p>
+                                                    <span className="text-[10px] text-purple-300">Uploading...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {filteredDocs.map((doc) => (
+                                        <DocumentItem
+                                            key={doc.id}
+                                            doc={doc}
+                                            onView={() => setSelectedDocument(doc)}
+                                            onDelete={() => setDeleteModal({ isOpen: true, docId: doc.id })}
+                                            onRetry={() => handleExtract(doc.id)}
+                                            isExtracting={!!extractingDocs[doc.id]}
+                                        />
+                                    ))}
+                                </>
                             ) : (
                                 <div className="py-12 text-center">
                                     <FileText className="w-10 h-10 text-gray-600 mx-auto mb-3" />
@@ -318,16 +369,25 @@ export function FloatingResearchPanel() {
                                 <Sparkles className="w-4 h-4" />
                                 Deep Research
                             </button>
-                            <button
-                                onClick={() => {
-                                    closeResearchPanel();
-                                    openUploadModal();
-                                }}
-                                className="w-full py-3 border border-white/10 rounded-xl mt-3 text-gray-300 hover:bg-white/5 flex items-center justify-center gap-2 transition-colors"
-                            >
-                                <Upload className="w-4 h-4" />
-                                Upload Document
-                            </button>
+                            {projectId && (
+                                <DirectUploadWrapper
+                                    projectId={projectId}
+                                    onUploadStart={(fileName) => setUploadingFiles(prev => [fileName, ...prev])}
+                                    onUploadEnd={(fileName) => setUploadingFiles(prev => prev.filter(f => f !== fileName))}
+                                    onUploadSuccess={handleUploadSuccess}
+                                >
+                                    {({ onClick, isUploading }) => (
+                                        <button
+                                            onClick={onClick}
+                                            disabled={isUploading}
+                                            className="w-full py-3 border border-white/10 rounded-xl mt-3 text-gray-300 hover:bg-white/5 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                                        >
+                                            {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                            {isUploading ? "Uploading..." : "Upload Document"}
+                                        </button>
+                                    )}
+                                </DirectUploadWrapper>
+                            )}
                         </div>
                     </motion.aside>
 
@@ -367,4 +427,3 @@ export function FloatingResearchPanel() {
     );
 }
 
-// DocumentItem has been moved to ResearchDocumentItem.tsx

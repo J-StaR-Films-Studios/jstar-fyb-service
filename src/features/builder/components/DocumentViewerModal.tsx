@@ -800,7 +800,22 @@ export const DocumentViewerModal = ({
                                             </div>
                                         );
                                     }
-                                    return null;
+
+                                    return (
+                                        <div className="flex items-center justify-center py-8 flex-col gap-3 text-gray-500 bg-white/[0.02] rounded-xl border border-white/5">
+                                            {researchDoc.status === 'PENDING' || researchDoc.status === 'PROCESSING' ? (
+                                                <>
+                                                    <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+                                                    <span className="text-xs text-center px-4">Analyzing document insights...<br /><span className="text-[10px] opacity-70">This might take a minute.</span></span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Info className="w-6 h-6 opacity-30" />
+                                                    <span className="text-xs">No analysis available for this document.</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    );
                                 })()}
 
                                 {/* Metadata Grid */}
@@ -879,13 +894,37 @@ export const DocumentViewerModal = ({
 
                                 {/* Status */}
                                 <div className="flex items-center gap-2 pt-2">
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-400 rounded-full text-[10px] font-bold border border-green-500/20">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                                        ANALYZED
-                                    </div>
-                                    <span className="text-[10px] text-gray-600">
-                                        Context available for AI
-                                    </span>
+                                    {researchDoc.status === 'PROCESSED' ? (
+                                        <>
+                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-400 rounded-full text-[10px] font-bold border border-green-500/20">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                                                ANALYZED
+                                            </div>
+                                            <span className="text-[10px] text-gray-600">
+                                                Context available for AI
+                                            </span>
+                                        </>
+                                    ) : researchDoc.status === 'FAILED' ? (
+                                        <>
+                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 text-red-400 rounded-full text-[10px] font-bold border border-red-500/20">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                                                FAILED
+                                            </div>
+                                            <span className="text-[10px] text-gray-600">
+                                                Analysis failed
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-400 rounded-full text-[10px] font-bold border border-purple-500/20">
+                                                <Loader2 className="w-3 h-3 animate-spin" />
+                                                PROCESSING
+                                            </div>
+                                            <span className="text-[10px] text-gray-600">
+                                                AI is reading document
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 

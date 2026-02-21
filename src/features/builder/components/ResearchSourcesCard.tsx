@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useBuilderLayout } from '../context/BuilderLayoutContext';
 import { useBuilderStore } from '../store/useBuilderStore';
+import { DirectUploadWrapper } from './DirectUploadWrapper';
 import { cn } from '@/lib/utils';
 
 /**
@@ -141,11 +142,12 @@ export function ResearchSourcesCard() {
             {previewDocs.length > 0 ? (
                 <div className="space-y-2">
                     {previewDocs.map((doc) => (
-                        <motion.div
+                        <motion.button
                             key={doc.id}
                             initial={{ opacity: 0, y: 5 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                            onClick={openResearchPanel}
+                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors w-full text-left cursor-pointer"
                         >
                             <div className={cn('shrink-0 w-7 h-7 rounded flex items-center justify-center', getIconBg(doc))}>
                                 {getIcon(doc)}
@@ -158,7 +160,7 @@ export function ResearchSourcesCard() {
                                     {doc.sourceType === 'ACADEMIC' ? 'Academic Paper' : doc.sourceType === 'WEB' ? 'Web Source' : 'Uploaded'}
                                 </p>
                             </div>
-                        </motion.div>
+                        </motion.button>
                     ))}
                 </div>
             ) : (
@@ -182,13 +184,23 @@ export function ResearchSourcesCard() {
                     View All
                     <ArrowRight className="w-3 h-3" />
                 </button>
-                <button
-                    onClick={openUploadModal}
-                    className="py-2 px-3 rounded-lg text-xs font-medium bg-white/5 text-gray-300 hover:bg-white/10 flex items-center justify-center gap-1 transition-colors"
-                >
-                    <Plus className="w-3 h-3" />
-                    Add Source
-                </button>
+                {projectId && (
+                    <DirectUploadWrapper
+                        projectId={projectId}
+                        onUploadSuccess={(doc) => setDocuments(prev => [doc, ...prev])}
+                    >
+                        {({ onClick, isUploading }) => (
+                            <button
+                                onClick={onClick}
+                                disabled={isUploading}
+                                className="py-2 px-3 rounded-lg text-xs font-medium bg-white/5 text-gray-300 hover:bg-white/10 flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
+                            >
+                                {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                {isUploading ? "Uploading..." : "Add Source"}
+                            </button>
+                        )}
+                    </DirectUploadWrapper>
+                )}
             </div>
         </div>
     );
