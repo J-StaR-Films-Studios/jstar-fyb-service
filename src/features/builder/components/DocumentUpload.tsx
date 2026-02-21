@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, Link as LinkIcon, FileText, Loader2, Trash2, CheckCircle,
   XCircle, Eye, Sparkles, BrainCircuit, RefreshCw, Plus, BookOpen,
-  Globe, Quote, Download, Lock, Unlock, ExternalLink, Search, Zap, ArrowRight, Filter
+  Globe, Quote, Download, Lock, Unlock, ExternalLink, Search, Zap,
+  ArrowRight, Filter, DownloadCloud
 } from "lucide-react";
 import { useBuilderStore } from "../store/useBuilderStore";
 import { DocumentViewerModal } from "./DocumentViewerModal";
@@ -13,114 +14,47 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ResearchDocument } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { ResearchModal } from "@/features/research/components/ResearchModal";
+import { useResearchDocuments } from "@/features/research/hooks/useResearchDocuments";
 
 type ViewMode = "all" | "academic" | "web" | "uploaded";
 type AccessFilter = "all" | "open" | "paywalled";
 
 export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: string, searchQuery?: string }) {
+  // ── UI-only state ─────────────────────────────────────
   const [mode, setMode] = useState<"upload" | "link">("upload");
   const [file, setFile] = useState<File | null>(null);
   const [link, setLink] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<ResearchDocument | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isResearchModalOpen, setIsResearchModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [accessFilter, setAccessFilter] = useState<AccessFilter>("all");
-
-  // Modal states
+  const [selectedDocument, setSelectedDocument] = useState<ResearchDocument | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; docId: string | null }>({ isOpen: false, docId: null });
-  const [syncModal, setSyncModal] = useState<{ isOpen: boolean; result?: 'success' | 'error' }>({ isOpen: false });
   const [isDeleting, setIsDeleting] = useState(false);
-  const [syncingDocs, setSyncingDocs] = useState<Record<string, boolean>>({});
+  const [syncModal, setSyncModal] = useState<{ isOpen: boolean; result?: 'success' | 'error' }>({ isOpen: false });
 
-  // Fetch existing documents
-  useEffect(() => {
-    fetchDocuments();
-  }, [projectId]);
+  // ── Shared Hook ───────────────────────────────────────
+  const {
+    filteredDocs,
+    extractingDocs,
+    isProcessingBatch,
+    counts,
+    fetchDocuments,
+    handleExtract,
+    handleManualFetch,
+    handleDelete,
+    handleSyncAll,
+    handleResearchComplete: hookResearchComplete,
+    handleUpload: hookUpload,
+  } = useResearchDocuments({
+    projectId,
+    searchQuery,
+    viewMode,
+    accessFilter,
+  });
 
-  const fetchDocuments = async () => {
-    try {
-      const res = await fetch(`/api/documents?projectId=${projectId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setDocuments(data.documents || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch documents:", error);
-    }
-  };
-
-  // Categorize documents
-  const { academicPapers, webSources, uploadedDocs, counts } = useMemo(() => {
-    const academic: any[] = [];
-    const web: any[] = [];
-    const uploaded: any[] = [];
-
-    let openCount = 0;
-    let paywalledCount = 0;
-
-    for (const doc of documents) {
-      if (doc.sourceType === 'ACADEMIC') {
-        academic.push(doc);
-        if (doc.openAccessUrl && doc.openAccessUrl.length > 0) {
-          openCount++;
-        } else {
-          paywalledCount++;
-        }
-      } else if (doc.sourceType === 'WEB') {
-        web.push(doc);
-      } else {
-        uploaded.push(doc);
-      }
-    }
-
-    // Sort academic by citation count
-    academic.sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
-
-    return {
-      academicPapers: academic,
-      webSources: web,
-      uploadedDocs: uploaded,
-      counts: {
-        all: documents.length,
-        academic: academic.length,
-        web: web.length,
-        uploaded: uploaded.length,
-        open: openCount,
-        paywalled: paywalledCount
-      }
-    };
-  }, [documents]);
-
-  // Get filtered documents based on view mode
-  const filteredDocs = useMemo(() => {
-    let docs: any[] = [];
-    switch (viewMode) {
-
-      case "academic":
-        docs = academicPapers;
-        if (accessFilter !== 'all') {
-          docs = docs.filter(doc => {
-            const hasOpen = doc.openAccessUrl && doc.openAccessUrl.length > 0;
-            return accessFilter === 'open' ? hasOpen : !hasOpen;
-          });
-        }
-        break;
-      case "web": docs = webSources; break;
-      case "uploaded": docs = uploadedDocs; break;
-      default: docs = documents;
-    }
-
-    if (!searchQuery) return docs;
-    return docs.filter(doc =>
-      doc.fileName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.title?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [viewMode, academicPapers, webSources, uploadedDocs, documents, searchQuery, accessFilter]);
-
+  // ── Upload Handler ────────────────────────────────────
   const handleUpload = async () => {
     if (!file && !link) return;
 
@@ -150,33 +84,10 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
     }
 
     try {
-      const res = await fetch("/api/documents/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(error.error || "Upload failed");
-      }
-
-      const data = await res.json();
-      setDocuments(prev => [...prev, {
-        id: data.doc.id,
-        fileName: mode === "upload" ? file!.name : "External Link",
-        fileType: mode === "upload" ? "file" : "link",
-        status: "PENDING",
-        ...data.doc
-      }]);
-
+      await hookUpload(formData);
       setFile(null);
       setLink("");
       setIsExpanded(false);
-
-      if (mode === "upload" && data.doc.id) {
-        await handleExtract(data.doc.id);
-      }
-
     } catch (error) {
       console.error("Upload error:", error);
       alert(error instanceof Error ? error.message : "Failed to upload document");
@@ -185,56 +96,37 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
     }
   };
 
-  const handleExtract = async (documentId: string) => {
-    setIsExtracting(true);
-    try {
-      const res = await fetch(`/api/documents/${documentId}/extract`, { method: "POST" });
-      if (!res.ok) throw new Error("Extraction failed");
-      const data = await res.json();
-      setDocuments(prev => prev.map(doc =>
-        doc.id === documentId ? { ...doc, status: "PROCESSED", ...data.extraction.metadata } : doc
-      ));
-    } catch (error) {
-      console.error("Extraction error:", error);
-    } finally {
-      setIsExtracting(false);
-    }
-  };
-
+  // ── Sync Handler ──────────────────────────────────────
   const handleRetrySync = async () => {
     setSyncModal({ isOpen: true });
-    setSyncingDocs(prev => ({ ...prev, global: true }));
-    try {
-      const res = await fetch(`/api/projects/${projectId}/research/sync`, { method: 'POST' });
-      if (res.ok) {
-        await fetchDocuments();
-        setSyncModal({ isOpen: true, result: 'success' });
-      } else {
-        setSyncModal({ isOpen: true, result: 'error' });
-      }
-    } catch (e) {
-      setSyncModal({ isOpen: true, result: 'error' });
-    } finally {
-      setSyncingDocs(prev => ({ ...prev, global: false }));
-    }
+    const success = await handleSyncAll();
+    setSyncModal({ isOpen: true, result: success ? 'success' : 'error' });
   };
 
-  const handleDeleteClick = (docId: string) => setDeleteModal({ isOpen: true, docId });
-
+  // ── Delete Handler ────────────────────────────────────
   const handleDeleteConfirm = async () => {
     if (!deleteModal.docId) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/documents/${deleteModal.docId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setDocuments(prev => prev.filter(doc => doc.id !== deleteModal.docId));
-        setDeleteModal({ isOpen: false, docId: null });
-      }
+      await handleDelete(deleteModal.docId);
+      setDeleteModal({ isOpen: false, docId: null });
     } finally {
       setIsDeleting(false);
     }
   };
 
+  // ── Research Complete Handler ─────────────────────────
+  const handleResearchComplete = async (savedDocs?: any[], shouldSync?: boolean) => {
+    setIsResearchModalOpen(false);
+    if (shouldSync && savedDocs && savedDocs.length > 0) {
+      const docIds = savedDocs.map((d) => d.id);
+      await hookResearchComplete(docIds);
+    } else {
+      await fetchDocuments();
+    }
+  };
+
+  // ── Status Config Helper ──────────────────────────────
   const getStatusConfig = (status: string, importedToFileSearch: boolean, importError: boolean) => {
     if (status === "PROCESSED" && importedToFileSearch) {
       return { icon: <BrainCircuit className="w-3 h-3" />, text: "AI Ready", className: "text-emerald-400" };
@@ -253,6 +145,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
     }
   };
 
+  // ── Tab & Filter Config ───────────────────────────────
   const viewTabs = [
     { id: "all" as ViewMode, label: "All", count: counts.all },
     { id: "academic" as ViewMode, label: "Papers", icon: BookOpen, count: counts.academic },
@@ -301,6 +194,25 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
           </button>
         </div>
       </div>
+
+      {/* Processing Banner */}
+      <AnimatePresence>
+        {(isProcessingBatch || Object.values(extractingDocs).some(Boolean)) && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden bg-purple-500/10 border border-purple-500/20 rounded-xl"
+          >
+            <div className="px-4 py-2.5 flex items-center gap-2.5">
+              <Loader2 className="w-4 h-4 text-purple-400 animate-spin shrink-0" />
+              <span className="text-xs font-medium text-purple-200">
+                AI is processing documents. Please do not close the page.
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Collapsible Upload Section */}
       <AnimatePresence>
@@ -476,9 +388,10 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                 doc={doc}
                 getStatusConfig={getStatusConfig}
                 onView={() => setSelectedDocument(doc)}
-                onDelete={() => handleDeleteClick(doc.id)}
+                onDelete={() => setDeleteModal({ isOpen: true, docId: doc.id })}
                 onRetry={() => handleExtract(doc.id)}
-                isExtracting={isExtracting}
+                onManualFetch={() => handleManualFetch(doc.id)}
+                isExtracting={!!extractingDocs[doc.id]}
               />
             ))}
           </motion.div>
@@ -528,11 +441,10 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
             <p className="text-[10px] text-gray-600">Documents provide AI context for generation</p>
             <button
               onClick={handleRetrySync}
-              disabled={syncingDocs['global']}
               className="flex items-center gap-1.5 text-[10px] text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
               title="Sync to AI knowledge base"
             >
-              <RefreshCw className={cn("w-3 h-3", syncingDocs['global'] && "animate-spin")} />
+              <RefreshCw className="w-3 h-3" />
               Sync AI
             </button>
           </div>
@@ -575,19 +487,20 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
         onClose={() => setIsResearchModalOpen(false)}
         projectId={projectId}
         projectTopic={useBuilderStore.getState().data.topic}
-        onComplete={() => fetchDocuments()}
+        onComplete={handleResearchComplete}
       />
     </div>
   );
 }
 
-// Separate card component for cleaner code
+// ── Inline DocumentCard (workspace-specific styling) ───────
 function DocumentCard({
   doc,
   getStatusConfig,
   onView,
   onDelete,
   onRetry,
+  onManualFetch,
   isExtracting
 }: {
   doc: any;
@@ -595,6 +508,7 @@ function DocumentCard({
   onView: () => void;
   onDelete: () => void;
   onRetry: () => void;
+  onManualFetch?: () => void;
   isExtracting: boolean;
 }) {
   const status = getStatusConfig(doc.status, doc.importedToFileSearch, !!doc.importError);
@@ -746,6 +660,23 @@ function DocumentCard({
           >
             <RefreshCw className={cn("w-3 h-3", isExtracting && "animate-spin")} />
             Retry
+          </button>
+        )}
+
+        {/* Manual Fetch PDF */}
+        {onManualFetch && hasOpenAccess && doc.status !== 'PENDING' && doc.status !== 'PROCESSING' && (
+          <button
+            onClick={onManualFetch}
+            disabled={isExtracting}
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-[10px] font-medium transition-colors ml-1"
+            title="Manually force a PDF download attempt"
+          >
+            {isExtracting ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <DownloadCloud className="w-3 h-3" />
+            )}
+            {doc.fileData ? 'Refetch PDF' : 'Fetch PDF'}
           </button>
         )}
 

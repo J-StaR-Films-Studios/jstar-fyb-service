@@ -78,3 +78,9 @@ My workflow: I focus on one section at a time, ensuring everything is grounded i
 ---
 
 Supporting Referrals with Google Auth
+
+---
+
+Make the mobile flow on the workspace much better
+we need to make it that when we do deep research that it caps it to 10 free papers and 10 paywalled ones and 5 webs 
+that way the Ai doesn't have to index too many at a time

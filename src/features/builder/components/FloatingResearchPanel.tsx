@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X,
@@ -12,13 +12,7 @@ import {
     BookOpen,
     Upload,
     Sparkles,
-    ExternalLink,
-    Download,
-    Quote,
     Loader2,
-    RefreshCw,
-    Eye,
-    Trash2,
     Filter,
 } from 'lucide-react';
 import { useBuilderLayout } from '../context/BuilderLayoutContext';
@@ -29,6 +23,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DocumentViewerModal } from './DocumentViewerModal';
 import { DocumentItem } from './ResearchDocumentItem';
 import { DirectUploadWrapper } from './DirectUploadWrapper';
+import { useResearchDocuments } from '@/features/research/hooks/useResearchDocuments';
 
 type ViewMode = 'all' | 'papers' | 'web' | 'uploaded';
 type AccessFilter = 'all' | 'open' | 'paywalled';
@@ -40,40 +35,49 @@ type AccessFilter = 'all' | 'open' | 'paywalled';
  * Shows research documents with tabs, search, and actions
  */
 export function FloatingResearchPanel() {
-    const { isResearchPanelOpen, closeResearchPanel, openUploadModal } = useBuilderLayout();
+    const { isResearchPanelOpen, closeResearchPanel } = useBuilderLayout();
     const projectId = useBuilderStore((s) => s.data.projectId);
 
-    // Local state
-    const [documents, setDocuments] = useState<any[]>([]);
-    const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+    // UI-only state (stays local)
     const [viewMode, setViewMode] = useState<ViewMode>('all');
     const [accessFilter, setAccessFilter] = useState<AccessFilter>('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
     const [isResearchModalOpen, setIsResearchModalOpen] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
     const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; docId: string | null }>({ isOpen: false, docId: null });
     const [isDeleting, setIsDeleting] = useState(false);
-    const [extractingDocs, setExtractingDocs] = useState<Record<string, boolean>>({});
-    const [isProcessingBatch, setIsProcessingBatch] = useState(false);
 
-    // Fetch documents
-    const fetchDocuments = useCallback(async () => {
-        if (!projectId) return;
-        try {
-            // Append timestamp to bypass Next.js API caching
-            const res = await fetch(`/api/documents?projectId=${projectId}&t=${Date.now()}`);
-            if (res.ok) {
-                const data = await res.json();
-                setDocuments(data.documents || []);
-            }
-        } catch (error) {
-            console.error('Failed to fetch documents:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [projectId]);
+    // ── Shared Hook ─────────────────────────────────────────
+    // Map panel's viewMode ('papers') to hook's viewMode ('academic')
+    const hookViewMode = viewMode === 'papers' ? 'academic' : viewMode;
 
+    const {
+        filteredDocs,
+        extractingDocs,
+        isProcessingBatch,
+        counts: hookCounts,
+        fetchDocuments,
+        handleExtract,
+        handleManualFetch,
+        handleDelete,
+        handleResearchComplete: hookResearchComplete,
+    } = useResearchDocuments({
+        projectId: projectId || '',
+        searchQuery,
+        viewMode: hookViewMode,
+        accessFilter,
+    });
+
+    // Remap hook counts to include the 'papers' key used in the panel
+    const counts = {
+        all: hookCounts.all,
+        papers: hookCounts.academic,
+        web: hookCounts.web,
+        uploaded: hookCounts.uploaded,
+    };
+
+    // Fetch when panel opens
     useEffect(() => {
         if (isResearchPanelOpen) {
             fetchDocuments();
@@ -103,91 +107,13 @@ export function FloatingResearchPanel() {
         return () => window.removeEventListener('keydown', handleEscape);
     }, [isResearchPanelOpen, closeResearchPanel]);
 
-    // Prevent page closing during extraction or batch processing
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            const isWorking = isProcessingBatch || Object.values(extractingDocs).some(Boolean) || uploadingFiles.length > 0;
-            if (isWorking) {
-                e.preventDefault();
-                e.returnValue = ''; // Trigger browser confirmation dialog
-            }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [isProcessingBatch, extractingDocs, uploadingFiles]);
-
-    // Categorize documents
-    const { academicPapers, webSources, uploadedDocs, counts } = useMemo(() => {
-        const academic: any[] = [];
-        const web: any[] = [];
-        const uploaded: any[] = [];
-
-        for (const doc of documents) {
-            if (doc.sourceType === 'ACADEMIC') {
-                academic.push(doc);
-            } else if (doc.sourceType === 'WEB') {
-                web.push(doc);
-            } else {
-                uploaded.push(doc);
-            }
-        }
-
-        // Sort academic by citation count
-        academic.sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
-
-        return {
-            academicPapers: academic,
-            webSources: web,
-            uploadedDocs: uploaded,
-            counts: {
-                all: documents.length,
-                papers: academic.length,
-                web: web.length,
-                uploaded: uploaded.length,
-            },
-        };
-    }, [documents]);
-
-    // Filter documents based on view mode and search
-    const filteredDocs = useMemo(() => {
-        let docs: any[] = [];
-        switch (viewMode) {
-            case 'papers':
-                docs = academicPapers;
-                if (accessFilter !== 'all') {
-                    docs = docs.filter(doc => {
-                        const hasOpen = doc.openAccessUrl && doc.openAccessUrl.length > 0;
-                        return accessFilter === 'open' ? hasOpen : !hasOpen;
-                    });
-                }
-                break;
-            case 'web':
-                docs = webSources;
-                break;
-            case 'uploaded':
-                docs = uploadedDocs;
-                break;
-            default:
-                docs = documents;
-        }
-
-        if (!searchQuery) return docs;
-        return docs.filter(
-            (doc) =>
-                doc.fileName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                doc.title?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [viewMode, academicPapers, webSources, uploadedDocs, documents, searchQuery, accessFilter]);
-
+    // ── Handlers ────────────────────────────────────────────
     const handleDeleteConfirm = async () => {
         if (!deleteModal.docId) return;
         setIsDeleting(true);
         try {
-            const res = await fetch(`/api/documents/${deleteModal.docId}`, { method: 'DELETE' });
-            if (res.ok) {
-                setDocuments((prev) => prev.filter((doc) => doc.id !== deleteModal.docId));
-                setDeleteModal({ isOpen: false, docId: null });
-            }
+            await handleDelete(deleteModal.docId);
+            setDeleteModal({ isOpen: false, docId: null });
         } catch (error) {
             console.error('Delete failed:', error);
         } finally {
@@ -195,85 +121,25 @@ export function FloatingResearchPanel() {
         }
     };
 
-    const handleExtract = useCallback(async (documentId: string) => {
-        setExtractingDocs(prev => ({ ...prev, [documentId]: true }));
-        try {
-            const res = await fetch(`/api/documents/${documentId}/extract`, { method: "POST" });
-            if (!res.ok) throw new Error("Extraction failed");
-            await fetchDocuments();
-        } catch (error) {
-            console.error("Extraction error:", error);
-            await fetchDocuments();
-        } finally {
-            setExtractingDocs(prev => ({ ...prev, [documentId]: false }));
-        }
-    }, [fetchDocuments]);
-
-    const handleManualFetch = useCallback(async (documentId: string) => {
-        setExtractingDocs(prev => ({ ...prev, [documentId]: true }));
-        try {
-            // 1. Fetch PDF
-            await fetch(`/api/documents/${documentId}/fetch-pdf`, { method: "POST" });
-            // 2. Extract and Sync
-            await fetch(`/api/documents/${documentId}/extract`, { method: "POST" });
-            await fetchDocuments();
-        } catch (error) {
-            console.error("Manual fetch error:", error);
-            await fetchDocuments();
-        } finally {
-            setExtractingDocs(prev => ({ ...prev, [documentId]: false }));
-        }
-    }, [fetchDocuments]);
-
-    const handleUploadSuccess = useCallback(async (doc: any) => {
+    const handleUploadSuccess = async (doc: any) => {
         await fetchDocuments();
         if (doc && doc.id) {
             handleExtract(doc.id);
         }
-    }, [fetchDocuments, handleExtract]);
+    };
 
-    const handleResearchComplete = useCallback(async (savedDocs?: any[], shouldSync?: boolean) => {
-        await fetchDocuments();
+    const handleResearchComplete = async (savedDocs?: any[], shouldSync?: boolean) => {
         setIsResearchModalOpen(false);
 
         if (shouldSync && savedDocs && savedDocs.length > 0) {
-            setIsProcessingBatch(true);
-            const processDocs = async () => {
-                try {
-                    for (const doc of savedDocs) {
-                        setExtractingDocs(prev => ({ ...prev, [doc.id]: true }));
-                        try {
-                            // 1. Fetch PDF if available
-                            if (doc.openAccessUrl) {
-                                await fetch(`/api/documents/${doc.id}/fetch-pdf`, { method: "POST" });
-                            }
-
-                            // 2. Extract text and Sync to Gemini RAG
-                            await fetch(`/api/documents/${doc.id}/extract`, { method: "POST" });
-
-                            // Update UI to show the 'AI Ready' state for this specific paper
-                            await fetchDocuments();
-                        } catch (error) {
-                            console.error(`[Orchestrator] Error processing document ${doc.id}:`, error);
-                        } finally {
-                            setExtractingDocs(prev => ({ ...prev, [doc.id]: false }));
-                        }
-
-                        // Strictly honor Gemini API rate limits with 1.5s delay
-                        await new Promise(resolve => setTimeout(resolve, 1500));
-                    }
-                } finally {
-                    setIsProcessingBatch(false);
-                    // One final fetch just to be absolutely sure everything is up to date
-                    await fetchDocuments();
-                }
-            };
-
-            // Run processing lazily in background
-            processDocs();
+            const docIds = savedDocs.map((d) => d.id);
+            await hookResearchComplete(docIds);
+        } else {
+            await fetchDocuments();
         }
-    }, [fetchDocuments]);
+    };
 
+    // ── Tab & Filter Config ─────────────────────────────────
     const tabs = [
         { id: 'all' as ViewMode, label: 'All', count: counts.all },
         { id: 'papers' as ViewMode, label: 'Papers', count: counts.papers, icon: BookOpen },
@@ -411,11 +277,7 @@ export function FloatingResearchPanel() {
 
                         {/* Document List */}
                         <div className="flex-1 overflow-y-auto custom-scrollbar px-6 space-y-3 pb-36">
-                            {isLoading ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
-                                </div>
-                            ) : filteredDocs.length > 0 || uploadingFiles.length > 0 ? (
+                            {filteredDocs.length > 0 || uploadingFiles.length > 0 ? (
                                 <>
                                     {uploadingFiles.map((fileName, idx) => (
                                         <div key={`uploading-${idx}`} className="group bg-white/[0.02] border border-white/5 rounded-xl p-3 mb-3 transition-all duration-200 animate-pulse">
@@ -518,4 +380,3 @@ export function FloatingResearchPanel() {
         </AnimatePresence>
     );
 }
-
