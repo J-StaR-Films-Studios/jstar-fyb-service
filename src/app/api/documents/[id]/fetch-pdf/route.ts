@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { extractPdfText } from "@/lib/pdf-parser";
+import { getSession } from "@/lib/auth-server";
+import { validateUrlSecurity } from "@/lib/security";
+import { logger } from "@/lib/logger";
 
-export const maxDuration = 120; // 2 minutes max for PDF fetch
+export const maxDuration = 120;
 
 interface FetchPdfResponse {
     success: boolean;
@@ -11,18 +14,39 @@ interface FetchPdfResponse {
     error?: string;
 }
 
-/**
- * POST /api/documents/[id]/fetch-pdf
- * 
- * Fetches a PDF from openAccessUrl for academic papers and stores it as fileData.
- * This enables full text extraction for richer AI context.
- * 
- * Common failure cases:
- * - Paywalls (403 Forbidden)
- * - CORS restrictions
- * - Invalid/expired URLs
- * - Rate limiting
- */
+const ALLOWED_ACADEMIC_DOMAINS = [
+    'arxiv.org',
+    'doi.org',
+    'semanticscholar.org',
+    'scholar.google.com',
+    'researchgate.net',
+    'academia.edu',
+    'springer.com',
+    'elsevier.com',
+    'wiley.com',
+    'nature.com',
+    'science.org',
+    'ieee.org',
+    'acm.org',
+    'jstor.org',
+    'ncbi.nlm.nih.gov',
+    'pmc.ncbi.nlm.nih.gov',
+    'mdpi.com',
+    'frontiersin.org',
+    'plos.org',
+];
+
+function isAllowedAcademicUrl(url: string): boolean {
+    try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        return ALLOWED_ACADEMIC_DOMAINS.some(domain => 
+            hostname === domain || hostname.endsWith('.' + domain)
+        );
+    } catch {
+        return false;
+    }
+}
+
 export async function POST(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -30,7 +54,14 @@ export async function POST(
     try {
         const { id } = await params;
 
-        // 1. Fetch the document
+        const session = await getSession();
+        if (!session?.user?.id) {
+            return NextResponse.json(
+                { success: false, message: "Authentication required" },
+                { status: 401 }
+            );
+        }
+
         const doc = await prisma.researchDocument.findUnique({
             where: { id },
             select: {
@@ -41,6 +72,11 @@ export async function POST(
                 fileData: true,
                 sourceType: true,
                 fileType: true,
+                project: {
+                    select: {
+                        userId: true
+                    }
+                }
             }
         });
 
@@ -51,7 +87,15 @@ export async function POST(
             );
         }
 
-        // 2. Check if already has file data
+        const isOwner = doc.project.userId === session.user.id;
+        const isAdmin = (session.user as { role?: string }).role === 'ADMIN';
+        if (!isOwner && !isAdmin) {
+            return NextResponse.json(
+                { success: false, message: "Access denied" },
+                { status: 403 }
+            );
+        }
+
         if (doc.fileData) {
             return NextResponse.json({
                 success: true,
@@ -60,7 +104,6 @@ export async function POST(
             });
         }
 
-        // 3. Check for open access URL
         if (!doc.openAccessUrl) {
             return NextResponse.json(
                 { success: false, message: "No open access PDF URL available for this document" },
@@ -68,19 +111,30 @@ export async function POST(
             );
         }
 
-        // 4. Fetch the PDF
-        console.log(`[FetchPDF] Attempting to fetch PDF for: ${doc.title}`);
-        console.log(`[FetchPDF] URL: ${doc.openAccessUrl}`);
+        try {
+            await validateUrlSecurity(doc.openAccessUrl);
+        } catch (securityError) {
+            logger.error(`SSRF blocked for document ${id}: ${doc.openAccessUrl}`, "[FetchPDF]");
+            return NextResponse.json(
+                { success: false, message: "Invalid or blocked URL", error: "BLOCKED_URL" },
+                { status: 400 }
+            );
+        }
+
+        if (!isAllowedAcademicUrl(doc.openAccessUrl)) {
+            logger.warn(`Non-allowlisted URL for document ${id}: ${doc.openAccessUrl}`, "[FetchPDF]");
+        }
+
+        logger.info(`Attempting to fetch PDF for: ${doc.title}`, "[FetchPDF]");
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
 
         let response: Response;
         try {
             response = await fetch(doc.openAccessUrl, {
                 signal: controller.signal,
                 headers: {
-                    // Some academic repositories require a user agent
                     'User-Agent': 'Mozilla/5.0 (compatible; JStarAcademicBot/1.0; +https://jstar.app/bot)',
                     'Accept': 'application/pdf,*/*',
                 }
@@ -95,7 +149,7 @@ export async function POST(
                 );
             }
 
-            console.error('[FetchPDF] Network error:', fetchError);
+            logger.error(`Network error for document ${id}`, "[FetchPDF]");
             return NextResponse.json(
                 { success: false, message: "Failed to connect to PDF source", error: "NETWORK_ERROR" },
                 { status: 502 }
@@ -104,13 +158,12 @@ export async function POST(
 
         clearTimeout(timeoutId);
 
-        // 5. Check response status
         if (!response.ok) {
             const errorType = response.status === 403 ? "PAYWALL" :
                 response.status === 404 ? "NOT_FOUND" :
                     response.status === 429 ? "RATE_LIMITED" : "HTTP_ERROR";
 
-            console.error(`[FetchPDF] HTTP ${response.status} for ${doc.openAccessUrl}`);
+            logger.error(`HTTP ${response.status} for ${doc.openAccessUrl}`, "[FetchPDF]");
 
             return NextResponse.json(
                 {
@@ -122,10 +175,9 @@ export async function POST(
             );
         }
 
-        // 6. Verify content type - STRICT check to prevent saving HTML landing pages as PDFs
         const contentType = response.headers.get('content-type') || '';
         if (!contentType.includes('application/pdf') && !contentType.includes('application/octet-stream')) {
-            console.error(`[FetchPDF] Invalid content type: ${contentType}`);
+            logger.error(`Invalid content type: ${contentType}`, "[FetchPDF]");
             return NextResponse.json(
                 {
                     success: false,
@@ -136,11 +188,9 @@ export async function POST(
             );
         }
 
-        // 7. Get the PDF buffer
         const arrayBuffer = await response.arrayBuffer();
         const pdfBuffer = Buffer.from(arrayBuffer);
 
-        // 8. Validate PDF size (max 50MB)
         const MAX_SIZE = 50 * 1024 * 1024;
         if (pdfBuffer.length > MAX_SIZE) {
             return NextResponse.json(
@@ -153,29 +203,25 @@ export async function POST(
             );
         }
 
-        // 9. Extract text from PDF
         let extractedText = "";
         try {
             extractedText = await extractPdfText(pdfBuffer);
         } catch (extractError) {
-            console.error('[FetchPDF] Text extraction failed:', extractError);
-            // Continue without extracted text - we still have the PDF
+            logger.error(`Text extraction failed for document ${id}`, "[FetchPDF]");
         }
 
-        // 10. Save to database
         await prisma.researchDocument.update({
             where: { id },
             data: {
                 fileData: pdfBuffer,
                 mimeType: 'application/pdf',
                 extractedContent: extractedText || null,
-                status: 'UPLOADED', // Ready for processing
-                // Keep the original filename but update fileType
+                status: 'UPLOADED',
                 fileType: 'PDF',
             }
         });
 
-        console.log(`[FetchPDF] Successfully saved PDF for: ${doc.title} (${pdfBuffer.length} bytes)`);
+        logger.info(`Successfully saved PDF for: ${doc.title} (${pdfBuffer.length} bytes)`, "[FetchPDF]");
 
         return NextResponse.json({
             success: true,
@@ -184,8 +230,8 @@ export async function POST(
         });
 
     } catch (error: unknown) {
-        console.error("[FetchPDF] Error:", error);
         const message = error instanceof Error ? error.message : "Failed to fetch PDF";
+        logger.error(`Error fetching PDF: ${message}`, "[FetchPDF]");
         return NextResponse.json(
             { success: false, message, error: "INTERNAL_ERROR" },
             { status: 500 }

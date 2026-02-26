@@ -1,6 +1,6 @@
 'use client';
 
-import { Lock, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { PricingOverlay } from './PricingOverlay';
 import { ReactNode } from 'react';
 
@@ -47,8 +47,6 @@ export function PaywallGate({
 
             {/* Paywall overlay with gradient fade */}
             <div className="absolute inset-0 paywall-gradient flex flex-col items-center justify-end pb-10 z-10">
-                <Lock className="w-8 h-8 text-primary mb-4" />
-                <h3 className="text-xl font-bold text-white mb-4">Unlock Full Project</h3>
                 <PricingOverlay onUnlock={onUnlock} />
             </div>
         </div>

@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateDiagramCode } from '@/lib/ai/diagramService';
+import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimitResponse = await applyRateLimit(
+      getClientIdentifier(req),
+      'ai'
+    );
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { prompt, diagramType, context } = await req.json();
 
     if (!prompt) {
@@ -14,7 +22,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Use shared diagram generation service
     const result = await generateDiagramCode({
       diagramType: diagramType || 'flowchart',
       description: prompt,
@@ -23,10 +30,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
 
-  } catch (error: any) {
-    console.error('Diagram generation error:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Diagram generation error: ${errorMessage}`, "[GenerateDiagram]");
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage || 'Internal server error' },
       { status: 500 }
     );
   }

@@ -7,6 +7,7 @@ import { GeminiFileSearchService } from '@/lib/gemini-file-search';
 import { selectModel } from '@/lib/ai';
 import { getChapterSpecificPrompt, COMMON_ACADEMIC_RULES } from '@/features/bot/prompts/chapterPrompts';
 import { logger } from '@/lib/logger';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 300; // Increased duration for RAG
 
@@ -138,6 +139,10 @@ export async function POST(req: Request) {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
+
+        // 1b. Rate limiting
+        const rateLimitResponse = await applyRateLimit(user.id, 'ai');
+        if (rateLimitResponse) return rateLimitResponse;
 
         // 2. Parse and validate request
         const body = await req.json();

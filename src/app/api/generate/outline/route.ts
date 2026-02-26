@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { BuilderAiService } from '@/features/builder/services/builderAiService';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
+import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
 
 // Validate environment variables
 const groqApiKey = process.env.GROQ_API_KEY;
@@ -27,6 +29,12 @@ const requestSchema = z.object({
 });
 
 export async function POST(req: Request) {
+    // Rate limiting (apply before heavy processing)
+    const user = await getCurrentUser();
+    const identifier = user?.id || getClientIdentifier(req);
+    const rateLimitResponse = await applyRateLimit(identifier, 'ai');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const body = await req.json();
 
     // Validate input
@@ -48,11 +56,8 @@ export async function POST(req: Request) {
             contextLine = `\nContext from similar projects: ${outlineTopics.join(', ')}\nUse the context from similar projects to make the outline more relevant and data-driven.`;
         }
     } catch (serviceError) {
-        console.warn('[GenerateOutline] BuilderAiService failed, proceeding without context:', serviceError);
+        logger.warn('[GenerateOutline] BuilderAiService failed, proceeding without context', "[GenerateOutline]");
     }
-
-    // Check for authenticated user context before streaming
-    const user = await getCurrentUser();
 
     const result = streamObject({
         model: groq('openai/gpt-oss-120b'),
@@ -97,7 +102,7 @@ Ensure the content descriptions are specific to the project's domain (e.g., if b
 
                         // PRIORITY 3: Create new project only if nothing found
                         if (!project) {
-                            console.log('[GenerateOutline] No existing project found, creating new one');
+                            logger.info('No existing project found, creating new one', "[GenerateOutline]");
                             // Use ProjectsService to enforce lock
                             const { ProjectsService } = await import('@/services/projects.service');
                             project = await ProjectsService.createProject({
@@ -127,7 +132,7 @@ Ensure the content descriptions are specific to the project's domain (e.g., if b
                         });
                     }
                 } catch (dbError) {
-                    console.error('[GenerateOutline] Failed to store outline in database:', dbError);
+                    logger.error('[GenerateOutline] Failed to store outline in database', "[GenerateOutline]");
                 }
             }
         }
