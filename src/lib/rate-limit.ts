@@ -3,39 +3,6 @@ import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 import { logger } from "./logger";
 
-let ratelimit: Ratelimit | null = null;
-
-function getRateLimiter(): Ratelimit | null {
-    if (ratelimit) return ratelimit;
-
-    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-    if (!redisUrl || !redisToken) {
-        logger.warn("Upstash Redis not configured. Rate limiting disabled.", "[RateLimit]");
-        return null;
-    }
-
-    try {
-        const redis = new Redis({
-            url: redisUrl,
-            token: redisToken,
-        });
-
-        ratelimit = new Ratelimit({
-            redis,
-            limiter: Ratelimit.slidingWindow(10, "10 s"),
-            analytics: true,
-            prefix: "jstar-fyb",
-        });
-
-        return ratelimit;
-    } catch (error) {
-        logger.error(`Failed to initialize rate limiter: ${error}`, "[RateLimit]");
-        return null;
-    }
-}
-
 export const rateLimiters = {
     ai: {
         requests: 20,
@@ -57,15 +24,53 @@ export const rateLimiters = {
         window: "1 m",
         identifier: "upload",
     },
-};
+} as const;
 
 export type RateLimitType = keyof typeof rateLimiters;
+
+const ratelimitCache = new Map<RateLimitType, Ratelimit>();
+
+function getRateLimiter(type: RateLimitType): Ratelimit | null {
+    if (ratelimitCache.has(type)) {
+        return ratelimitCache.get(type)!;
+    }
+
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    if (!redisUrl || !redisToken) {
+        logger.warn("Upstash Redis not configured. Rate limiting disabled.", "[RateLimit]");
+        return null;
+    }
+
+    try {
+        const redis = new Redis({
+            url: redisUrl,
+            token: redisToken,
+        });
+
+        const config = rateLimiters[type];
+
+        const ratelimit = new Ratelimit({
+            redis,
+            limiter: Ratelimit.slidingWindow(config.requests, config.window as any),
+            analytics: true,
+            prefix: "jstar-fyb",
+        });
+
+        ratelimitCache.set(type, ratelimit);
+        return ratelimit;
+    } catch (error) {
+        logger.error(`Failed to initialize rate limiter: ${error}`, "[RateLimit]");
+        return null;
+    }
+}
 
 export async function checkRateLimit(
     identifier: string,
     type: RateLimitType = "ai"
 ): Promise<{ success: boolean; limit: number; remaining: number; reset: Date } | null> {
-    const limiter = getRateLimiter();
+    const limiter = getRateLimiter(type);
 
     if (!limiter) {
         return null;
