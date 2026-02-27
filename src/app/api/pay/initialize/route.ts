@@ -5,8 +5,9 @@ import { PaystackService } from "@/services/paystack.service";
 import { DiscountService } from "@/services/discount.service";
 import { BillingService } from "@/services/billing.service";
 import { randomUUID } from "crypto";
+import { applyRateLimit } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
-// Constant for now, can be moved to env/db later
 const PROJECT_UNLOCK_AMOUNT = 15000;
 
 export async function POST(req: Request) {
@@ -15,6 +16,9 @@ export async function POST(req: Request) {
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+
+        const rateLimitResponse = await applyRateLimit(user.id, 'payment');
+        if (rateLimitResponse) return rateLimitResponse;
 
         // Fetch full user to check referral status
         const userData = await prisma.user.findUnique({
@@ -113,7 +117,7 @@ export async function POST(req: Request) {
         // Initialize Paystack with final amount
         // HANDLE 100% DISCOUNT (Use "Free Pass" Logic)
         if (finalAmount <= 0) {
-            console.log(`[PaymentInit] 100% Discount detected for user ${user.id}. Bypassing Paystack.`);
+            logger.info(`100% Discount detected for user ${user.id}. Bypassing Paystack.`, "[PaymentInit]");
 
             // 1. Update Payment to SUCCESS immediately
             const successPayment = await prisma.payment.update({
@@ -168,8 +172,9 @@ export async function POST(req: Request) {
             discountApplied: discountAmount > 0 ? discountAmount : undefined
         });
 
-    } catch (error: any) {
-        console.error("[PaymentInit] Error:", error);
-        return NextResponse.json({ error: error.message || "Failed to initialize payment" }, { status: 500 });
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Error: ${errorMessage}`, "[PaymentInit]");
+        return NextResponse.json({ error: errorMessage || "Failed to initialize payment" }, { status: 500 });
     }
 }

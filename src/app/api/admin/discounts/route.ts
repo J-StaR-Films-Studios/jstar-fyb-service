@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-server";
 import { DiscountService } from "@/services/discount.service";
+import { logger } from "@/lib/logger";
 
 const createDiscountSchema = z.object({
     code: z.string().min(2, "Code must be at least 2 characters"),
@@ -26,8 +27,8 @@ export async function GET() {
         const codes = await DiscountService.getAllCodes();
         return NextResponse.json({ codes });
 
-    } catch (error: any) {
-        console.error("[AdminDiscounts] GET Error:", error);
+    } catch (error: unknown) {
+        logger.error("GET Error", "[AdminDiscounts]");
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
@@ -73,11 +74,12 @@ export async function POST(req: Request) {
             code
         });
 
-    } catch (error: any) {
-        console.error("[AdminDiscounts] POST Error:", error);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`POST Error: ${errorMessage}`, "[AdminDiscounts]");
 
-        if (error.message.includes("already exists")) {
-            return NextResponse.json({ error: error.message }, { status: 400 });
+        if (errorMessage.includes("already exists")) {
+            return NextResponse.json({ error: errorMessage }, { status: 400 });
         }
 
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

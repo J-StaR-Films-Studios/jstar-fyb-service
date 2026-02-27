@@ -7,6 +7,7 @@ import { chatTools } from '@/features/bot/tools/definitions';
 import { selectModel } from '@/lib/ai/router';
 import { Models } from '@/lib/ai/providers';
 import { logger } from '@/lib/logger';
+import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 
 // Validate AI service configuration at startup
 // We keep this check but make it non-blocking if other providers are available
@@ -47,6 +48,12 @@ const chatSchema = z.object({
 
 export async function POST(req: Request) {
     try {
+        const rateLimitResponse = await applyRateLimit(
+            getClientIdentifier(req),
+            'ai'
+        );
+        if (rateLimitResponse) return rateLimitResponse;
+
         const body = await req.json();
         const validation = chatSchema.safeParse(body);
 

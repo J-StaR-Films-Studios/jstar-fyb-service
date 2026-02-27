@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { useBuilderStore, ProjectData } from '../store/useBuilderStore';
+import { toast } from 'sonner';
 
 /**
  * BuilderLayoutContext
@@ -57,17 +58,35 @@ export function BuilderLayoutProvider({ children }: BuilderLayoutProviderProps) 
     const { data: projectData, isPaid, saveStatus } = useBuilderStore();
 
     const toggleResearchPanel = () => {
+        if (!isPaid) {
+            toast.error("Research Library is a premium feature. Please unlock your project.");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
         setIsResearchPanelOpen(prev => !prev);
         if (isResearchUploadOpen) setIsResearchUploadOpen(false);
     };
+
     const openResearchPanel = () => {
+        if (!isPaid) {
+            toast.error("Research Library is a premium feature. Please unlock your project.");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
         setIsResearchPanelOpen(true);
         setIsResearchUploadOpen(false);
     };
+
     const openResearchUpload = () => {
+        if (!isPaid) {
+            toast.error("Research Library is a premium feature. Please unlock your project.");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
         setIsResearchPanelOpen(true);
         setIsResearchUploadOpen(true);
     };
+
     const closeResearchPanel = () => {
         setIsResearchPanelOpen(false);
         setIsResearchUploadOpen(false);

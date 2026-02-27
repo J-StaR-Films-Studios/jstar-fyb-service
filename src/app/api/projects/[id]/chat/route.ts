@@ -18,6 +18,7 @@ import {
 } from '@/lib/agents/academic-agent';
 import { MUTATION_TOOLS } from '@/lib/tools';
 import { validateChatRequest } from '@/lib/validation/chat';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 300;
 
@@ -38,6 +39,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             { status: 401, headers: { 'Content-Type': 'application/json' } }
         );
     }
+
+    // --------------------------------------------------------
+    // 0.1. RATE LIMITING
+    // --------------------------------------------------------
+
+    const rateLimitResponse = await applyRateLimit(session.user.id, 'ai');
+    if (rateLimitResponse) return rateLimitResponse;
 
     const { id: projectId } = await params;
 
