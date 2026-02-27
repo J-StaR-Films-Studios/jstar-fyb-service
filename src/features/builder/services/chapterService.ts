@@ -79,23 +79,30 @@ export const ChapterService = {
      * Generate structured outline for a project
      * (Wraps AI generation logic but returns data, doesn't save to DB directly unless requested)
      */
-    async generateOutline(projectId: string, context?: { topic: string; abstract?: string; focus?: string }) {
-        // 1. Fetch project context if not provided
-        if (!context) {
+    async generateOutline(projectId: string, context?: { topic?: string; abstract?: string; focus?: string }) {
+        // 1. Fetch project context if missing critical info
+        if (!context || !context.topic) {
             const project = await prisma.project.findUnique({
                 where: { id: projectId },
                 select: { topic: true, abstract: true }
             });
             if (!project) throw new Error('Project not found');
-            context = { topic: project.topic, abstract: project.abstract || '', focus: '' };
+            context = {
+                topic: project.topic,
+                abstract: project.abstract || '',
+                focus: context?.focus || ''
+            };
+        }
+        if (!context.topic || context.topic.trim() === '') {
+            throw new Error('Project must have a topic to generate an outline. Please set a topic first.');
         }
 
         // 2. Generate Outline using AI
         const { model } = selectModel({ quality: 'high' });
 
         const prompt = `
-        Create a detailed academic chapter outline for a project titled: "${context.topic}".
-        Abstract: "${context.abstract}"
+        Create a detailed academic chapter outline for a project titled: "${context.topic || ''}".
+        Abstract: "${context.abstract || ''}"
         ${context.focus ? `Focus areas: ${context.focus}` : ''}
 
         Return a comprehensive list of chapters (at least 5) with titles and brief descriptions.

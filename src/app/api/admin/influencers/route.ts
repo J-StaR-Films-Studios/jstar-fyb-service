@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-server";
 import { ReferralService } from "@/services/referral.service";
+import { logger } from "@/lib/logger";
 
 
 const createInfluencerSchema = z.object({
@@ -33,8 +34,8 @@ export async function GET() {
         const influencers = await ReferralService.getAllInfluencers();
         return NextResponse.json({ influencers });
 
-    } catch (error: any) {
-        console.error("[AdminInfluencers] GET Error:", error);
+    } catch (error: unknown) {
+        logger.error("GET Error", "[AdminInfluencers]");
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
@@ -98,11 +99,12 @@ export async function POST(req: Request) {
             influencer
         });
 
-    } catch (error: any) {
-        console.error("[AdminInfluencers] POST Error:", error);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`POST Error: ${errorMessage}`, "[AdminInfluencers]");
 
-        if (error.message.includes("already exists")) {
-            return NextResponse.json({ error: error.message }, { status: 400 });
+        if (errorMessage.includes("already exists")) {
+            return NextResponse.json({ error: errorMessage }, { status: 400 });
         }
 
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

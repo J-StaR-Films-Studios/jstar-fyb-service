@@ -7,12 +7,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TopicSelector } from "@/features/builder/components/TopicSelector";
 import { AbstractGenerator } from "@/features/builder/components/AbstractGenerator";
 import { ChapterOutliner } from "@/features/builder/components/ChapterOutliner";
-import { Loader2, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 import { useSession } from "@/lib/auth-client";
 import { mergeAnonymousData } from "@/features/bot/actions/chat";
 import { usePaymentVerification } from "@/features/builder/hooks/usePaymentVerification";
+import { BuilderBottomNav } from "@/features/builder/components/BuilderBottomNav";
+import { FloatingChatFAB } from "@/features/builder/components/FloatingChatFAB";
+import { FloatingResearchPanel } from "@/features/builder/components/FloatingResearchPanel";
+import { ProgressStepper } from "@/features/builder/components/ProgressStepper";
+import { useBuilderLayout } from "@/features/builder/context/BuilderLayoutContext";
 
 interface BuilderClientProps {
     serverProject?: Partial<ProjectData> | null;
@@ -20,17 +24,12 @@ interface BuilderClientProps {
     serverIsReferred?: boolean;
 }
 
-const STEPS = [
-    { id: 'TOPIC', label: 'Concept' },
-    { id: 'ABSTRACT', label: 'Strategy' },
-    { id: 'OUTLINE', label: 'Blueprint' }
-];
-
 export function BuilderClient({ serverProject, serverIsPaid = false, serverIsReferred = false }: BuilderClientProps) {
     const { data: session, isPending } = useSession();
     const router = useRouter();
-    const { step, updateData, syncWithUser, hydrateFromChat, loadProject, isPaid, unlockPaywall } = useBuilderStore();
+    const { step, updateData, syncWithUser, hydrateFromChat, loadProject, isPaid, unlockPaywall, data: storeData } = useBuilderStore();
     const searchParams = useSearchParams();
+    const { } = useBuilderLayout();
 
     // CRITICAL: Track local hydration state to prevent rendering with stale data
     const [isHydrated, setIsHydrated] = useState(false);
@@ -77,9 +76,9 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
         // STEP 3: Sync with current user (only runs destructive reset on actual logout/account-switch)
         syncWithUser(session?.user?.id || null);
 
-    // CRITICAL: Mark hydration complete AFTER all state updates
+        // CRITICAL: Mark hydration complete AFTER all state updates
 
-    setIsHydrated(true);
+        setIsHydrated(true);
 
     }, [isPending, serverProject, serverIsPaid, session?.user?.id, loadProject, syncWithUser, hydrateFromChat]);
 
@@ -124,9 +123,6 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
         if (topic && twist) updateData({ topic, twist });
     }, [searchParams, updateData]);
 
-    // Helper to determine step index
-    const getStepIndex = () => ['TOPIC', 'ABSTRACT', 'OUTLINE'].indexOf(step);
-
     // ========== HYDRATION LOADING STATE ==========
     // Block rendering of main content until hydration is complete to prevent stale data issues
     if (!isHydrated || isPending) {
@@ -142,7 +138,11 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
 
 
     return (
-        <div className="w-full">
+        <div className="w-full relative">
+            {/* Ambient Background Blobs */}
+            <div className="fixed rounded-full blur-[100px] z-[-1] opacity-30 pointer-events-none bg-purple-900/40 w-96 h-96 top-0 -left-20" aria-hidden="true" />
+            <div className="fixed rounded-full blur-[100px] z-[-1] opacity-30 pointer-events-none bg-blue-900/20 w-[500px] h-[500px] bottom-0 -right-20" aria-hidden="true" />
+
             {/* Payment Verification Loading Overlay */}
             {isVerifying && (
                 <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
@@ -153,52 +153,14 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
                     </div>
                 </div>
             )}
-            {/* Progress Toolbar */}
-            <div className="mb-8">
-                <div className="flex items-center justify-between mb-8">
-                    <h2 className="font-display font-bold text-2xl text-white">Project Builder</h2>
-                </div>
 
-                {/* Steps Progress */}
-                <div className="relative flex justify-between items-center mb-8 px-4 max-w-2xl mx-auto">
-                    {/* Connecting Line */}
-                    <div className="absolute top-4 left-0 w-full h-0.5 bg-white/10 -z-10" />
-                    <div
-                        className="absolute top-4 left-0 h-0.5 bg-primary -z-10 transition-all duration-500"
-                        style={{ width: `${(getStepIndex() / 2) * 100}%` }}
-                    />
-
-                    {STEPS.map((s, i) => {
-                        const currentIndex = getStepIndex();
-                        const isCompleted = currentIndex > i;
-                        const isActive = currentIndex === i;
-
-                        return (
-                            <div key={s.id} className="flex flex-col items-center gap-2 bg-dark px-2 z-10">
-                                <div className={cn(
-                                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300",
-                                    isActive ? "border-primary text-primary shadow-[0_0_15px_rgba(139,92,246,0.5)] bg-dark" :
-                                        isCompleted ? "border-primary bg-primary text-white" :
-                                            "border-white/10 text-gray-500 bg-dark"
-                                )}>
-                                    {isCompleted ? <Check className="w-4 h-4" /> : i + 1}
-                                </div>
-                                <span className={cn(
-                                    "text-xs font-medium uppercase tracking-wider transition-colors duration-300",
-                                    isActive ? "text-primary" :
-                                        isCompleted ? "text-white" :
-                                            "text-gray-600"
-                                )}>
-                                    {s.label}
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
+            {/* Progress Section */}
+            <div id="progress-header" className="mb-6 relative z-10 transition-all duration-500 max-w-7xl mx-auto px-4 w-full pt-20">
+                <ProgressStepper />
             </div>
 
-            {/* Main Content Area */}
-            <main className="relative">
+            {/* Main Content Area - with enhanced step transitions */}
+            <main className="relative px-4 md:px-8 max-w-7xl mx-auto min-h-screen flex flex-col">
                 <AnimatePresence mode="wait">
                     {step === 'TOPIC' && (
                         <motion.div
@@ -206,6 +168,7 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3, ease: 'easeOut' }}
                         >
                             <TopicSelector />
                         </motion.div>
@@ -217,6 +180,7 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3, ease: 'easeOut' }}
                         >
                             <AbstractGenerator />
                         </motion.div>
@@ -228,12 +192,22 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3, ease: 'easeOut' }}
                         >
                             <ChapterOutliner isReferred={serverIsReferred} />
                         </motion.div>
                     )}
                 </AnimatePresence>
             </main>
+
+            {/* Builder Mobile Bottom Navigation - 4 tabs + center FAB */}
+            <BuilderBottomNav />
+
+            {/* Floating Chat FAB - Gradient button linking to /hub */}
+            <FloatingChatFAB />
+
+            {/* Floating Research Panel - Research panel for the builder */}
+            <FloatingResearchPanel />
         </div>
     );
 }

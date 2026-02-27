@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import { DefaultChatTransport, isToolUIPart } from 'ai';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -32,6 +32,10 @@ import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { PERSONALITIES } from '@/features/bot/prompts/system';
 
 import { AcademicMessageBubble } from './AcademicMessageBubble';
+
+// Import typed message and mutation tools
+import type { AcademicUIMessage } from '@/lib/agents/academic-agent';
+import { MUTATION_TOOLS } from '@/lib/tools/mutation-tools';
 
 interface AcademicCopilotProps {
     projectId: string;
@@ -134,19 +138,24 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     // This prevents the hook from reinitializing and clearing messages
     const [stableThreadId] = useState(urlThreadId || 'new');
 
-    const { messages, sendMessage: chatSendMessage, status, setMessages } = useChat({
+    // Typed useChat hook with AcademicUIMessage
+    const { messages, sendMessage: chatSendMessage, status, setMessages } = useChat<AcademicUIMessage>({
         transport: new DefaultChatTransport({ api: `/api/projects/${projectId}/chat` }),
         id: `academic-copilot-${projectId}-${stableThreadId}`, // Stable ID - doesn't change mid-conversation
         onError: (error) => {
             console.error("Chat error:", error);
         },
-        onFinish: (message) => {
+        onFinish: ({ message }) => {
             // Smart Refresh: Check for mutation tools
-            const toolInvocations = (message as any).toolInvocations || [];
-            const MUTATION_TOOLS = ['generateSection', 'addChapter', 'generateChapterOutline', 'saveUserContext'];
-
-            // Check if any loaded tool is a mutation tool
-            const hasMutation = toolInvocations.some((t: any) => MUTATION_TOOLS.includes(t.toolName));
+            // Tool parts have type format: 'tool-{toolName}'
+            const hasMutation = message.parts.some(part => {
+                if (isToolUIPart(part)) {
+                    // Extract tool name from type: 'tool-{toolName}' -> '{toolName}'
+                    const toolName = part.type.replace(/^tool-/, '');
+                    return MUTATION_TOOLS.includes(toolName as typeof MUTATION_TOOLS[number]);
+                }
+                return false;
+            });
 
             if (hasMutation && onToolCompleted) {
                 console.log("[AcademicCopilot] Mutation tool finished, triggering refresh.");
@@ -204,27 +213,40 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             // Handle Suggest Edit
             const editResult = findToolResult('suggestEdit');
             if (editResult) {
-                setSuggestion(editResult);
+                // Unwrap ToolSuccess wrapper: { success: true, data: {...} } → extract .data
+                const unwrapped = editResult?.data ?? editResult;
+                setSuggestion(unwrapped);
             }
 
             // Handle Generate Diagram
             const diagramResult = findToolResult('generateDiagram');
             if (diagramResult) {
-                setDiagramSuggestion(diagramResult);
+                // Unwrap ToolSuccess wrapper
+                const unwrapped = diagramResult?.data ?? diagramResult;
+                setDiagramSuggestion(unwrapped);
             }
         }
     }, [messages]);
 
     const handleSaveDiagram = async (diagram: any, alsoInsert: boolean = false) => {
+        // Extract diagram data - handle both direct and nested result structure
+        const diagramData = diagram?.data || diagram;
+        const mermaidCode = diagramData?.mermaidCode || diagram?.mermaidCode;
+
+        if (!mermaidCode) {
+            toast.error('No diagram code found to save');
+            return;
+        }
+
         try {
             const res = await fetch(`/api/projects/${projectId}/diagrams`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title: diagram.title || 'Untitled Diagram',
-                    diagramType: diagram.type || 'flowchart',
-                    mermaidCode: diagram.mermaidCode,
-                    description: diagram.explanation || 'AI Generated Diagram'
+                    title: diagramData.title || diagram.title || 'Untitled Diagram',
+                    diagramType: diagramData.type || diagram.type || 'flowchart',
+                    mermaidCode: mermaidCode,
+                    description: diagramData.explanation || diagram.explanation || 'AI Generated Diagram'
                 })
             });
             if (res.ok) {

@@ -7,6 +7,7 @@ import { chatTools } from '@/features/bot/tools/definitions';
 import { selectModel } from '@/lib/ai/router';
 import { Models } from '@/lib/ai/providers';
 import { logger } from '@/lib/logger';
+import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 
 // Validate AI service configuration at startup
 // We keep this check but make it non-blocking if other providers are available
@@ -47,6 +48,12 @@ const chatSchema = z.object({
 
 export async function POST(req: Request) {
     try {
+        const rateLimitResponse = await applyRateLimit(
+            getClientIdentifier(req),
+            'ai'
+        );
+        if (rateLimitResponse) return rateLimitResponse;
+
         const body = await req.json();
         const validation = chatSchema.safeParse(body);
 
@@ -97,11 +104,11 @@ export async function POST(req: Request) {
         logger.info(`Processing ${modelMessages.length} messages.`, '[Chat API]');
 
         // Select model using Router
+        // Note: Tool loop is handled by streamText, not the router
         const { model: selectedModel, modelId } = selectModel({
             quality: (quality as any) || 'standard',
             // Default to Kimi K2 for Jay, unless override is present (Retry)
             forceModel: modelOverride || Models.GROQ.KIMI_K2_0905,
-            tools: true,
         });
 
         logger.info(`Using model: ${modelId}`, '[Chat API]');

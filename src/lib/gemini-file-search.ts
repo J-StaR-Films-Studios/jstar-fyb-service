@@ -11,9 +11,15 @@ export interface FileSearchUploadResult {
     error?: string;
 }
 
+export interface GroundingChunk {
+    title?: string;
+    uri?: string;
+    [key: string]: any;
+}
+
 export interface GroundedGenerationResult {
     text: string;
-    groundingChunks: any[];
+    groundingChunks: GroundingChunk[];
     groundingSupports: any[];
 }
 

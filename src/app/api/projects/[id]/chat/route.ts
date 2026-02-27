@@ -1,40 +1,146 @@
-import { streamText, tool, stepCountIs } from 'ai';
-import { prisma } from '@/lib/prisma';
-import { MONJI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
-import { ProjectContextService } from '@/features/builder/services/projectContextService';
-import { selectModel } from '@/lib/ai';
-import { createAcademicTools } from '@/lib/ai/academicTools';
-import { COMMON_ACADEMIC_RULES } from '@/features/bot/prompts/chapterPrompts';
+/**
+ * Project Chat API Route
+ * 
+ * Handles chat interactions for the Monji Academic Copilot.
+ * Uses ToolLoopAgent for multi-step tool execution.
+ * 
+ * @module app/api/projects/[id]/chat/route
+ */
 
+import { createAgentUIStreamResponse, generateId } from 'ai';
+import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth-server';
+import { ProjectContextService } from '@/features/builder/services/projectContextService';
+import {
+    academicAgent,
+    buildSystemPrompt,
+    type AcademicExecutionContext,
+} from '@/lib/agents/academic-agent';
+import { MUTATION_TOOLS } from '@/lib/tools';
+import { validateChatRequest } from '@/lib/validation/chat';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 300;
 
-// Validate environment variables
-const geminiApiKey = process.env.GEMINI_API_KEY;
-if (!geminiApiKey) {
-    throw new Error('GEMINI_API_KEY environment variable is required');
-}
-
-
+// ============================================================
+// POST: Handle Chat Messages
+// ============================================================
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    // --------------------------------------------------------
+    // 0. AUTHENTICATION CHECK
+    // --------------------------------------------------------
+
+    const session = await getSession();
+
+    if (!session?.user?.id) {
+        return new Response(
+            JSON.stringify({ error: 'Authentication required' }),
+            { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
+    // --------------------------------------------------------
+    // 0.1. RATE LIMITING
+    // --------------------------------------------------------
+
+    const rateLimitResponse = await applyRateLimit(session.user.id, 'ai');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { id: projectId } = await params;
-    const body = await req.json();
-    const { messages, threadId, contextScope } = body;
+
+    // --------------------------------------------------------
+    // 0.5. AUTHORIZATION CHECK
+    // --------------------------------------------------------
+
+    const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { userId: true },
+    });
+
+    if (!project) {
+        return new Response(
+            JSON.stringify({ error: 'Project not found' }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
+    if (project.userId !== session.user.id) {
+        return new Response(
+            JSON.stringify({ error: 'Access denied' }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
+    // --------------------------------------------------------
+    // 1. VALIDATE REQUEST BODY
+    // --------------------------------------------------------
+
+    let body;
+    try {
+        body = await req.json();
+    } catch {
+        return new Response(
+            JSON.stringify({ error: 'Invalid JSON in request body' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
+    const validation = validateChatRequest(body);
+
+    if (!validation.success) {
+        return new Response(
+            JSON.stringify({ error: 'Validation failed', details: validation.error }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
+    const { messages: rawMessages, threadId, contextScope } = validation.data;
+
+    // --------------------------------------------------------
+    // 2. RESOLVE/CREATE THREAD
+    // --------------------------------------------------------
+
+    // FIX: Simplified message sanitization
+    // Strip all tool parts from history messages — only keep text parts.
+    // The AI doesn't need old tool results in message history; they cause round-trip validation errors.
+    const messages = rawMessages.map(m => {
+        const textParts: any[] = [];
+
+        // Extract text from content string if present
+        if (typeof m.content === 'string' && m.content) {
+            textParts.push({ type: 'text', text: m.content });
+        }
+
+        // Also extract text from parts array (for DB-loaded messages with parts format)
+        if (Array.isArray(m.parts)) {
+            for (const p of m.parts) {
+                if (p.type === 'text' && p.text) {
+                    textParts.push({ type: 'text', text: p.text });
+                }
+                // Note: tool parts are intentionally stripped
+            }
+        }
+
+        return {
+            id: m.id || generateId(),
+            role: m.role,
+            content: typeof m.content === 'string' ? m.content : undefined,
+            parts: textParts.length > 0 ? textParts : undefined,
+        };
+    });
 
     console.log(`[Chat API] Request for project ${projectId}. ThreadId: ${threadId || 'NEW'}`);
 
-    // 1. Resolve Thread
     let activeConversationId = threadId;
     let activeThreadTitle = 'General Chat';
 
     if (activeConversationId) {
-        // Verify thread exists
         const thread = await prisma.projectConversation.findUnique({
-            where: { id: activeConversationId }
+            where: { id: activeConversationId },
         });
+
         if (!thread) {
-            // Fallback to creating a new one if not found (robustness)
             activeConversationId = null;
         } else {
             activeThreadTitle = thread.threadTitle || 'Chat';
@@ -42,32 +148,30 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     if (!activeConversationId) {
-        // Create new thread
         const newThread = await prisma.projectConversation.create({
             data: {
                 projectId,
                 threadType: contextScope ? 'scoped' : 'general',
                 contextScope: contextScope || {},
-                threadTitle: 'New Conversation'
-            }
+                threadTitle: 'New Conversation',
+            },
         });
         activeConversationId = newThread.id;
     }
 
-    // 2. Build Context using Service
-    // We prioritize the explicit contextScope passed in the request, 
-    // falling back to the thread's saved scope if needed (though request scope usually overrides)
-    const scope = contextScope || {};
+    // --------------------------------------------------------
+    // 3. BUILD CONTEXT
+    // --------------------------------------------------------
 
-    // If specific chapters requested (e.g. "Chapter 1 Revisions"), fetch only those
+    const scope = contextScope || {};
     const chapterNumbers = scope.chapterNumbers;
 
     const context = await ProjectContextService.buildContext(projectId, {
-        chapterNumbers: chapterNumbers,
-        includeResearch: scope.includeResearch !== false // Default true
+        chapterNumbers,
+        includeResearch: scope.includeResearch !== false,
     });
 
-    // 3. Prepare System Prompt Context
+    // Prepare context strings
     const researchText = context.researchSummaries.length > 0
         ? context.researchSummaries.map(r => `- "${r.title}" (${r.year || 'n.d'}): ${r.summary}`).join('\n')
         : 'No research documents available.';
@@ -81,190 +185,179 @@ ${c.content ? c.content.slice(0, 3000) + (c.content.length > 3000 ? '...[truncat
 
     const progressCtx = `Completed ${context.currentProgress.completedChapters}/${context.currentProgress.totalChapters} chapters. Next step: ${context.currentProgress.nextRecommendedStep}`;
 
-    const systemPrompt = `${MONJI_SYSTEM_PROMPT}
+    // --------------------------------------------------------
+    // 4. BUILD SYSTEM PROMPT
+    // --------------------------------------------------------
 
-## COMMON ACADEMIC GUIDELINES
-You must strictly adhere to the following rules for content generation, formatting, and structure:
-${COMMON_ACADEMIC_RULES}
-
-## Project Context
-- **Topic:** ${context.topic}
-- **Abstract:** ${context.abstract || 'Pending'}
-- **Progress:** ${progressCtx}
-
-## Working Context (Thread: ${activeThreadTitle})
-${chaptersText}
-
-## Research Library
-${researchText}
-
-## Instructions
-1. You are a co-author and writing coach.
-2. Use the provided Chapter content and Research Library to answer questions.
-3. If the user asks for a revision, use the 'suggestEdit' tool.
-4. Be concise but helpful.
-5. When using the 'generateDiagram' tool, describe what the diagram should show in detail (nodes, relationships, flow). The system will generate the Mermaid code for you.
-6. CRITICAL: When the user asks to "write", "draft", "create", or "generate" content for a chapter, you MUST uses the 'generateSection' tool. Do NOT just write the text in the chat. The 'generateSection' tool is the ONLY way to save the content to the project database.
-7. CRITICAL: When you use a tool (like listChapters, searchProjectDocuments), you MUST analyze the return value and provide a helpful natural language summary to the user. Do not stop after the tool runs. Explain what you found.
-8. AUTONOMY RULE: If the user asks for a "Full Chapter" or "All Sections", do NOT stop to ask for confirmation after generating the outline. Proceed immediately to generating the sections.
-`;
-
-    // 4. Stream Response
-    const coreMessages = messages.map((m: any) => {
-        // Handle SDK v6 CoreMessage format directly if possible, or convert from UI messages
-        // Simple string content
-        if (typeof m.content === 'string') {
-            return {
-                role: m.role as 'user' | 'assistant' | 'system',
-                content: m.content
-            };
-        }
-
-        // Parts based content (SDK v6 standard)
-        if (Array.isArray(m.parts)) {
-            // Filter for text parts for now, as streamText expects valid CoreMessage content
-            // Note: core messages for LLMs usually take simple strings or specific array parts.
-            // We extract text to be safe or pass struct if model supports it.
-            // For strict compliance:
-            return {
-                role: m.role as 'user' | 'assistant' | 'system',
-                content: m.parts.map((p: any) => p.text || '').join('')
-            };
-        }
-
-        return {
-            role: m.role as 'user' | 'assistant' | 'system',
-            content: ''
-        };
+    const systemPrompt = buildSystemPrompt({
+        topic: context.topic,
+        abstract: context.abstract,
+        progress: progressCtx,
+        chaptersText,
+        researchText,
+        threadTitle: activeThreadTitle,
     });
 
-    // Detect if user wants reasoning
-    // DEFAULT: We now default to reasoning model for Academic Copilot as requested
-    const wantsReasoning = true;
-    const useGrounding = contextScope?.grounding === true;
+    // --------------------------------------------------------
+    // 5. PREPARE EXECUTION CONTEXT FOR TOOLS
+    // --------------------------------------------------------
 
-    // Use smart routing to pick the best model
-    const { model, modelId, provider, isFree, reason } = selectModel({
-        tools: true,
-        reasoning: wantsReasoning, // Force default true
-        grounding: useGrounding, // Respect user preference for grounding
-        quality: 'high'
-    });
+    const executionContext: AcademicExecutionContext = {
+        projectId,
+        conversationId: activeConversationId,
+        activeChapterNumber: contextScope?.chapterNumbers?.[0],
+        chaptersText,
+    };
 
-    console.log(`[Chat API] Using model: ${modelId} via ${provider} (Free: ${isFree}) - ${reason} (Reasoning: ${wantsReasoning}, Grounding: ${useGrounding})`);
+    // --------------------------------------------------------
+    // 6. STREAM RESPONSE VIA AGENT
+    // --------------------------------------------------------
 
-    // For OpenRouter reasoning models, we pass the reasoning config via providerOptions
-    // The reasoning content comes back in a separate 'reasoning' field on the response
-    const result = streamText({
-        model,
-        system: systemPrompt, // No need for forced <think> tags - OpenRouter handles reasoning
-        messages: coreMessages as any,
-        // @ts-ignore
-        maxSteps: 5, // Simple mode: user requests one action, Monji executes, waits for next
-        // Pass reasoning config to OpenRouter when requested
-        ...(wantsReasoning && provider === 'openrouter' ? {
-            providerOptions: {
-                openrouter: {
-                    reasoning: {
-                        effort: 'high', // high effort for detailed reasoning
-                        // exclude: false // include reasoning in response (default)
-                    }
-                }
-            }
-        } : {}),
+    // Return the agent stream response
+    return createAgentUIStreamResponse({
+        agent: academicAgent,
+        uiMessages: messages,
 
+        // Headers
+        headers: {
+            'x-thread-id': activeConversationId!,
+        },
 
-        // Use centralized tool definitions
-        tools: createAcademicTools(projectId, activeConversationId, {
-            chaptersText
-        }) as any,
-        onFinish: async ({ text, reasoning, steps }: { text: string; reasoning?: any[]; steps?: any[] }) => {
-            console.log('[Chat API] onFinish called:', {
-                textLength: text?.length || 0,
-                hasReasoning: !!reasoning,
-                hasSteps: !!steps,
-                stepsCount: steps?.length || 0,
-                stepsPreview: steps ? JSON.stringify(steps).substring(0, 500) : 'no steps'
+        // Options for the agent call
+        options: {
+            instructions: systemPrompt,
+            experimental_context: executionContext,
+        },
+
+        // onFinish callback for persistence
+        // NOTE: This is UIMessageStreamOnFinishCallback, NOT StreamTextOnFinishCallback.
+        // It receives { messages, responseMessage, isContinuation, isAborted, finishReason }
+        onFinish: async (event: any) => {
+            console.log('[Chat API] onFinish:', {
+                hasResponseMessage: !!event.responseMessage,
+                partsCount: event.responseMessage?.parts?.length || 0,
+                isAborted: event.isAborted,
             });
 
-            // Save messages to the resolved thread ID
-            if (activeConversationId) {
-                const userMsg = messages[messages.length - 1];
-                if (userMsg?.role === 'user') {
-                    await prisma.projectChatMessage.create({
-                        data: {
-                            conversationId: activeConversationId,
-                            role: 'user',
-                            content: (() => {
-                                if (typeof userMsg.content === 'string' && userMsg.content) return userMsg.content;
-                                if (Array.isArray(userMsg.parts)) {
-                                    return userMsg.parts.map((p: any) => p.text || '').join('');
-                                }
-                                return '';
-                            })()
-                        }
-                    });
-                }
+            if (!activeConversationId || event.isAborted) return;
 
-                // Extract reasoning text from the reasoning array
-                // SDK returns reasoning as an array of {type: 'reasoning', text: '...'} objects
-                let reasoningText: string | null = null;
-                if (reasoning && Array.isArray(reasoning) && reasoning.length > 0) {
-                    reasoningText = reasoning
-                        .map((r: any) => r.text || r.content || '')
-                        .filter(Boolean)
-                        .join('\n');
-                }
-
-                // Extract tool invocations from steps for persistence
-                // SDK v6 structure: step.content[] contains objects with type: 'tool-call' and 'tool-result'
-                const toolInvocations: any[] = [];
-                if (steps && Array.isArray(steps)) {
-                    for (const step of steps) {
-                        const content = step.content || [];
-                        // Find all tool calls and their results
-                        const toolCalls = content.filter((c: any) => c.type === 'tool-call');
-                        const toolResults = content.filter((c: any) => c.type === 'tool-result');
-
-                        for (const toolCall of toolCalls) {
-                            // Find matching result by toolCallId
-                            const matchingResult = toolResults.find((r: any) => r.toolCallId === toolCall.toolCallId);
-                            toolInvocations.push({
-                                toolName: toolCall.toolName,
-                                args: toolCall.input || toolCall.args,
-                                // Check for result in multiple possible properties
-                                result: matchingResult?.result || matchingResult?.output || matchingResult?.content || null,
-                                state: matchingResult ? 'completed' : 'pending'
-                            });
-                        }
-                    }
-                }
+            // Save user message
+            const userMsg = messages[messages.length - 1];
+            if (userMsg?.role === 'user') {
+                const textContent = typeof userMsg.content === 'string' && userMsg.content
+                    ? userMsg.content
+                    : Array.isArray(userMsg.parts)
+                        ? userMsg.parts.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('')
+                        : '';
 
                 await prisma.projectChatMessage.create({
                     data: {
                         conversationId: activeConversationId,
-                        role: 'assistant',
-                        content: text,
-                        reasoning: reasoningText || undefined,
-                        toolInvocations: toolInvocations.length > 0 ? toolInvocations : undefined
-                    }
+                        role: 'user',
+                        content: textContent,
+                    },
                 });
             }
-        }
-    } as any);
 
-    return (result as any).toUIMessageStreamResponse({
-        sendReasoning: true, // Include OpenRouter reasoning in stream
-        headers: {
-            'x-thread-id': activeConversationId!
-        }
+            // Extract data from the assistant's UIMessage response parts
+            const responseParts: any[] = event.responseMessage?.parts || [];
+
+            // 1. Extract text content from TextUIPart entries
+            const assistantText = responseParts
+                .filter((p: any) => p.type === 'text')
+                .map((p: any) => p.text || '')
+                .filter(Boolean)
+                .join('\n\n');
+
+            // 2. Extract reasoning from ReasoningUIPart entries
+            const reasoningText = responseParts
+                .filter((p: any) => p.type === 'reasoning')
+                .map((p: any) => p.text || '')
+                .filter(Boolean)
+                .join('\n') || null;
+
+            // 3. Extract tool invocations from ToolUIPart entries (type: 'tool-{toolName}')
+            const toolInvocations: any[] = [];
+            for (const part of responseParts) {
+                // ToolUIPart has type starting with 'tool-' and a toolName property
+                if (part.type?.startsWith('tool-') && part.toolName) {
+                    toolInvocations.push({
+                        toolCallId: part.toolCallId,
+                        toolName: part.toolName,
+                        args: part.input || {},
+                        result: part.output || null,
+                        state: part.state === 'output-available' ? 'completed' : 'pending',
+                    });
+                }
+            }
+
+            // Save assistant message
+            await prisma.projectChatMessage.create({
+                data: {
+                    conversationId: activeConversationId,
+                    role: 'assistant',
+                    content: assistantText,
+                    reasoning: reasoningText || undefined,
+                    toolInvocations: toolInvocations.length > 0 ? toolInvocations : undefined,
+                },
+            });
+
+            // Check for mutation tools to trigger refresh
+            const hasMutation = toolInvocations.some(t =>
+                MUTATION_TOOLS.includes(t.toolName as any)
+            );
+
+            if (hasMutation) {
+                console.log('[Chat API] Mutation tool finished, refresh may be needed.');
+            }
+        },
     });
 }
 
-// DELETE: Clear project chat history
+
+// ============================================================
+// GET: Fetch Thread Messages
+// ============================================================
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    // --------------------------------------------------------
+    // 0. AUTHENTICATION CHECK
+    // --------------------------------------------------------
+
+    const session = await getSession();
+
+    if (!session?.user?.id) {
+        return new Response(
+            JSON.stringify({ error: 'Authentication required' }),
+            { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
     const { id: projectId } = await params;
+
+    // --------------------------------------------------------
+    // 0.5. AUTHORIZATION CHECK
+    // --------------------------------------------------------
+
+    const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { userId: true },
+    });
+
+    if (!project) {
+        return new Response(
+            JSON.stringify({ error: 'Project not found' }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
+    if (project.userId !== session.user.id) {
+        return new Response(
+            JSON.stringify({ error: 'Access denied' }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
     const { searchParams } = new URL(req.url);
     const threadId = searchParams.get('threadId');
 
@@ -272,43 +365,116 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         return new Response(JSON.stringify({ messages: [] }), { status: 200 });
     }
 
-    const messages = await prisma.projectChatMessage.findMany({
+    const dbMessages = await prisma.projectChatMessage.findMany({
         where: { conversationId: threadId },
         orderBy: { createdAt: 'asc' },
         select: {
             id: true,
             role: true,
             content: true,
-            reasoning: true, // Include reasoning for AI messages
+            reasoning: true,
             toolInvocations: true,
-            createdAt: true
+            createdAt: true,
+        },
+    });
+
+    // Transform database messages to AI SDK v6 'parts' format
+    const messages = dbMessages.map(m => {
+        const parts: any[] = [];
+
+        // 1. Add reasoning part
+        if (m.reasoning) {
+            parts.push({ type: 'reasoning', text: m.reasoning });
         }
+
+        // 2. Add text part
+        if (m.content) {
+            parts.push({ type: 'text', text: m.content });
+        }
+
+        // 3. Add tool parts
+        if (m.toolInvocations && Array.isArray(m.toolInvocations)) {
+            m.toolInvocations.forEach((tool: any) => {
+                parts.push({
+                    type: `tool-${tool.toolName}`,
+                    toolName: tool.toolName,
+                    toolCallId: tool.toolCallId,
+                    state: tool.state === 'completed' ? 'output-available' : 'input-available',
+                    input: tool.args || {},
+                    output: tool.result,
+                });
+            });
+        }
+
+        return {
+            ...m,
+            parts,
+        };
     });
 
     return new Response(JSON.stringify({ messages }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
     });
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-    try {
-        const { id: projectId } = await params;
+// ============================================================
+// DELETE: Clear Chat History
+// ============================================================
 
-        // Find and delete all project conversations and messages
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    // --------------------------------------------------------
+    // 0. AUTHENTICATION CHECK
+    // --------------------------------------------------------
+
+    const session = await getSession();
+
+    if (!session?.user?.id) {
+        return new Response(
+            JSON.stringify({ error: 'Authentication required' }),
+            { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
+    const { id: projectId } = await params;
+
+    // --------------------------------------------------------
+    // 0.5. AUTHORIZATION CHECK
+    // --------------------------------------------------------
+
+    const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { userId: true },
+    });
+
+    if (!project) {
+        return new Response(
+            JSON.stringify({ error: 'Project not found' }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
+    if (project.userId !== session.user.id) {
+        return new Response(
+            JSON.stringify({ error: 'Access denied' }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
+
+    try {
         const conversations = await prisma.projectConversation.findMany({
-            where: { projectId }
+            where: { projectId },
         });
 
         if (conversations.length > 0) {
-            // Delete messages first, then conversations
             await prisma.projectChatMessage.deleteMany({
                 where: {
-                    conversationId: { in: conversations.map(c => c.id) }
-                }
+                    conversationId: { in: conversations.map(c => c.id) },
+                },
             });
+
             await prisma.projectConversation.deleteMany({
-                where: { projectId }
+                where: { projectId },
             });
         }
 
@@ -316,6 +482,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     } catch (error: any) {
         console.error('[Project Chat DELETE] Error:', error);
-        return new Response(JSON.stringify({ error: 'Failed to clear conversation' }), { status: 500 });
+        return new Response(JSON.stringify({ error: 'Failed to clear conversation' }), {
+            status: 500
+        });
     }
 }
