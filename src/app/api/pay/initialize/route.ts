@@ -49,13 +49,9 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Project not found" }, { status: 404 });
         }
 
-        // Determine base unlock amount based on project department (Software vs Paper)
-        const isSoftware = project.department?.toLowerCase().includes('computer') || 
-                          project.department?.toLowerCase().includes('software') || 
-                          project.department?.toLowerCase().includes('it') ||
-                          project.department?.toLowerCase().includes('information technology');
-        
-        const baseUnlockAmount = isSoftware ? PRICING_CONFIG.SAAS.SOFTWARE.price : PRICING_CONFIG.SAAS.PAPER.price;
+        // Set base unlock amount back to the standard Paper price (15k)
+        // Project categorization currently unlinked from UI toggle.
+        const baseUnlockAmount = PRICING_CONFIG.SAAS.PAPER.price;
 
         // Check ownership (should be claimed by now)
         if (project.userId !== user.id) {
