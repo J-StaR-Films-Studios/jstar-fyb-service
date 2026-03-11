@@ -52,7 +52,8 @@ export function MetaPixel() {
  * trackFBEvent('CompleteRegistration');
  * 
  * // Track when user makes a purchase
- * trackFBEvent('Purchase', { value: 15000, currency: 'NGN' });
+ * // Purchases should now pass dynamic values based on the tier
+ * trackFBEvent('Purchase', { value: PRICING_CONFIG.SAAS.PAPER.price, currency: 'NGN' });
  */
 export function trackFBEvent(
     eventName: string,

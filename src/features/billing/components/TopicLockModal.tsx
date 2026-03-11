@@ -5,6 +5,8 @@ import { AlertTriangle, Lock, X, HeartHandshake } from "lucide-react";
 import { createPortal } from "react-dom";
 import { DiscountCodeInput } from "@/features/billing/components/DiscountCodeInput";
 
+import { PRICING_CONFIG } from "@/config/pricing";
+
 interface TopicLockModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -14,7 +16,7 @@ interface TopicLockModalProps {
     amount?: number;
 }
 
-export function TopicLockModal({ isOpen, onClose, onConfirm, topic, isReferred, amount = 15000 }: TopicLockModalProps) {
+export function TopicLockModal({ isOpen, onClose, onConfirm, topic, isReferred, amount = PRICING_CONFIG.SAAS.PAPER.price }: TopicLockModalProps) {
     const [acknowledged, setAcknowledged] = useState(false);
     const [discountCode, setDiscountCode] = useState<string | null>(null);
     const [currentAmount, setCurrentAmount] = useState(amount);

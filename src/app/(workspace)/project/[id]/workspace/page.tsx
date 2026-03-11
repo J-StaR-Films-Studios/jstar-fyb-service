@@ -28,7 +28,16 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
         return <div className="min-h-screen flex items-center justify-center text-white">Project not found</div>;
     }
 
-    const REQUIRED_AMOUNT = 15000; // For display purposes only
+    const isSoftware = project.topic?.toLowerCase().includes('computer') || 
+                      project.topic?.toLowerCase().includes('software') || 
+                      project.topic?.toLowerCase().includes('it') ||
+                      project.topic?.toLowerCase().includes('information technology') ||
+                      project.topic?.toLowerCase().includes('web') ||
+                      project.topic?.toLowerCase().includes('app');
+    
+    // We import this inline or at the top
+    const { PRICING_CONFIG } = await import('@/config/pricing');
+    const REQUIRED_AMOUNT = isSoftware ? PRICING_CONFIG.SAAS.SOFTWARE.price : PRICING_CONFIG.SAAS.PAPER.price;
 
     if (!project.isUnlocked) {
         // Check if user is referred (to disable discount codes)
