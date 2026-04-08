@@ -1,6 +1,7 @@
 import { ChapterEditor } from '@/features/builder/components/v2/ChapterEditor';
 import { prisma } from '@/lib/prisma';
 import { WorkspaceLockScreen } from '@/features/builder/components/WorkspaceLockScreen';
+import { WORKSPACE_UNLOCK_PRICE } from '@/config/pricing';
 
 interface WorkspacePageProps {
     params: Promise<{
@@ -28,8 +29,6 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
         return <div className="min-h-screen flex items-center justify-center text-white">Project not found</div>;
     }
 
-    const REQUIRED_AMOUNT = 15000; // For display purposes only
-
     if (!project.isUnlocked) {
         // Check if user is referred (to disable discount codes)
         let isReferred = false;
@@ -44,7 +43,7 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
         return (
             <WorkspaceLockScreen
                 projectId={id}
-                requiredAmount={REQUIRED_AMOUNT}
+                requiredAmount={WORKSPACE_UNLOCK_PRICE}
                 paymentReference={typeof reference === 'string' ? reference : undefined}
                 projectTopic={project?.topic}
                 isReferred={isReferred}

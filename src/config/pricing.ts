@@ -10,9 +10,9 @@ export const PRICING_CONFIG = {
             { id: 'AGENCY_PAPER_PREMIUM', label: 'Paper Premium', price: 100_000, popular: false }
         ],
         SOFTWARE: [
-            { id: 'AGENCY_CODE_GO', label: 'Code & Go', price: 120_000, popular: false },
-            { id: 'AGENCY_DEFENSE_READY', label: 'Defense Ready', price: 200_000, popular: true },
-            { id: 'AGENCY_SOFT_LIFE', label: 'The Soft Life', price: 320_000, popular: false }
+            { id: 'AGENCY_CODE_GO', label: 'Code & Go', price: 150_000, popular: false },
+            { id: 'AGENCY_DEFENSE_READY', label: 'Defense Ready', price: 250_000, popular: true },
+            { id: 'AGENCY_SOFT_LIFE', label: 'The Soft Life', price: 400_000, popular: false }
         ],
         FEATURES: {
             'AGENCY_PAPER_EXPRESS': ['Topic Generation (3 Options)', 'Chapters 1-3 (Proposal)', 'Pay-as-you-go Structure', 'Standard Delivery (2 Weeks)'],
@@ -34,6 +34,7 @@ export const PRICING_CONFIG = {
 } as const;
 
 export type PricingTrack = 'PAPER' | 'SOFTWARE';
+export const WORKSPACE_UNLOCK_PRICE = PRICING_CONFIG.SAAS.PAPER.price;
 
 export const getTierByPrice = (price: number) => {
     // Check SaaS

@@ -17,7 +17,13 @@ interface WorkspaceLockScreenProps {
     isReferred?: boolean;
 }
 
-export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReference, projectTopic, isReferred }: WorkspaceLockScreenProps) {
+export function WorkspaceLockScreen({
+    projectId,
+    requiredAmount,
+    paymentReference,
+    projectTopic,
+    isReferred
+}: WorkspaceLockScreenProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [showLockModal, setShowLockModal] = useState(false);
@@ -27,50 +33,47 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
     const { openSupport } = useSupport();
 
     React.useEffect(() => {
-        if (paymentReference) {
-            verifyPayment(paymentReference);
+        if (!paymentReference) {
+            return;
         }
-    }, [paymentReference]);
 
-    const verifyPayment = async (reference: string) => {
-        try {
-            setIsVerifying(true);
-            const response = await fetch("/api/pay/verify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ reference }),
-            });
+        const verifyPayment = async () => {
+            try {
+                setIsVerifying(true);
+                const response = await fetch("/api/pay/verify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reference: paymentReference }),
+                });
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || "Verification failed");
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || "Verification failed");
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    toast.success("Payment verified! Unlocking workspace...");
+                    router.refresh();
+                } else {
+                    throw new Error("Payment could not be verified");
+                }
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : "Verification failed";
+                toast.error(message);
+                setIsVerifying(false);
             }
+        };
 
-            const data = await response.json();
-            if (data.success) {
-                toast.success("Payment verified! Unlocking workspace...");
-                // Reload the page to reflect the new unlocked status from the server
-                router.refresh();
-            } else {
-                throw new Error("Payment could not be verified");
-            }
-        } catch (error: any) {
-            toast.error(error.message || "Verification failed");
-            setIsVerifying(false); // Stop verifying to show the lock screen again or error state
-        }
-    };
+        void verifyPayment();
+    }, [paymentReference, router]);
 
-    // Step 1: Show warning modal first
     const handleUnlockClick = () => {
         setShowLockModal(true);
     };
 
-    // Step 2: Actually proceed to payment after confirmation
-    const proceedToPayment = async (modalDiscountCode?: string) => {
+    const proceedToPayment = async () => {
         setShowLockModal(false);
-
-        // Prefer code from modal, fall back to screen state
-        const effectiveDiscountCode = modalDiscountCode || discountCode;
 
         try {
             setIsLoading(true);
@@ -79,8 +82,8 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     projectId,
-                    callbackUrl: window.location.href, // Return to this page after payment
-                    discountCode: effectiveDiscountCode || undefined
+                    callbackUrl: window.location.href,
+                    discountCode: discountCode || undefined
                 }),
             });
 
@@ -95,8 +98,9 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
             } else {
                 throw new Error("No payment URL received");
             }
-        } catch (error: any) {
-            toast.error(error.message || "Something went wrong");
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Something went wrong";
+            toast.error(message);
             setIsLoading(false);
         }
     };
@@ -105,8 +109,8 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
         return (
             <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
                 <div className="flex flex-col items-center gap-4 text-center">
-                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <h2 className="text-2xl font-bold font-display text-white">Verifying Payment...</h2>
+                    <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                    <h2 className="font-display text-2xl font-bold text-white">Verifying Payment...</h2>
                     <p className="text-gray-400">Please wait while we confirm your transaction.</p>
                 </div>
             </div>
@@ -114,66 +118,66 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
     }
 
     return (
-        <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
-            {/* Ambient Background Effects */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 blur-[150px] rounded-full pointer-events-none" />
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 blur-[150px] rounded-full pointer-events-none" />
+        <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black p-4">
+            <div className="pointer-events-none absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-primary/10 blur-[150px]" />
+            <div className="pointer-events-none absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-purple-500/10 blur-[150px]" />
 
-            <div className="glass-panel max-w-lg w-full p-8 md:p-10 rounded-3xl border border-white/10 flex flex-col relative z-10 shadow-2xl backdrop-blur-xl bg-dark/50">
-                {/* Header Icon */}
-                <div className="self-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6 shadow-glow ring-1 ring-white/10">
-                    <Lock className="w-10 h-10 text-white" />
+            <div className="glass-panel relative z-10 flex w-full max-w-lg flex-col rounded-3xl border border-white/10 bg-dark/50 p-8 shadow-2xl backdrop-blur-xl md:p-10">
+                <div className="mb-6 flex h-20 w-20 self-center items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 shadow-glow ring-1 ring-white/10">
+                    <Lock className="h-10 w-10 text-white" />
                 </div>
 
-                <div className="text-center space-y-3 mb-8">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
-                        <Sparkles className="w-3 h-3" />
+                <div className="mb-8 space-y-3 text-center">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary">
+                        <Sparkles className="h-3 w-3" />
                         Premium Workspace
                     </div>
-                    <h1 className="text-3xl font-bold font-display text-white">Unlock Your Project</h1>
-                    <p className="text-gray-400 leading-relaxed">
+                    <h1 className="font-display text-3xl font-bold text-white">Unlock Your Project</h1>
+                    <p className="leading-relaxed text-gray-400">
                         Access the full workspace, advanced editing tools, and export features by upgrading this project.
                     </p>
                 </div>
 
-                {/* Features List */}
-                <div className="bg-white/5 rounded-2xl p-6 mb-8 border border-white/5">
+                <div className="mb-8 rounded-2xl border border-white/5 bg-white/5 p-6">
                     <ul className="space-y-3 text-sm text-gray-300">
                         <li className="flex items-center gap-3">
-                            <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
                             <span>Full Chapter Editing & Formatting</span>
                         </li>
                         <li className="flex items-center gap-3">
-                            <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
                             <span>Unlimited AI Refinements</span>
                         </li>
                         <li className="flex items-center gap-3">
-                            <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
                             <span>Export to PDF & Word</span>
                         </li>
                     </ul>
                 </div>
 
-                {/* Price Display and Discount Code */}
-                <div className="flex flex-col items-center gap-4 mb-8">
+                <div className="mb-8 flex flex-col items-center gap-4">
                     <div className="flex items-baseline justify-center gap-2">
-                        <span className="text-sm text-gray-500 line-through">
-                            ₦{discountCode ? requiredAmount.toLocaleString() : '25,000'}
-                        </span>
-                        <span className="text-4xl font-bold font-display text-white">
+                        {discountCode ? (
+                            <span className="text-sm text-gray-500 line-through">
+                                ₦{requiredAmount.toLocaleString()}
+                            </span>
+                        ) : null}
+                        <span className="font-display text-4xl font-bold text-white">
                             ₦{finalAmount.toLocaleString()}
                         </span>
                     </div>
 
                     <div className="w-full max-w-sm">
                         {isReferred ? (
-                            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
-                                <div className="p-2 bg-purple-500/20 rounded-full text-purple-400">
-                                    <HeartHandshake className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <div className="text-sm font-bold text-purple-400">Influencer Support Active</div>
-                                    <div className="text-xs text-purple-300/60">Discount codes are disabled while supporting a creator.</div>
+                            <div className="animate-in slide-in-from-bottom-2 fade-in rounded-lg border border-purple-500/20 bg-purple-500/10 p-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-full bg-purple-500/20 p-2 text-purple-400">
+                                        <HeartHandshake className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-bold text-purple-400">Influencer Support Active</div>
+                                        <div className="text-xs text-purple-300/60">Discount codes are disabled while supporting a creator.</div>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
@@ -192,52 +196,54 @@ export function WorkspaceLockScreen({ projectId, requiredAmount, paymentReferenc
                     </div>
                 </div>
 
-                {/* Actions */}
                 <div className="space-y-3">
                     <button
                         onClick={handleUnlockClick}
                         disabled={isLoading}
-                        className="w-full py-4 bg-primary hover:bg-primary/90 rounded-xl font-bold text-white uppercase tracking-wide transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-bold uppercase tracking-wide text-white shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {isLoading ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="h-5 w-5 animate-spin" />
                                 Initializing...
                             </>
                         ) : (
                             <>
-                                <Lock className="w-4 h-4" />
+                                <Lock className="h-4 w-4" />
                                 Unlock Now
                             </>
                         )}
                     </button>
 
-                    <div className="flex items-center justify-center gap-2 text-xs text-gray-500 py-2">
-                        <ShieldCheck className="w-3 h-3" />
+                    <div className="flex items-center justify-center gap-2 py-2 text-xs text-gray-500">
+                        <ShieldCheck className="h-3 w-3" />
                         <span>Secured by Paystack</span>
                     </div>
 
                     <Link
                         href="/dashboard"
-                        className="w-full py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-sm font-bold text-gray-300 transition-colors flex items-center justify-center gap-2"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-bold text-gray-300 transition-colors hover:bg-white/10"
                     >
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="h-4 w-4" />
                         Back to Dashboard
                     </Link>
                 </div>
             </div>
 
             <p className="mt-8 text-xs text-gray-600">
-                Need help? <button onClick={() => openSupport({ page: 'workspace-lock', projectId })} className="underline hover:text-gray-400">Contact Support</button>
+                Need help? <button onClick={() => openSupport({ page: "workspace-lock", projectId })} className="underline hover:text-gray-400">Contact Support</button>
             </p>
 
-            {/* Topic Lock Warning Modal */}
-            <TopicLockModal
-                isOpen={showLockModal}
-                onClose={() => setShowLockModal(false)}
-                onConfirm={proceedToPayment}
-                topic={projectTopic || "Your Project Topic"}
-            />
+            {showLockModal ? (
+                <TopicLockModal
+                    isOpen={showLockModal}
+                    onClose={() => setShowLockModal(false)}
+                    onConfirm={proceedToPayment}
+                    topic={projectTopic || "Your Project Topic"}
+                    amount={finalAmount}
+                    showDiscountInput={false}
+                />
+            ) : null}
         </div>
     );
 }

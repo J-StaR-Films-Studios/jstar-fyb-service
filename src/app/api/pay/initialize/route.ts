@@ -7,8 +7,7 @@ import { BillingService } from "@/services/billing.service";
 import { randomUUID } from "crypto";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
-
-const PROJECT_UNLOCK_AMOUNT = 15000;
+import { WORKSPACE_UNLOCK_PRICE } from "@/config/pricing";
 
 export async function POST(req: Request) {
     try {
@@ -50,6 +49,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Project not found" }, { status: 404 });
         }
 
+        const baseUnlockAmount = WORKSPACE_UNLOCK_PRICE;
+
         // Check ownership (should be claimed by now)
         if (project.userId !== user.id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -61,14 +62,14 @@ export async function POST(req: Request) {
         }
 
         // Calculate final amount (with potential discount)
-        let finalAmount = PROJECT_UNLOCK_AMOUNT;
+        let finalAmount: number = baseUnlockAmount;
         let discountAmount = 0;
         // Check for automatic referral discount
         const referralDiscountRate = userData?.referredBy?.referralDiscount || 0;
 
         if (isReferred && referralDiscountRate > 0) {
-            discountAmount = PROJECT_UNLOCK_AMOUNT * referralDiscountRate;
-            finalAmount = PROJECT_UNLOCK_AMOUNT - discountAmount;
+            discountAmount = baseUnlockAmount * referralDiscountRate;
+            finalAmount = baseUnlockAmount - discountAmount;
             // distinct from discountCodeId, we might want to log this differently later
         }
 
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
                 }, { status: 400 });
             }
 
-            const discountResult = await DiscountService.validateCode(discountCode, PROJECT_UNLOCK_AMOUNT);
+            const discountResult = await DiscountService.validateCode(discountCode, baseUnlockAmount);
 
             if (!discountResult.valid) {
                 return NextResponse.json({
@@ -144,7 +145,7 @@ export async function POST(req: Request) {
             // 3. Return Success URL immediately
             return NextResponse.json({
                 url: callbackUrl || `/project/${project.id}/workspace?payment=success`,
-                originalAmount: PROJECT_UNLOCK_AMOUNT,
+                originalAmount: baseUnlockAmount,
                 finalAmount: 0,
                 discountApplied: discountAmount
             });
@@ -161,13 +162,13 @@ export async function POST(req: Request) {
                 customCallback: !!callbackUrl,
                 discountCodeId: discountCodeId,
                 discountAmount: discountAmount,
-                originalAmount: PROJECT_UNLOCK_AMOUNT
+                originalAmount: baseUnlockAmount
             }
         });
 
         return NextResponse.json({
             url: paystackRes.authorizationUrl,
-            originalAmount: PROJECT_UNLOCK_AMOUNT,
+            originalAmount: baseUnlockAmount,
             finalAmount: finalAmount,
             discountApplied: discountAmount > 0 ? discountAmount : undefined
         });
