@@ -13,7 +13,7 @@ const PRICING = {
             features: ['AI-Generated Abstract', 'Full Chapter 1-5 Outline', 'Formatting Templates', 'Unlimited Revisions']
         },
         software: {
-            price: WORKSPACE_UNLOCK_PRICE,
+            price: PRICING_CONFIG.SAAS.SOFTWARE.price,
             features: ['Everything in Paper-Only', 'Code Snippets & Boilerplate', 'Database Schema Generator', 'Tech Stack Recommendations']
         }
     },

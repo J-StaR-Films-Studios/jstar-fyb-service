@@ -111,3 +111,7 @@ flowchart TD
 ### Hotfix 2026-01-05: Redundant DB Query in Builder Page
 - **Problem:** `builder/page.tsx` made a second DB query for `isUnlocked` when it was already available on the `recentProject` object from the first query.
 - **Solution:** Captured `isUnlocked` directly from `recentProject` during mapping, eliminating the redundant query and potential race condition.
+
+### Hotfix 2026-04-08: Topic Lock Modal State Reset
+- **Problem:** `TopicLockModal` preserved stale amount, acknowledgement, and discount state across reopenings because the local state was only initialized on first mount.
+- **Solution:** Added an `amount`/`isOpen` sync effect so opening the modal resets the displayed amount and clears previous acknowledgement and discount state.

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Lock, HeartHandshake } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -27,6 +27,18 @@ export function TopicLockModal({
     const [acknowledged, setAcknowledged] = useState(false);
     const [discountCode, setDiscountCode] = useState<string | null>(null);
     const [currentAmount, setCurrentAmount] = useState(amount);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const resetState = window.setTimeout(() => {
+            setCurrentAmount(amount);
+            setAcknowledged(false);
+            setDiscountCode(null);
+        }, 0);
+
+        return () => window.clearTimeout(resetState);
+    }, [amount, isOpen]);
 
     if (!isOpen) return null;
 

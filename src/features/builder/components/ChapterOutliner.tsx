@@ -363,15 +363,13 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
                 )}
             </motion.div>
 
-            {isLockModalOpen ? (
-                <TopicLockModal
-                    isOpen={isLockModalOpen}
-                    onClose={() => setIsLockModalOpen(false)}
-                    onConfirm={proceedToPayment}
-                    topic={data.topic || "Your Project"}
-                    isReferred={isReferred}
-                />
-            ) : null}
+            <TopicLockModal
+                isOpen={isLockModalOpen}
+                onClose={() => setIsLockModalOpen(false)}
+                onConfirm={proceedToPayment}
+                topic={data.topic || "Your Project"}
+                isReferred={isReferred}
+            />
 
             {/* Topic Change Warning Modal - shown when project was unlocked for topic switch */}
             <TopicChangeWarningModal

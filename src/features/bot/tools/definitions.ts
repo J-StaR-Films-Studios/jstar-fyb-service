@@ -38,11 +38,12 @@ NEGATIVE: Never write topics as plain text. If you want to suggest topics, you M
         inputSchema: z.object({}),
         execute: async () => {
             logger.info('Fetching pricing tiers', '[TOOL CALL] getPricing');
-            return {
-                basic: `₦${PRICING_CONFIG.AGENCY.SOFTWARE[0].price.toLocaleString()}`,
-                standard: `₦${PRICING_CONFIG.AGENCY.SOFTWARE[1].price.toLocaleString()}`,
-                premium: `₦${PRICING_CONFIG.AGENCY.SOFTWARE[2].price.toLocaleString()}`
-            };
+            return Object.fromEntries(
+                PRICING_CONFIG.AGENCY.SOFTWARE.map((tier) => [
+                    tier.label,
+                    `₦${tier.price.toLocaleString()}`
+                ])
+            );
         }
     }),
     measureConviction: tool({
