@@ -7,7 +7,7 @@ import { BillingService } from "@/services/billing.service";
 import { randomUUID } from "crypto";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
-import { PRICING_CONFIG } from "@/config/pricing";
+import { WORKSPACE_UNLOCK_PRICE } from "@/config/pricing";
 
 export async function POST(req: Request) {
     try {
@@ -49,9 +49,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Project not found" }, { status: 404 });
         }
 
-        // Set base unlock amount back to the standard Paper price (15k)
-        // Project categorization currently unlinked from UI toggle.
-        const baseUnlockAmount = PRICING_CONFIG.SAAS.PAPER.price;
+        const baseUnlockAmount = WORKSPACE_UNLOCK_PRICE;
 
         // Check ownership (should be claimed by now)
         if (project.userId !== user.id) {

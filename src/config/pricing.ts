@@ -34,6 +34,7 @@ export const PRICING_CONFIG = {
 } as const;
 
 export type PricingTrack = 'PAPER' | 'SOFTWARE';
+export const WORKSPACE_UNLOCK_PRICE = PRICING_CONFIG.SAAS.PAPER.price;
 
 export const getTierByPrice = (price: number) => {
     // Check SaaS

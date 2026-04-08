@@ -4,41 +4,41 @@ import { motion } from 'framer-motion';
 import { Zap, Crown, Check, Star, FileText, Code2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
-import { PRICING_CONFIG } from '@/config/pricing';
+import { PRICING_CONFIG, WORKSPACE_UNLOCK_PRICE } from '@/config/pricing';
 
 const PRICING = {
     saas: {
         paperOnly: {
-            price: PRICING_CONFIG.SAAS.PAPER.price,
+            price: WORKSPACE_UNLOCK_PRICE,
             features: ['AI-Generated Abstract', 'Full Chapter 1-5 Outline', 'Formatting Templates', 'Unlimited Revisions']
         },
         software: {
-            price: PRICING_CONFIG.SAAS.SOFTWARE.price,
+            price: WORKSPACE_UNLOCK_PRICE,
             features: ['Everything in Paper-Only', 'Code Snippets & Boilerplate', 'Database Schema Generator', 'Tech Stack Recommendations']
         }
     },
     agency: {
-        paperOnly: PRICING_CONFIG.AGENCY.PAPER.map(t => ({
-            name: t.label,
-            price: t.price,
-            id: t.id,
-            features: t.id === 'AGENCY_PAPER_EXPRESS'
+        paperOnly: PRICING_CONFIG.AGENCY.PAPER.map((tier) => ({
+            name: tier.label,
+            price: tier.price,
+            id: tier.id,
+            features: tier.id === 'AGENCY_PAPER_EXPRESS'
                 ? ['Chapters 1-5 Written', 'APA/IEEE Formatting', 'Plagiarism Check']
-                : t.id === 'AGENCY_PAPER_DEFENSE'
+                : tier.id === 'AGENCY_PAPER_DEFENSE'
                     ? ['Everything in Express', 'Mock Defense Session', 'Presentation Slides']
                     : ['Everything in Defense', 'Priority Support', 'Unlimited Revisions'],
-            popular: t.popular || false
+            popular: tier.popular || false
         })),
-        software: PRICING_CONFIG.AGENCY.SOFTWARE.map(t => ({
-            name: t.label,
-            price: t.price,
-            id: t.id,
-            features: t.id === 'AGENCY_CODE_GO'
+        software: PRICING_CONFIG.AGENCY.SOFTWARE.map((tier) => ({
+            name: tier.label,
+            price: tier.price,
+            id: tier.id,
+            features: tier.id === 'AGENCY_CODE_GO'
                 ? ['Complete Source Code', 'Database Setup Script', 'Installation Guide']
-                : t.id === 'AGENCY_DEFENSE_READY'
+                : tier.id === 'AGENCY_DEFENSE_READY'
                     ? ['Everything in Code & Go', 'Chapter 3 & 4 Write-up', 'Mock Defense Session']
                     : ['Full Documentation (Ch 1-5)', 'Presentation Slides', 'Priority Support'],
-            popular: t.popular || false
+            popular: tier.popular || false
         }))
     }
 };
@@ -46,69 +46,69 @@ const PRICING = {
 export function Pricing() {
     const [projectType, setProjectType] = useState<'paper' | 'software'>('software');
 
-    const formatPrice = (price: number) => {
-        return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(price);
-    };
+    const formatPrice = (price: number) =>
+        new Intl.NumberFormat('en-NG', {
+            style: 'currency',
+            currency: 'NGN',
+            minimumFractionDigits: 0
+        }).format(price);
 
     return (
-        <section id="pricing" className="py-32 relative">
+        <section id="pricing" className="relative py-32">
             <div className="container mx-auto px-6">
-                {/* Header */}
-                <div className="text-center mb-12">
+                <div className="mb-12 text-center">
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className="text-4xl md:text-5xl font-display font-bold mb-6"
+                        className="mb-6 text-4xl font-display font-bold md:text-5xl"
                     >
                         Simple, <span className="text-accent">Transparent</span> Pricing
                     </motion.h2>
-                    <p className="text-gray-400 max-w-xl mx-auto mb-8">
+                    <p className="mx-auto mb-8 max-w-xl text-gray-400">
                         Choose your path. DIY with our AI, or let professionals handle it.
                     </p>
 
-                    {/* Project Type Toggle */}
-                    <div className="inline-flex items-center gap-2 p-1.5 bg-white/5 rounded-full border border-white/10">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5">
                         <button
                             onClick={() => setProjectType('paper')}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${projectType === 'paper' ? 'bg-accent text-black' : 'text-gray-400 hover:text-white'}`}
+                            className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all ${projectType === 'paper' ? 'bg-accent text-black' : 'text-gray-400 hover:text-white'}`}
                         >
-                            <FileText className="w-4 h-4" />
+                            <FileText className="h-4 w-4" />
                             Paper Only
                         </button>
                         <button
                             onClick={() => setProjectType('software')}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${projectType === 'software' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white'}`}
+                            className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all ${projectType === 'software' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white'}`}
                         >
-                            <Code2 className="w-4 h-4" />
+                            <Code2 className="h-4 w-4" />
                             Software + Paper
                         </button>
                     </div>
                 </div>
 
-                {/* DIY Section */}
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     className="mb-20"
                 >
-                    <h3 className="text-center text-sm font-bold text-gray-500 uppercase tracking-widest mb-8">
-                        <Zap className="inline w-4 h-4 mr-2 text-accent" />
+                    <h3 className="mb-8 text-center text-sm font-bold uppercase tracking-widest text-gray-500">
+                        <Zap className="mr-2 inline h-4 w-4 text-accent" />
                         Self-Service AI Builder
                     </h3>
 
-                    <div className="max-w-md mx-auto">
-                        <div className="glass-panel p-8 rounded-3xl border border-accent/20 hover:border-accent/50 transition-colors text-center">
-                            <div className="text-5xl font-display font-bold text-white mb-2">
+                    <div className="mx-auto max-w-md">
+                        <div className="glass-panel rounded-3xl border border-accent/20 p-8 text-center transition-colors hover:border-accent/50">
+                            <div className="mb-2 text-5xl font-display font-bold text-white">
                                 {formatPrice(projectType === 'paper' ? PRICING.saas.paperOnly.price : PRICING.saas.software.price)}
                             </div>
-                            <p className="text-gray-500 text-sm mb-6">One-time payment</p>
+                            <p className="mb-6 text-sm text-gray-500">One-time payment</p>
 
-                            <ul className="space-y-3 mb-8 text-left">
-                                {(projectType === 'paper' ? PRICING.saas.paperOnly.features : PRICING.saas.software.features).map((feature, i) => (
-                                    <li key={i} className="flex items-center gap-3 text-sm text-gray-300">
-                                        <Check className="w-4 h-4 text-accent flex-shrink-0" />
+                            <ul className="mb-8 space-y-3 text-left">
+                                {(projectType === 'paper' ? PRICING.saas.paperOnly.features : PRICING.saas.software.features).map((feature) => (
+                                    <li key={feature} className="flex items-center gap-3 text-sm text-gray-300">
+                                        <Check className="h-4 w-4 flex-shrink-0 text-accent" />
                                         {feature}
                                     </li>
                                 ))}
@@ -116,61 +116,60 @@ export function Pricing() {
 
                             <Link
                                 href="/project/builder"
-                                className="block w-full py-4 border border-accent/30 rounded-xl text-accent font-bold uppercase tracking-wider hover:bg-accent hover:text-black transition-all"
+                                className="block w-full rounded-xl border border-accent/30 py-4 font-bold uppercase tracking-wider text-accent transition-all hover:bg-accent hover:text-black"
                             >
-                                Start Building Free →
+                                Start Building Free
                             </Link>
-                            <p className="text-xs text-gray-600 mt-3">Pay only when you're ready to unlock</p>
+                            <p className="mt-3 text-xs text-gray-600">Pay only when you&apos;re ready to unlock</p>
                         </div>
                     </div>
                 </motion.div>
 
-                {/* Agency Section */}
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.2 }}
                 >
-                    <h3 className="text-center text-sm font-bold text-gray-500 uppercase tracking-widest mb-8">
-                        <Crown className="inline w-4 h-4 mr-2 text-primary" />
+                    <h3 className="mb-8 text-center text-sm font-bold uppercase tracking-widest text-gray-500">
+                        <Crown className="mr-2 inline h-4 w-4 text-primary" />
                         Done-For-You Agency
                     </h3>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                        {(projectType === 'paper' ? PRICING.agency.paperOnly : PRICING.agency.software).map((tier, i) => (
+                    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+                        {(projectType === 'paper' ? PRICING.agency.paperOnly : PRICING.agency.software).map((tier, index) => (
                             <motion.div
-                                key={tier.name}
+                                key={tier.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
-                                transition={{ delay: i * 0.1 }}
-                                className={`glass-panel p-6 rounded-2xl relative ${tier.popular ? 'border-2 border-primary ring-1 ring-primary/20' : 'border border-white/10'}`}
+                                transition={{ delay: index * 0.1 }}
+                                className={`glass-panel relative rounded-2xl p-6 ${tier.popular ? 'ring-1 ring-primary/20 border-2 border-primary' : 'border border-white/10'}`}
                             >
-                                {tier.popular && (
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-xs font-bold uppercase text-white rounded-full">
+                                {tier.popular ? (
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-bold uppercase text-white">
                                         Most Popular
                                     </div>
-                                )}
+                                ) : null}
 
-                                <h4 className="text-lg font-bold text-white mb-2">{tier.name}</h4>
-                                <div className="text-3xl font-display font-bold text-white mb-1">
+                                <h4 className="mb-2 text-lg font-bold text-white">{tier.name}</h4>
+                                <div className="mb-1 text-3xl font-display font-bold text-white">
                                     {formatPrice(tier.price)}
                                 </div>
-                                <p className="text-xs text-gray-500 mb-4">per group of 5</p>
+                                <p className="mb-4 text-xs text-gray-500">per group of 5</p>
 
-                                <ul className="space-y-2 mb-6">
-                                    {tier.features.map((f, j) => (
-                                        <li key={j} className="flex items-start gap-2 text-sm text-gray-400">
-                                            <Star className={`w-3 h-3 mt-1 flex-shrink-0 ${tier.popular ? 'text-primary' : 'text-gray-600'}`} />
-                                            {f}
+                                <ul className="mb-6 space-y-2">
+                                    {tier.features.map((feature) => (
+                                        <li key={feature} className="flex items-start gap-2 text-sm text-gray-400">
+                                            <Star className={`mt-1 h-3 w-3 flex-shrink-0 ${tier.popular ? 'text-primary' : 'text-gray-600'}`} />
+                                            {feature}
                                         </li>
                                     ))}
                                 </ul>
 
                                 <Link
                                     href={`/project/consult?tier=${encodeURIComponent(tier.name)}&price=${tier.price}&type=${projectType}`}
-                                    className={`block w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider text-center transition-all ${tier.popular ? 'bg-primary text-white hover:bg-primary/90' : 'border border-white/20 text-white hover:bg-white/5'}`}
+                                    className={`block w-full rounded-xl py-3 text-center text-sm font-bold uppercase tracking-wider transition-all ${tier.popular ? 'bg-primary text-white hover:bg-primary/90' : 'border border-white/20 text-white hover:bg-white/5'}`}
                                 >
                                     Get Started
                                 </Link>
@@ -178,8 +177,8 @@ export function Pricing() {
                         ))}
                     </div>
 
-                    <p className="text-center text-gray-600 text-sm mt-8">
-                        Already paid for DIY? We'll deduct that from your Agency upgrade. 🤝
+                    <p className="mt-8 text-center text-sm text-gray-600">
+                        Already paid for DIY? We&apos;ll deduct that from your Agency upgrade. 🤝
                     </p>
                 </motion.div>
             </div>

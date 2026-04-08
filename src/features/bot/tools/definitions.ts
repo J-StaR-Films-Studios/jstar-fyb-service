@@ -1,13 +1,14 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { PRICING_CONFIG } from '@/config/pricing';
 
 export const chatTools = {
     suggestTopics: tool({
         description: `MANDATORY tool for suggesting project topics. You MUST call this tool when presenting topic options.
 TRIGGER: After learning the user's department/course.
 SYNTAX: suggestTopics({ topics: [{ title: "...", twist: "...", difficulty: "Safe Bet" | "Insane Mode" }] })
-POSITIVE: User says "I study Computer Science" → Call suggestTopics with 2 options.
+POSITIVE: User says "I study Computer Science" -> Call suggestTopics with 2 options.
 NEGATIVE: Never write topics as plain text. If you want to suggest topics, you MUST use this tool.`,
         inputSchema: z.object({
             topics: z.array(z.object({
@@ -38,9 +39,9 @@ NEGATIVE: Never write topics as plain text. If you want to suggest topics, you M
         execute: async () => {
             logger.info('Fetching pricing tiers', '[TOOL CALL] getPricing');
             return {
-                basic: "₦120,000",
-                standard: "₦200,000",
-                premium: "₦320,000"
+                basic: `₦${PRICING_CONFIG.AGENCY.SOFTWARE[0].price.toLocaleString()}`,
+                standard: `₦${PRICING_CONFIG.AGENCY.SOFTWARE[1].price.toLocaleString()}`,
+                premium: `₦${PRICING_CONFIG.AGENCY.SOFTWARE[2].price.toLocaleString()}`
             };
         }
     }),
@@ -59,7 +60,7 @@ NEGATIVE: Never write topics as plain text. If you want to suggest topics, you M
         description: `MANDATORY tool to collect user's WhatsApp number.
 TRIGGER: When user agrees to a topic and seems ready to proceed.
 SYNTAX: requestContactInfo({ reason: "To send the architecture specs" })
-POSITIVE: User says "ok let's do this" → Call requestContactInfo.
+POSITIVE: User says "ok let's do this" -> Call requestContactInfo.
 NEGATIVE: Never say "drop your WhatsApp" or "send me your number" in plain text. You MUST use this tool.`,
         inputSchema: z.object({
             reason: z.string().describe('Context for asking (e.g. "To send architecture")'),
@@ -73,7 +74,7 @@ NEGATIVE: Never say "drop your WhatsApp" or "send me your number" in plain text.
         description: `MANDATORY tool to finalize the topic after getting WhatsApp.
 TRIGGER: After user provides their phone number (e.g. "08012345678").
 SYNTAX: confirmTopic({ topic: "Project Title", twist: "The unique angle" })
-POSITIVE: User shares phone → Call confirmTopic with the agreed topic.
+POSITIVE: User shares phone -> Call confirmTopic with the agreed topic.
 NEGATIVE: Never end conversation or say "we're done" without calling this tool.`,
         inputSchema: z.object({
             topic: z.string().describe('The confirmed project topic title'),

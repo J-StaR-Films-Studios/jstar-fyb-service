@@ -2,7 +2,7 @@
 
 import { useBuilderStore } from "@/features/builder/store/useBuilderStore";
 import { useEffect, useRef } from "react";
-import { Check, Loader2, RefreshCw, FileText, Pencil } from "lucide-react";
+import { Check, Loader2, RefreshCw, FileText } from "lucide-react";
 import { toast } from 'sonner';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { motion } from 'framer-motion';
@@ -13,7 +13,6 @@ import { ModeSelection } from "./ModeSelection";
 import { ConciergeWaiting } from "./ConciergeWaiting";
 import { ChapterGenerator } from "./ChapterGenerator";
 import { UpsellBridge } from "./UpsellBridge";
-import { DocumentUpload } from "./DocumentUpload";
 import { OutlinePreview } from "./OutlinePreview";
 import { ResearchSourcesCard } from "./ResearchSourcesCard";
 import { usePaymentVerification } from "../hooks/usePaymentVerification";
@@ -79,7 +78,11 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
     useEffect(() => {
         if (wasRecentlyUnlocked && !hasShownWarningRef.current) {
             hasShownWarningRef.current = true;
-            setShowTopicChangeWarning(true);
+            const timer = window.setTimeout(() => {
+                setShowTopicChangeWarning(true);
+            }, 0);
+
+            return () => window.clearTimeout(timer);
         }
     }, [wasRecentlyUnlocked]);
 
@@ -193,7 +196,7 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
             console.log('[ChapterOutliner] Generating free outline...');
             submit({ topic: data.topic, abstract: data.abstract, projectId: data.projectId });
         }
-    }, [data.abstract, data.topic, data.outline?.length, submit, isLoading]);
+    }, [data.abstract, data.topic, data.outline?.length, data.projectId, submit, isLoading]);
 
     // Project claiming logic (Lazy Auth)
     useEffect(() => {
@@ -360,14 +363,15 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
                 )}
             </motion.div>
 
-
-            <TopicLockModal
-                isOpen={isLockModalOpen}
-                onClose={() => setIsLockModalOpen(false)}
-                onConfirm={proceedToPayment}
-                topic={data.topic || "Your Project"}
-                isReferred={isReferred}
-            />
+            {isLockModalOpen ? (
+                <TopicLockModal
+                    isOpen={isLockModalOpen}
+                    onClose={() => setIsLockModalOpen(false)}
+                    onConfirm={proceedToPayment}
+                    topic={data.topic || "Your Project"}
+                    isReferred={isReferred}
+                />
+            ) : null}
 
             {/* Topic Change Warning Modal - shown when project was unlocked for topic switch */}
             <TopicChangeWarningModal
