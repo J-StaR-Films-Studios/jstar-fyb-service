@@ -218,7 +218,7 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
   if (hasOpenRouter()) {
     const modelId = quality === 'high' 
       ? Models.FREE.NVIDIA_3_NANO 
-      : Models.FREE.MIMO_V2_FLASH;
+      : Models.FREE.TRINITY_LARGE_PREVIEW;
     
     return {
       model: openrouter!(modelId),

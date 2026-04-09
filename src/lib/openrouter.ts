@@ -17,12 +17,12 @@ export const openrouter = createOpenRouter({
  */
 export const OpenRouterModels = {
     // FREE Interactive Models
-    CHAT: 'xiaomi/mimo-v2-flash:free',
+    CHAT: 'arcee-ai/trinity-large-preview:free',
     CHAT_VISION: 'nvidia/nemotron-nano-12b-v2-vl:free',
-    REASONING: 'tngtech/deepseek-r1t2-chimera:free',
+    REASONING: 'nvidia/nemotron-3-super-120b-a12b:free',
 
     // Paid tier (if needed)
-    KIMI: 'moonshotai/kimi-k2:free',
+    KIMI: 'moonshotai/kimi-k2',
 } as const;
 
 /**

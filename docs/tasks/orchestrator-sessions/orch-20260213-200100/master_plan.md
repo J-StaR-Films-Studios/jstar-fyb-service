@@ -43,7 +43,7 @@ Implement the Hybrid Research Feature for J-Star FYB. Replaces the broken OpenRo
 
 ## Design Decisions
 - Gemini required for `googleSearch` grounding (native feature, can't use OpenRouter)
-- OpenRouter `Models.FREE.MIMO_V2_FLASH` used for AI summarization/snippets
+- OpenRouter `Models.FREE.TRINITY_LARGE_PREVIEW` used for AI summarization/snippets
 - No binary PDF downloads — students click through to open-access links
 - Semantic Scholar API is free, no API key needed, 100 req/sec
 

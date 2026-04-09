@@ -18,7 +18,7 @@ Refactor `src/features/research/services/geminiService.ts` to return well-struct
 **In Scope:**
 - Refactor `geminiService.ts` → cleaner return types
 - Add `GroundedWebSource` interface
-- Add batch AI summarization using OpenRouter (`Models.FREE.MIMO_V2_FLASH`)
+- Add batch AI summarization using OpenRouter (`Models.FREE.TRINITY_LARGE_PREVIEW`)
 - Handle edge cases (no grounding metadata, empty responses)
 - Deduplicate URLs
 - Verify with `npx tsc --noEmit`
@@ -53,7 +53,7 @@ After getting grounding URLs, batch-summarize using:
 ```typescript
 import { generateObject } from 'ai';
 import { openrouter, Models } from '@/lib/ai/providers';
-// Model: Models.FREE.MIMO_V2_FLASH
+// Model: Models.FREE.TRINITY_LARGE_PREVIEW
 ```
 
 ---

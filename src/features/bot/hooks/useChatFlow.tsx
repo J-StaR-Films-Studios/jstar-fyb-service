@@ -104,12 +104,12 @@ export function useChatFlow(userId?: string, userName?: string) {
     // ------------------------------------------------------------------
     useEffect(() => {
         if (error && retryCount === 0) {
-            console.log("⚠️ Auto-retrying with MIMO_V2_FLASH...");
+            console.log("⚠️ Auto-retrying with TRINITY_LARGE_PREVIEW...");
             setRetryCount(1);
             // Retry with explicit model override
             regenerate({
                 body: {
-                    modelOverride: Models.FREE.MIMO_V2_FLASH,
+                    modelOverride: Models.FREE.TRINITY_LARGE_PREVIEW,
                     quality: 'free'
                 }
             });

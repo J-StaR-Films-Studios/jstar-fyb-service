@@ -9,7 +9,7 @@
 
 ## ✅ Results
 
-Refactored `geminiService.ts` to return structured `GroundedWebSource[]` with AI-generated snippets using OpenRouter free model (`Models.FREE.MIMO_V2_FLASH`).
+Refactored `geminiService.ts` to return structured `GroundedWebSource[]` with AI-generated snippets using OpenRouter free model (`Models.FREE.TRINITY_LARGE_PREVIEW`).
 
 ---
 
@@ -36,7 +36,7 @@ export interface GroundedWebSource {
 ### Key Changes
 1. **Deduplication** - URLs deduplicated using `Set`
 2. **Structured output** - Returns `GroundedWebSource[]` instead of raw `{ title, url }[]`
-3. **AI Snippets** - Uses OpenRouter `MIMO_V2_FLASH` (free) for relevance summaries
+3. **AI Snippets** - Uses OpenRouter `TRINITY_LARGE_PREVIEW` (free) for relevance summaries
 4. **Graceful degradation** - Returns empty array on errors, fallback snippets if OpenRouter unavailable
 5. **Zod schema validation** - Uses `generateObject` with schema for structured snippet output
 
