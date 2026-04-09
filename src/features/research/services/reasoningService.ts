@@ -56,8 +56,6 @@ DO return precise Dorks like "History of AI filetype:pdf site:.edu".
 *   **TARGET AUDIENCE & CONTEXT:** ${audience}
 `;
 
-        if (!openrouter) throw new Error('OpenRouter provider is not configured (missing API key).');
-
         try {
             // Use TRINITY_LARGE_PREVIEW (trinity-large-preview) - supports structured output/tool calling
             // StepFun models don't support JSON schema response_format

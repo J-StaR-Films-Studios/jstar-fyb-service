@@ -3,6 +3,27 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { Models, openrouter } from '@/lib/ai/providers';
 
+/**
+ * Normalize a URL for comparison.
+ * Handles: lowercase, decode percent-encoding, remove trailing slashes, normalize host.
+ */
+function normalizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    // Lowercase hostname, decode path/query, remove trailing slash
+    const normalized = {
+      hostname: parsed.hostname.toLowerCase(),
+      pathname: decodeURIComponent(parsed.pathname).replace(/\/+$/, ''),
+      search: decodeURIComponent(parsed.search).replace(/^\?/, ''),
+    };
+    // Reconstruct without protocol for lenient matching
+    return `${normalized.hostname}${normalized.pathname}${normalized.search ? '?' + normalized.search : ''}`;
+  } catch {
+    // Fallback: lowercase the whole thing
+    return url.toLowerCase();
+  }
+}
+
 export interface GroundedWebSource {
   title: string;
   url: string;
@@ -127,9 +148,10 @@ ${sources.map((s, i) => `${i + 1}. ${s.title} - ${s.url}`).join('\n')}
 For each source, explain why it might be relevant for researching the topic academically.`,
       });
 
-      // Merge snippets with sources
+      // Merge snippets with sources using normalized URL comparison
       return sources.map((source) => {
-        const matched = object.sources.find(s => s.url === source.url);
+        const sourceNormalized = normalizeUrl(source.url);
+        const matched = object.sources.find(s => normalizeUrl(s.url) === sourceNormalized);
         return {
           title: source.title,
           url: source.url,

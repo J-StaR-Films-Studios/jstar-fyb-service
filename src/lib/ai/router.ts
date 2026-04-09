@@ -240,6 +240,16 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
 // ============================================================
 
 /**
+ * Check if an OpenRouter model ID is a known free tier model.
+ * Returns true for models in Models.FREE, false otherwise.
+ * Returns undefined if we cannot determine (unknown model).
+ */
+function isOpenRouterFreeModel(modelId: string): boolean | undefined {
+    const freeModels = Object.values(Models.FREE) as string[];
+    return freeModels.includes(modelId) ? true : undefined;
+}
+
+/**
  * Handle forced model selection.
  */
 function selectForcedModel(forceModel: string): RouteResult {
@@ -264,11 +274,12 @@ function selectForcedModel(forceModel: string): RouteResult {
     }
 
     if (hasOpenRouter()) {
+        const isFree = isOpenRouterFreeModel(forceModel);
         return {
             model: openrouter!(forceModel),
             provider: 'openrouter',
             modelId: forceModel,
-            isFree: true,
+            isFree: isFree ?? false,
             reason: 'Forced model override (OpenRouter)',
         };
     }
