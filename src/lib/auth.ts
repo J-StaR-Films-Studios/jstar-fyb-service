@@ -91,7 +91,7 @@ export const auth = betterAuth({
                 logger.info(`Sending Magic Link to ${email}`, "[Auth]");
 
                 await resend.emails.send({
-                    from: process.env.RESEND_FROM_EMAIL || "J-Star Projects <onboarding@resend.dev>",
+                    from: process.env.RESEND_FROM_EMAIL || "J-Star Projects <no-reply@jstarstudios.com>",
                     to: email,
                     subject: "Sign in to J-Star FYB Service",
                     html: `

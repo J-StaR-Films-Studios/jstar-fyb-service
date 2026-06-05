@@ -3,7 +3,7 @@ import { PaymentReceiptEmail } from '@/emails/PaymentReceipt';
 import { escapeHtml } from '@/lib/security';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'J-Star Projects <onboarding@resend.dev>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'J-Star Projects <no-reply@jstarstudios.com>';
 const SUPPORT_EMAIL = 'hey@jstarstudios.com';
 
 interface SendReceiptParams {
