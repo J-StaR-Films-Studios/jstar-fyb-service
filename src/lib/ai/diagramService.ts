@@ -53,7 +53,7 @@ ${projectContext ? `Relevant Project Context:\n${projectContext}` : ''}
     }
 
     const { text } = await generateText({
-        model: openrouter(Models.FREE.TRINITY_LARGE_PREVIEW),
+        model: openrouter(Models.FREE.NVIDIA_3_NANO),
         system: systemPrompt,
         prompt: userPrompt,
         temperature: 0.2,

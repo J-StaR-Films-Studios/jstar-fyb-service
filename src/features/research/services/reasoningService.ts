@@ -57,10 +57,10 @@ DO return precise Dorks like "History of AI filetype:pdf site:.edu".
 `;
 
         try {
-            // Use TRINITY_LARGE_PREVIEW (trinity-large-preview) - supports structured output/tool calling
-            // StepFun models don't support JSON schema response_format
+            // Use a current OpenRouter free model that supports structured output/tool calling
+            // Some older/free models do not support JSON schema response_format
             const result = await generateObject({
-                model: openrouter(Models.FREE.TRINITY_LARGE_PREVIEW),
+                model: openrouter(Models.FREE.NVIDIA_3_NANO),
                 schema: SearchQueriesSchema,
                 system: systemPrompt,
                 prompt: userPrompt,

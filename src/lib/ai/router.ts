@@ -29,7 +29,7 @@ export interface RouteConfig {
     /**
      * Quality tier preference
      * - 'premium': Always use Gemini (paid)
-     * - 'high': Use best available free model (DeepSeek V3, Kimi K2)
+     * - 'high': Use best available free model
      * - 'standard': Use reliable free models
      * - 'free': Use any free model, lowest quality acceptable
      */
@@ -198,8 +198,8 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     // High/Standard/Free: Use OpenRouter free tier
     if (hasOpenRouter()) {
         const modelId = quality === 'high'
-            ? Models.FREE.NVIDIA_3_NANO
-            : Models.FREE.TRINITY_LARGE_PREVIEW;
+            ? Models.FREE.NEMOTRON_3_ULTRA
+            : Models.FREE.NVIDIA_3_NANO;
 
         return {
             model: openrouter!(modelId),
@@ -213,9 +213,9 @@ export function selectModel(config: RouteConfig = {}): RouteResult {
     // Fallback to Groq
     if (hasGroq()) {
         return {
-            model: groq!(Models.GROQ.KIMI_K2),
+            model: groq!(Models.GROQ.GPT_OSS_120B),
             provider: 'groq',
-            modelId: Models.GROQ.KIMI_K2,
+            modelId: Models.GROQ.GPT_OSS_120B,
             isFree: false,
             reason: 'Fallback to Groq',
         };

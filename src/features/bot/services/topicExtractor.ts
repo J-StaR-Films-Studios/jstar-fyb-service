@@ -37,7 +37,7 @@ export async function extractTopicFromConversation(
         }
 
         const { object } = await generateObject({
-            model: groq('openai/gpt-oss-20b'), // Fast & cheap model for extraction
+            model: groq('openai/gpt-oss-120b'), // Groq-hosted model for extraction
             schema: extractionSchema,
             prompt: `You are analyzing a conversation between a Nigerian student and an AI assistant (Jay) about their final year project.
 
