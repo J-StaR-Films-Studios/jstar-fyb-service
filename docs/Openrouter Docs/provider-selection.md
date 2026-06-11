@@ -394,7 +394,7 @@ By copying the exact provider slug and using it in your request's `order` array,
   });
 
   const completion = await openRouter.chat.send({
-    model: 'deepseek/deepseek-r1',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
     messages: [{ role: 'user', content: 'Hello' }],
     provider: {
       order: ['deepinfra/turbo'],
@@ -414,7 +414,7 @@ By copying the exact provider slug and using it in your request's `order` array,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'deepseek/deepseek-r1',
+      model: 'nvidia/nemotron-3-super-120b-a12b:free',
       messages: [{ role: 'user', content: 'Hello' }],
       provider: {
         order: ['deepinfra/turbo'],
@@ -435,7 +435,7 @@ By copying the exact provider slug and using it in your request's `order` array,
   }
 
   response = requests.post('https://openrouter.ai/api/v1/chat/completions', headers=headers, json={
-    'model': 'deepseek/deepseek-r1',
+    'model': 'nvidia/nemotron-3-super-120b-a12b:free',
     'messages': [{ 'role': 'user', 'content': 'Hello' }],
     'provider': {
       'order': ['deepinfra/turbo'],

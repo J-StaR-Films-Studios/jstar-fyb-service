@@ -14,7 +14,7 @@ You can also append `:online` to `:free` model variants like so:
 
 ```json
 {
-  "model": "openai/gpt-oss-20b:free:online"
+  "model": "openai/gpt-oss-120b:free:online"
 }
 ```
 

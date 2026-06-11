@@ -38,7 +38,7 @@
 - GeminiFileSearchService with streaming
 - Project.fileSearchStoreId sync
 - Document extract endpoint with auto-RAG
-- Model-switching logic (Gemini vs Kimi)
+- Model-switching logic (Gemini vs GPT-OSS 120B)
 - Citations (Author, Year) integration
 - References section generation
 
