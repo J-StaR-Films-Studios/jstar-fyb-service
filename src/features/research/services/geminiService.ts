@@ -136,7 +136,7 @@ Topic: ${goal}
 
     try {
       const { object } = await generateObject({
-        model: openrouter(Models.FREE.TRINITY_LARGE_PREVIEW),
+        model: openrouter(Models.FREE.NVIDIA_3_NANO),
         schema: SnippetSchema,
         prompt: `Generate brief relevance snippets (1-2 sentences) for each source related to this research topic.
 

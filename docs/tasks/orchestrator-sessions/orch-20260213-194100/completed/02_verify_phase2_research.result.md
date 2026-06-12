@@ -10,9 +10,9 @@
 - [x] Project model has fileSearchStoreId field
 - [x] ResearchDocument model has File Search fields
 - [x] Document extract endpoint exists
-- [x] Chapter generation has model-switching logic (Gemini vs Kimi)
+- [x] Chapter generation has model-switching logic (Gemini vs GPT-OSS 120B)
 - [x] Citations are properly formatted in generation
-- [x] Fallback model (kimi-k2) is configured
+- [x] Fallback model (gpt-oss-120b) is configured
 
 ## Artifacts
 
@@ -23,7 +23,7 @@
 | `src/app/api/documents/[id]/extract/route.ts` | Verified | Summary extraction endpoint with auto-RAG sync |
 | `src/app/api/documents/upload/route.ts` | Verified | File Search integration with store creation |
 | `src/app/api/generate/chapter/route.ts` | Verified | Model-switching logic and citations |
-| `src/lib/openrouter.ts` | Verified | kimi-k2 fallback model configured |
+| `src/lib/openrouter.ts` | Verified | gpt-oss-120b fallback model configured |
 | `src/lib/ai/router.ts` | Verified | selectModel() routing function |
 
 ## Detailed Findings
@@ -98,7 +98,7 @@ const useGroundedParams = !!fileSearchStoreId && hasDocuments;
 ### 8. Fallback Model Configuration ✅
 **File:** [`src/lib/openrouter.ts`](src/lib/openrouter.ts:25)
 
-- Kimi K2 configured as free tier option: `moonshotai/kimi-k2:free`
+- GPT-OSS 120B configured as free tier option: `openai/gpt-oss-120b:free`
 - Router in [`src/lib/ai/router.ts`](src/lib/ai/router.ts:105) handles model selection
 
 ## Outstanding Items

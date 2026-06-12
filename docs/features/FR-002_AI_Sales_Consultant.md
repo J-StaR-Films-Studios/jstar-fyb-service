@@ -47,7 +47,7 @@ const groq = createOpenAI({
     baseURL: 'https://api.groq.com/openai/v1',
     apiKey: process.env.GROQ_API_KEY,
 });
-// Model: moonshotai/kimi-k2-instruct-0905 (Best for Tool Calling)
+// Model: openai/gpt-oss-120b via Groq
 ```
 
 ### System Prompt (Jay's Persona)

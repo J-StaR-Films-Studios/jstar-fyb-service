@@ -17,12 +17,12 @@ export const openrouter = createOpenRouter({
  */
 export const OpenRouterModels = {
     // FREE Interactive Models
-    CHAT: 'arcee-ai/trinity-large-preview:free',
+    CHAT: 'nvidia/nemotron-3-nano-30b-a3b:free',
     CHAT_VISION: 'nvidia/nemotron-nano-12b-v2-vl:free',
     REASONING: 'nvidia/nemotron-3-super-120b-a12b:free',
 
-    // Paid tier (if needed)
-    KIMI: 'moonshotai/kimi-k2',
+    // Free fallback for general generation
+    GPT_OSS_120B: 'openai/gpt-oss-120b:free',
 } as const;
 
 /**

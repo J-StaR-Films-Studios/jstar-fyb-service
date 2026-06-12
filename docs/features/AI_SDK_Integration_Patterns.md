@@ -23,8 +23,8 @@ const groq = createOpenAI({
 
 // Usage
 streamText({
-    model: groq('moonshotai/kimi-k2-instruct-0905'),
-    // or: groq('llama-3.3-70b-versatile')
+    model: groq('openai/gpt-oss-120b'),
+    // or: use OpenRouter free-tier fallbacks from Models.FREE
 });
 ```
 

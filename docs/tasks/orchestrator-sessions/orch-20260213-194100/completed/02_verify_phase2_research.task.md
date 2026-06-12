@@ -41,7 +41,7 @@ Phase 2 is marked as [COMPLETE ✅] with verification checklist:
 - [x] Chapter generation switches to Gemini when docs are present
 - [x] Citations (Author, Year) integrated into generated text
 - [x] References section appended via grounding metadata
-- [x] Standard fallback uses `kimi-k2` correctly
+- [x] Standard fallback uses `gpt-oss-120b` correctly
 - [ ] Cleanup: FileSearchStore deleted when project is deleted (Pending)
 
 ### Files to Check
@@ -61,9 +61,9 @@ Phase 2 is marked as [COMPLETE ✅] with verification checklist:
 - [ ] Project model has fileSearchStoreId field
 - [ ] ResearchDocument model has File Search fields
 - [ ] Document extract endpoint exists
-- [ ] Chapter generation has model-switching logic (Gemini vs Kimi)
+- [ ] Chapter generation has model-switching logic (Gemini vs GPT-OSS 120B)
 - [ ] Citations are properly formatted in generation
-- [ ] Fallback model (kimi-k2) is configured
+- [ ] Fallback model (gpt-oss-120b) is configured
 
 ## 📁 Expected Artifacts
 | File | Purpose |

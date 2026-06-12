@@ -104,12 +104,12 @@ export function useChatFlow(userId?: string, userName?: string) {
     // ------------------------------------------------------------------
     useEffect(() => {
         if (error && retryCount === 0) {
-            console.log("⚠️ Auto-retrying with TRINITY_LARGE_PREVIEW...");
+            console.log("⚠️ Auto-retrying with current OpenRouter free model...");
             setRetryCount(1);
             // Retry with explicit model override
             regenerate({
                 body: {
-                    modelOverride: Models.FREE.TRINITY_LARGE_PREVIEW,
+                    modelOverride: Models.FREE.NVIDIA_3_NANO,
                     quality: 'free'
                 }
             });

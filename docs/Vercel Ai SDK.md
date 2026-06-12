@@ -14147,7 +14147,7 @@ export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
   const result = streamText({
-    model: 'deepseek/deepseek-r1',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
     messages: await convertToModelMessages(messages),
   });
 
@@ -24496,7 +24496,6 @@ These tools can be used in conjunction with the `anthropic.claude-3-5-sonnet-202
 | `mistral.mistral-small-2402-v1:0`              | <Cross size={18} /> | <Cross size={18} /> | <Cross size={18} /> | <Cross size={18} /> |
 | `us.mistral.pixtral-large-2502-v1:0`           | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `openai.gpt-oss-120b-1:0`                      | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
-| `openai.gpt-oss-20b-1:0`                       | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 
 <Note>
   The table above lists popular models. Please see the [Amazon Bedrock
@@ -25127,7 +25126,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 
 const result = await generateObject({
-  model: groq('moonshotai/kimi-k2-instruct-0905'),
+  model: groq('openai/gpt-oss-120b'),
   schema: z.object({
     recipe: z.object({
       name: z.string(),
@@ -25170,7 +25169,7 @@ console.log(JSON.stringify(result.object, null, 2));
 
 <Note type="warning">
   Structured outputs are only supported by newer Groq models like
-  `moonshotai/kimi-k2-instruct-0905`. For unsupported models, you can disable
+  `openai/gpt-oss-120b`. For unsupported models, you can disable
   structured outputs by setting `structuredOutputs: false`. When disabled, Groq
   uses the `json_object` format which requires the word "JSON" to be included in
   your messages.
@@ -25254,7 +25253,7 @@ const { text } = await generateText({
 | `meta-llama/llama-4-scout-17b-16e-instruct`     | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `meta-llama/llama-prompt-guard-2-22m`           | <Cross size={18} /> | <Check size={18} /> | <Cross size={18} /> | <Cross size={18} /> |
 | `meta-llama/llama-prompt-guard-2-86m`           | <Cross size={18} /> | <Check size={18} /> | <Cross size={18} /> | <Cross size={18} /> |
-| `moonshotai/kimi-k2-instruct-0905`              | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
+| `openai/gpt-oss-120b`              | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `qwen/qwen3-32b`                                | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `llama-guard-3-8b`                              | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `llama3-70b-8192`                               | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
@@ -25263,7 +25262,6 @@ const { text } = await generateText({
 | `qwen-qwq-32b`                                  | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `qwen-2.5-32b`                                  | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `deepseek-r1-distill-qwen-32b`                  | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
-| `openai/gpt-oss-20b`                            | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `openai/gpt-oss-120b`                           | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 
 <Note>
@@ -25281,7 +25279,6 @@ Groq provides a browser search tool that offers interactive web browsing capabil
 
 Browser search is only available for these specific models:
 
-- `openai/gpt-oss-20b`
 - `openai/gpt-oss-120b`
 
 <Note type="warning">
@@ -25341,7 +25338,7 @@ for await (const delta of result.fullStream) {
 ### Best Practices
 
 - Use `toolChoice: 'required'` to ensure the browser search is activated
-- Only supported on `openai/gpt-oss-20b` and `openai/gpt-oss-120b` models
+- Only supported on `openai/gpt-oss-120b` models
 - The tool works automatically - no configuration parameters needed
 - Server-side execution means no additional API keys or setup required
 
@@ -25361,7 +25358,7 @@ const result = await generateText({
   model: groq('gemma2-9b-it'),
   tools: { browser_search: groq.tools.browserSearch({}) },
 });
-// Warning: "Browser search is only supported on models: openai/gpt-oss-20b, openai/gpt-oss-120b"
+// Warning: "Browser search is only supported on models: openai/gpt-oss-120b"
 ```
 
 <Note>
@@ -29991,10 +29988,10 @@ You can use the following optional settings to customize the Baseten provider in
 ## Model APIs
 
 You can select [Baseten models](https://www.baseten.co/products/model-apis/) using a provider instance.
-The first argument is the model id, e.g. `'moonshotai/Kimi-K2-Instruct-0905'`: The complete supported models under Model APIs can be found [here](https://docs.baseten.co/development/model-apis/overview#supported-models).
+The first argument is the model id, e.g. `'openai/gpt-oss-120b'`: The complete supported models under Model APIs can be found [here](https://docs.baseten.co/development/model-apis/overview#supported-models).
 
 ```ts
-const model = baseten('moonshotai/Kimi-K2-Instruct-0905');
+const model = baseten('openai/gpt-oss-120b');
 ```
 
 ### Example
@@ -30006,7 +30003,7 @@ import { baseten } from '@ai-sdk/baseten';
 import { generateText } from 'ai';
 
 const { text } = await generateText({
-  model: baseten('moonshotai/Kimi-K2-Instruct-0905'),
+  model: baseten('openai/gpt-oss-120b'),
   prompt: 'What is the meaning of life? Answer in one sentence.',
 });
 ```
@@ -30107,7 +30104,7 @@ import { generateText } from 'ai';
 
 try {
   const { text } = await generateText({
-    model: baseten('moonshotai/Kimi-K2-Instruct-0905'),
+    model: baseten('openai/gpt-oss-120b'),
     prompt: 'Hello, world!',
   });
 } catch (error) {
@@ -30256,7 +30253,7 @@ You can also use the `.responses()` or `.languageModel()` factory methods:
 ```ts
 const model = huggingface.responses('deepseek-ai/DeepSeek-V3-0324');
 // or
-const model = huggingface.languageModel('moonshotai/Kimi-K2-Instruct');
+const model = huggingface.languageModel('openai/gpt-oss-120b');
 ```
 
 Hugging Face language models can be used in the `streamText` function
@@ -30279,7 +30276,7 @@ You can explore the latest and trending models with their capabilities, context 
 | `Qwen/Qwen3-Coder-480B-A35B-Instruct`       | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `Qwen/Qwen2.5-VL-7B-Instruct`               | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 | `google/gemma-3-27b-it`                     | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
-| `moonshotai/Kimi-K2-Instruct`               | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
+| `openai/gpt-oss-120b`               | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> |
 
 <Note>
   The capabilities depend on the specific model you're using. Check the model
@@ -31422,7 +31419,7 @@ const model = fireworks.completion('accounts/fireworks/models/firefunction-v1');
 | `accounts/fireworks/models/llama-v3p2-11b-vision-instruct` | <Check size={18} /> | <Check size={18} /> | <Check size={18} /> | <Cross size={18} /> |
 | `accounts/fireworks/models/qwq-32b`                        | <Cross size={18} /> | <Check size={18} /> | <Cross size={18} /> | <Cross size={18} /> |
 | `accounts/fireworks/models/yi-large`                       | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Cross size={18} /> |
-| `accounts/fireworks/models/kimi-k2-instruct`               | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Cross size={18} /> |
+| `accounts/fireworks/models/gpt-oss-120b`               | <Cross size={18} /> | <Check size={18} /> | <Check size={18} /> | <Cross size={18} /> |
 
 <Note>
   The table above lists popular models. Please see the [Fireworks models

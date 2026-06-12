@@ -68,8 +68,9 @@ J-Star FYB Service is a comprehensive SaaS platform designed to help final year 
 
 | Provider | Model | Use Case |
 |----------|-------|----------|
-| OpenRouter | `moonshotai/kimi-k2-instruct-0905` | Standard chapter generation |
-| OpenRouter | `openai/gpt-oss-120b` | Research paper summarization |
+| Groq | `openai/gpt-oss-120b` | Jay chat and topic extraction |
+| OpenRouter | `nvidia/nemotron-3-ultra-550b-a55b:free` | High-quality standard chapter generation |
+| OpenRouter | `openai/gpt-oss-120b:free` | Research paper summarization / fallback |
 | Google | `gemini-2.5-flash` | Grounded generation with File Search |
 | Groq | `llama-3.3-70b-versatile` | Fast outline generation |
 | OpenRouter | `tngtech/tng-r1t-chimera:free` | Reasoning traces for complex tasks |

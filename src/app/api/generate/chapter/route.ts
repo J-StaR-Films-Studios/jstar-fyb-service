@@ -227,7 +227,7 @@ export async function POST(req: Request) {
         logger.info(`Mode: ${useGroundedParams ? 'GROUNDED (Gemini)' : 'STANDARD (FREE Tier)'}`, '[GenerateChapter]');
 
         // ==========================================================
-        // MODE A: STANDARD GENERATION (FREE Tier - DeepSeek V3 / Kimi K2)
+        // MODE A: STANDARD GENERATION (FREE/OpenRouter tier or Groq fallback)
         // ==========================================================
         if (!useGroundedParams) {
             // Use FREE tier model for cost savings

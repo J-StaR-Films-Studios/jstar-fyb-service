@@ -344,7 +344,7 @@ We implemented a robust **Hybrid Context** strategy to maximize generation quali
 2.  **Phase 2b: Grounded Generation (`gemini-2.5-flash`)**
     - Uses **Gemini File Search** as a managed tool for citation retrieval.
     - Injects structured summaries into the system prompt for high-level synthesis (Synthesis Mode).
-3.  **Fallback Path (`moonshotai/kimi-k2-instruct-0905`)**
+3. **Fallback Path (`openai/gpt-oss-120b` via Groq or OpenRouter free-tier models)**
     - Used for projects without research documents.
 
 ### 2.2 Implementation Notes (2026-01-03)
@@ -372,7 +372,7 @@ We implemented a robust **Hybrid Context** strategy to maximize generation quali
 - [x] Chapter generation switches to Gemini when docs are present
 - [x] Citations (Author, Year) integrated into generated text
 - [x] References section appended via grounding metadata
-- [x] Standard fallback uses `kimi-k2` correctly
+- [x] Standard fallback uses current Groq/OpenRouter models correctly
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │ User uploads PDF                                                     │

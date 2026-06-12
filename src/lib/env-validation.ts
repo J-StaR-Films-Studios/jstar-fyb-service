@@ -16,7 +16,7 @@ const envSchema = z.object({
     PAYSTACK_SECRET_KEY: z.string().min(1, "PAYSTACK_SECRET_KEY is required"),
 
     // AI services
-    OPENROUTER_API_KEY: z.string().optional(), // Kept for DeepSeek R1 (Future)
+    OPENROUTER_API_KEY: z.string().optional(), // Optional for OpenRouter free-tier fallbacks
     GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
     GEMINI_API_KEY: z.string().optional(), // For RAG/File Search features
 
