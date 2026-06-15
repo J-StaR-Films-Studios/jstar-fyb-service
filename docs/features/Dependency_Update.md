@@ -85,14 +85,24 @@ Major Prisma upgrades are deferred unless explicitly approved because `@prisma/c
 - Upgraded `@openrouter/ai-sdk-provider` to `2.9.1` so it peers with `ai@6`.
 - Upgraded `@react-pdf/renderer` to `4.5.1` and `react-pdf` to `10.4.1` for React 19 compatibility.
 - Changed `tiptap-markdown` from `0.9.0` to `0.8.10` because `0.9.0` peers with TipTap 3 while the app still uses TipTap 2.
+- Added explicit `@tiptap/extension-code-block@2.27.2` so `novel` resolves its TipTap 2 peer consistently after the TipTap 3 probe was reverted.
 - Removed deprecated dev-only stub type packages:
   - `@types/bcryptjs`
   - `@types/cookie`
   - `@types/dompurify`
+- Updated additional major-version packages that passed production build verification:
+  - `@google/genai` from `1.52.0` to `2.8.0`
+  - `diff` from `8.0.4` to `9.0.0`
+  - `lucide-react` from `0.561.0` to `1.18.0`
+  - `typescript` from `5.9.3` to `6.0.3`
+  - `@types/node` from `20.19.43` to `25.9.3`
+- Probed and reverted Tailwind CSS `4.3.1` because the build requires the Tailwind 4 PostCSS plugin migration.
+- Probed and reverted TipTap `3.26.1` because the editor build failed on the moved `BubbleMenu` export and `novel` still expects TipTap 2 extension peers.
+- Probed and reverted Prisma `7.8.0` because `prisma generate` failed on the Prisma 7 datasource/config migration requirement.
 
 ## Verification Result
 - `pnpm exec prisma generate`: passed.
-- `pnpm exec next build`: passed on Next.js `16.2.9`.
+- `pnpm exec next build`: passed on Next.js `16.2.9`, React `19.2.7`, TypeScript `6.0.3`, and the successful additional major bumps.
 - `pnpm lint`: still fails due to an existing lint backlog across scripts and app files. The errors are primarily `no-explicit-any`, unescaped JSX text, CommonJS `require()` in scripts, and React hook lint rules. This should be handled as a separate lint hardening task instead of bundled into the dependency update.
 
 Build warnings observed:
@@ -104,12 +114,7 @@ Build warnings observed:
 - Prisma `5.22.0` to `7.x`.
 - TipTap `2.x` to `3.x`.
 - Tailwind CSS `3.x` to `4.x`.
-- TypeScript `5.x` to `6.x`.
 - ESLint `9.x` to `10.x`.
-- Lucide React `0.x` to `1.x`.
-- `@google/genai` `1.x` to `2.x`.
-- `diff` `8.x` to `9.x`.
-- Node type definitions `20.x` to `25.x`.
 
 ## Remaining Notes
 - The repo still contains both `pnpm-lock.yaml` and `package-lock.json`. This update used pnpm only, so `package-lock.json` was intentionally left untouched.
