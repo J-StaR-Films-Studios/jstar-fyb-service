@@ -34,14 +34,21 @@ export function ChatInterface({ initialUser, hideHeader = false }: ChatInterface
     const [inputValue, setInputValue] = useState("");
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [showCollective, setShowCollective] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Auto-Greeting Logic
     const jayGreeting = {
         id: 'jay-greeting',
         role: 'ai' as const,
         content: "Yo! I'm Jay, your FYP plug. Tell me what department you're in or drop a rough topic idea – let's find something that'll make your supervisor smile! 🔥",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: mounted
+            ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : 'Just now',
         toolInvocations: undefined
     };
 
