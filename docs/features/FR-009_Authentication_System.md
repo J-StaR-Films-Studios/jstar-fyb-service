@@ -20,6 +20,7 @@ Secure the application and manage user accounts using **Better-Auth** with Prism
 | `/auth/login` | Client component using `signIn.email` / `signIn.social` |
 | `/auth/register` | Client component using `signUp.email` / `signIn.social` |
 | `/profile` | User profile management and Sign Out |
+| `/admin/users` | Admin lookup by exact email and revocation of a user's active Better Auth sessions |
 
 ---
 
@@ -30,6 +31,8 @@ Middleware (`src/proxy.ts`) injects metadata for Server Components and handles e
 - **Header Injection:** Injects `x-current-path` header to allow Server Components to know the current URL.
 - **RBAC Protection:** Admin routes (`/admin`) are protected by checking the user's `role` field in the session.
 - **Redirects:** Non-admin users attempting to access `/admin` are redirected to `/dashboard`.
+
+Admin session revocation deletes the selected user's active Better Auth session records. It signs them out on their next request, but does not disable their account or revoke paid project access. The deprecated partner JWT cookie is separate and is not revoked by this control.
 
 ### 2. RBAC (Role-Based Access Control)
 The system uses a tiered role system stored in the database:
