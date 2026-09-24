@@ -1,5 +1,5 @@
 import { streamObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { selectModel } from '@/lib/ai/router';
 import { outlineSchema } from '@/features/builder/schemas/outlineSchema';
 import { z } from 'zod';
 import { BuilderAiService } from '@/features/builder/services/builderAiService';
@@ -7,17 +7,6 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
 import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-
-// Validate environment variables
-const groqApiKey = process.env.GROQ_API_KEY;
-if (!groqApiKey) {
-    throw new Error('GROQ_API_KEY environment variable is required');
-}
-
-const groq = createOpenAI({
-    baseURL: 'https://api.groq.com/openai/v1',
-    apiKey: groqApiKey,
-});
 
 export const maxDuration = 120;
 
@@ -59,8 +48,10 @@ export async function POST(req: Request) {
         logger.warn('[GenerateOutline] BuilderAiService failed, proceeding without context', "[GenerateOutline]");
     }
 
+    const { model, providerOptions } = selectModel({ effort: 'medium' });
     const result = streamObject({
-        model: groq('openai/gpt-oss-120b'),
+        model,
+        providerOptions,
         schema: outlineSchema,
         system: `You are an expert academic curriculum designer.
 Create a 5-chapter distinction-grade project outline based on the verified abstract.

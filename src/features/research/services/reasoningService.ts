@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { openrouter, Models } from '@/lib/ai/providers';
+import { selectModel } from '@/lib/ai/router';
 import { z } from 'zod';
 
 // Define the schema for search queries
@@ -20,10 +20,6 @@ export class ReasoningService {
         technologies: string,
         audience: string
     ): Promise<SearchQueries> {
-        if (!openrouter) {
-            throw new Error('OpenRouter provider is not configured properly.');
-        }
-
         const systemPrompt = `
 You are an expert research strategist. Your task is to generate a list of targeted search queries for a given project.
 Analyze the project details provided and create a list of search queries broken down into three strategic categories:
@@ -57,10 +53,10 @@ DO return precise Dorks like "History of AI filetype:pdf site:.edu".
 `;
 
         try {
-            // Use a current OpenRouter free model that supports structured output/tool calling
-            // Some older/free models do not support JSON schema response_format
+            const { model, providerOptions } = selectModel({ effort: 'medium' });
             const result = await generateObject({
-                model: openrouter(Models.FREE.NVIDIA_3_NANO),
+                model,
+                providerOptions,
                 schema: SearchQueriesSchema,
                 system: systemPrompt,
                 prompt: userPrompt,

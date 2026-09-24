@@ -15,11 +15,11 @@ This project is **proprietary software** belonging to J StaR Films Studios.
 
 ---
   
-  [![Next.js](https://img.shields.io/badge/Next.js-16.0.10-black?logo=next.js)](https://nextjs.org/)
-  [![React](https://img.shields.io/badge/React-19.2.1-blue?logo=react)](https://react.dev/)
+  [![Next.js](https://img.shields.io/badge/Next.js-16.2.9-black?logo=next.js)](https://nextjs.org/)
+  [![React](https://img.shields.io/badge/React-19.2.7-blue?logo=react)](https://react.dev/)
   [![Prisma](https://img.shields.io/badge/Prisma-5.22.0-2D3748?logo=prisma)](https://prisma.io/)
   [![Vercel AI SDK](https://img.shields.io/badge/AI%20SDK-6.0-000?logo=vercel)](https://sdk.vercel.ai/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
   [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
   
   [Live Demo](#) • [Features](#-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [API Reference](#-api-reference)
@@ -66,14 +66,12 @@ J-Star FYB Service is a comprehensive SaaS platform designed to help final year 
 
 ### 🧠 AI Integration
 
-| Provider | Model | Use Case |
+| Provider | Model | Use case |
 |----------|-------|----------|
-| Groq | `openai/gpt-oss-120b` | Jay chat and topic extraction |
-| OpenRouter | `nvidia/nemotron-3-ultra-550b-a55b:free` | High-quality standard chapter generation |
-| OpenRouter | `openai/gpt-oss-120b:free` | Research paper summarization / fallback |
-| Google | `gemini-2.5-flash` | Grounded generation with File Search |
-| Groq | `llama-3.3-70b-versatile` | Fast outline generation |
-| OpenRouter | `tngtech/tng-r1t-chimera:free` | Reasoning traces for complex tasks |
+| OpenRouter | `openai/gpt-6-luna` | Jay and Nengi chat, Monji's tool-using assistant, abstracts, outlines, chapters, research analysis, metadata extraction and image-to-diagram generation |
+| Google (native API) | `gemini-2.5-flash` | Google Search grounding and File Search over uploaded documents, including grounded chapter generation |
+
+GPT-6 Luna is a paid OpenRouter model. The app requests low reasoning for chat, topic extraction and snippets; medium for research, outlines, abstracts, enhancements, metadata and diagrams; and high for chapter writing and Monji's academic assistant. Google grounding still requires `GEMINI_API_KEY`; OpenRouter cannot access the app's Google File Search stores.
 
 ---
 
@@ -82,8 +80,8 @@ J-Star FYB Service is a comprehensive SaaS platform designed to help final year 
 ### Prerequisites
 
 - **Node.js** 20+ 
-- **pnpm** (recommended) or npm
-- **PostgreSQL** (production) or SQLite (development)
+- **pnpm** (the repository tracks `pnpm-lock.yaml`)
+- **PostgreSQL** (the Prisma schema uses PostgreSQL in every environment)
 
 ### Installation
 
@@ -118,8 +116,8 @@ Create a `.env` file with the following variables:
 # ==============================================
 # DATABASE
 # ==============================================
-DATABASE_URL="file:./dev.db"           # SQLite for dev
-DATABASE_PROVIDER="sqlite"             # or "postgresql" for production
+DATABASE_URL="postgresql://user:password@localhost:5432/jstar_fyb"
+DATABASE_PROVIDER="postgresql"
 
 # ==============================================
 # BETTER AUTH
@@ -132,10 +130,8 @@ GOOGLE_CLIENT_SECRET="your-google-client-secret"
 # ==============================================
 # AI PROVIDERS
 # ==============================================
-GOOGLE_API_KEY="your-google-api-key"
-GROQ_API_KEY="your-groq-api-key"
-GEMINI_API_KEY="your-gemini-api-key"
-OPENROUTER_API_KEY="your-openrouter-api-key"
+OPENROUTER_API_KEY="your-openrouter-api-key" # paid GPT-6 Luna inference
+GEMINI_API_KEY="your-gemini-api-key"         # native search and file grounding
 
 # ==============================================
 # PAYMENTS (Paystack)
@@ -170,9 +166,9 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 | Layer | Technology |
 |-------|------------|
 | **Framework** | Next.js 16 (App Router) |
-| **Language** | TypeScript 5 |
+| **Language** | TypeScript 6 |
 | **Styling** | Tailwind CSS 3.4 + Framer Motion |
-| **Database** | PostgreSQL (Neon) / SQLite |
+| **Database** | PostgreSQL (Neon or local) |
 | **ORM** | Prisma 5.22 |
 | **Auth** | Better-Auth with Prisma adapter |
 | **AI** | Vercel AI SDK 6.0, Google GenAI |
@@ -310,17 +306,17 @@ erDiagram
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `ai` | ^6.0.16 | Vercel AI SDK for streaming |
-| `@ai-sdk/react` | ^3.0.16 | React hooks for AI |
-| `@ai-sdk/google` | ^3.0.5 | Google AI provider |
-| `@openrouter/ai-sdk-provider` | ^1.5.4 | OpenRouter integration |
-| `better-auth` | ^1.4.9 | Authentication framework |
+| `ai` | ^6.0.205 | Vercel AI SDK for streaming |
+| `@ai-sdk/react` | ^3.0.207 | React hooks for AI |
+| `@ai-sdk/google` | ^3.0.82 | Google AI provider |
+| `@openrouter/ai-sdk-provider` | ^2.9.1 | OpenRouter integration |
+| `better-auth` | ^1.6.18 | Authentication framework |
 | `@prisma/client` | 5.22.0 | Database ORM |
-| `@tiptap/react` | ^2.11.2 | Rich text editor |
-| `framer-motion` | ^12.23.26 | Animations |
-| `docx` | ^9.5.1 | DOCX export |
-| `mermaid` | ^11.12.2 | Diagram generation |
-| `zustand` | ^5.0.9 | State management |
+| `@tiptap/react` | ^2.27.2 | Rich text editor |
+| `framer-motion` | ^12.40.0 | Animations |
+| `docx` | ^9.7.1 | DOCX export |
+| `mermaid` | ^11.15.0 | Diagram generation |
+| `zustand` | ^5.0.14 | State management |
 
 ---
 

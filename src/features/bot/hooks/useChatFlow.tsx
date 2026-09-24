@@ -16,7 +16,6 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { saveLeadAction } from "../actions/chat";
-import { Models } from "@/lib/ai/models";
 
 import { Message, ChatState, ConfirmedTopic } from "./types";
 import { useChatPersistence } from "./useChatPersistence";
@@ -104,31 +103,15 @@ export function useChatFlow(userId?: string, userName?: string) {
     // ------------------------------------------------------------------
     useEffect(() => {
         if (error && retryCount === 0) {
-            console.log("⚠️ Auto-retrying with current OpenRouter free model...");
+            console.log("Retrying Jay's response...");
             setRetryCount(1);
-            // Retry with explicit model override
-            regenerate({
-                body: {
-                    modelOverride: Models.FREE.NVIDIA_3_NANO,
-                    quality: 'free'
-                }
-            });
+            regenerate();
         }
     }, [error, retryCount, regenerate]);
 
-    /**
-     * Manual Retry Handler (for UI button)
-     * Falls back to high-quality model if initial retry failed
-     */
     const handleManualRetry = () => {
-        console.log("🔄 Manual retry triggered. Switching model...");
         setRetryCount(prev => prev + 1);
-        regenerate({
-            body: {
-                modelOverride: Models.FREE.NVIDIA_3_NANO,
-                quality: 'high'
-            }
-        });
+        regenerate();
     };
 
     // Track messages for persistence access

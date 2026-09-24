@@ -1,21 +1,11 @@
 import { streamText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { selectModel } from '@/lib/ai/router';
 import { z } from 'zod';
 import { BuilderAiService } from '@/features/builder/services/builderAiService';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
 import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-
-const groqApiKey = process.env.GROQ_API_KEY;
-if (!groqApiKey) {
-    throw new Error('GROQ_API_KEY environment variable is required');
-}
-
-const groq = createOpenAI({
-    baseURL: 'https://api.groq.com/openai/v1',
-    apiKey: groqApiKey,
-});
 
 export const maxDuration = 120;
 
@@ -75,8 +65,10 @@ Structure:
 
 ${instruction ? `REFINEMENT INSTRUCTION: ${instruction}` : ''}`;
 
+    const { model, providerOptions } = selectModel({ effort: 'medium' });
     const result = streamText({
-        model: groq('openai/gpt-oss-120b'),
+        model,
+        providerOptions,
         system: systemPrompt,
         prompt: `Write the abstract for "${topic}".`,
     });

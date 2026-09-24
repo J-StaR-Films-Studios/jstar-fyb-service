@@ -1,14 +1,9 @@
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { selectModel } from '@/lib/ai/router';
 import { generateText } from 'ai';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { extractPdfText } from '@/lib/pdf-parser';
 import mammoth from 'mammoth';
-
-// Initialize Google Gemini client
-const google = createGoogleGenerativeAI({
-    apiKey: process.env.GEMINI_API_KEY,
-});
 
 export const maxDuration = 300; // 5 minutes max for extraction
 
@@ -81,8 +76,10 @@ Return ONLY a valid JSON object with the following fields. Do not include markdo
     "category": "Primary research topic/domain"
 }`;
 
+        const { model, providerOptions } = selectModel({ effort: 'medium' });
         const { text: jsonOutput } = await generateText({
-            model: google('gemini-2.5-flash'),
+            model,
+            providerOptions,
             system: systemPrompt,
             prompt: `Analyze the following research document content and extract metadata:\n\n${textToAnalyze.slice(0, 50000)}`
         });
@@ -118,7 +115,7 @@ Return ONLY a valid JSON object with the following fields. Do not include markdo
                 category: metadata.category || null,
                 summary: jsonOutput, // Store raw JSON/text in summary for backup
                 status: 'PROCESSED',
-                aiInsights: 'Structured metadata extracted via Gemini 2.5 Flash',
+                aiInsights: 'Structured metadata extracted via GPT-6 Luna',
                 processedAt: new Date()
             }
         });

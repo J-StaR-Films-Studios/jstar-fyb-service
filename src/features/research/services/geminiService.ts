@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { Models, openrouter } from '@/lib/ai/providers';
+import { selectModel } from '@/lib/ai/router';
 
 /**
  * Normalize a URL for comparison.
@@ -106,7 +107,7 @@ Topic: ${goal}
         return [];
       }
 
-      // Generate snippets using OpenRouter free model
+      // Generate snippets using OpenRouter
       const sourcesWithSnippets = await this.generateSnippets(goal, rawSources);
 
       return sourcesWithSnippets;
@@ -118,7 +119,7 @@ Topic: ${goal}
   }
 
   /**
-   * Generate relevance snippets for sources using OpenRouter free model
+   * Generate relevance snippets for sources using GPT-6 Luna
    */
   private static async generateSnippets(
     goal: string,
@@ -135,8 +136,10 @@ Topic: ${goal}
     }
 
     try {
+      const { model, providerOptions } = selectModel();
       const { object } = await generateObject({
-        model: openrouter(Models.FREE.NVIDIA_3_NANO),
+        model,
+        providerOptions,
         schema: SnippetSchema,
         prompt: `Generate brief relevance snippets (1-2 sentences) for each source related to this research topic.
 

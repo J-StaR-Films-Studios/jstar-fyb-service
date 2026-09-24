@@ -153,11 +153,12 @@ The section will be appended to the chapter and saved to the database automatica
                     .join('\n');
 
                 // Select appropriate model for generation
-                const { model } = selectModel({ quality: 'high' });
+                const { model, providerOptions } = selectModel({ quality: 'high' });
 
                 // Generate the section content
                 const result = await generateText({
                     model,
+                    providerOptions,
                     prompt: `You are an expert academic writer.
 Write a section titled "${sectionTitle}" for Chapter ${chapterNumber}.
 

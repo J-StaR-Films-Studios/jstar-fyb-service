@@ -1,26 +1,20 @@
 /**
  * AI Provider Configuration
  * 
- * Centralized provider initialization for cost-optimized model routing.
- * 
- * ROUTING STRATEGY:
- * - Grounded/Tool-based → Google Gemini (native support required)
- * - Standard text generation → FREE tier OpenRouter models
+ * OpenRouter handles inference; native Gemini handles Google Search and File Search grounding.
  * 
  * @module lib/ai/providers
  */
 
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { createGroq } from '@ai-sdk/groq';
 
 // ============================================================
 // PROVIDER INSTANCES
 // ============================================================
 
 /**
- * Google Gemini - Used for grounded generation and tool-based chat
- * Required for: File search grounding, native tool support
+ * Google Gemini - Used for native grounding
  */
 const geminiApiKey = process.env.GEMINI_API_KEY;
 export const gemini = geminiApiKey
@@ -28,8 +22,7 @@ export const gemini = geminiApiKey
     : null;
 
 /**
- * OpenRouter - Used for FREE tier models
- * Best for: Standard text generation, non-critical tasks
+ * OpenRouter - GPT-6 Luna for text, tools and vision
  */
 const openrouterApiKey = process.env.OPENROUTER_API_KEY;
 export const openrouter = openrouterApiKey
@@ -42,17 +35,6 @@ export const openrouter = openrouterApiKey
     })
     : null;
 
-/**
- * Groq - High-speed inference
- * Best for: Jay chat, fast responses
- */
-const groqApiKey = process.env.GROQ_API_KEY;
-export const groq = groqApiKey
-    ? createGroq({
-        apiKey: groqApiKey
-    })
-    : null;
-
 // ============================================================
 // MODEL CONSTANTS
 // ============================================================
@@ -60,7 +42,7 @@ export const groq = groqApiKey
 /**
  * Model identifiers organized by use case
  */
-export { Models } from "./models";
+export { Models, lunaReasoning } from './models';
 
 // ============================================================
 // HELPER FUNCTIONS
@@ -81,19 +63,11 @@ export function hasOpenRouter(): boolean {
 }
 
 /**
- * Check if we have a working Groq provider
- */
-export function hasGroq(): boolean {
-    return !!groq;
-}
-
-/**
  * Get provider status for debugging
  */
 export function getProviderStatus() {
     return {
         gemini: hasGemini(),
         openrouter: hasOpenRouter(),
-        groq: hasGroq(),
     };
 }

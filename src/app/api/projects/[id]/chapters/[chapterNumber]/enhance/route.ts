@@ -1,18 +1,7 @@
 import { streamText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { selectModel } from '@/lib/ai/router';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth-server';
-
-// Use Groq with Llama for fast enhancement
-const groqApiKey = process.env.GROQ_API_KEY;
-if (!groqApiKey) {
-    throw new Error('GROQ_API_KEY environment variable is required');
-}
-
-const groq = createOpenAI({
-    baseURL: 'https://api.groq.com/openai/v1',
-    apiKey: groqApiKey,
-});
 
 export const maxDuration = 60;
 
@@ -84,8 +73,10 @@ OUTPUT RULES:
 
 ${chapterContext ? `CHAPTER CONTEXT (for reference):\n${chapterContext.substring(0, 500)}...` : ''}`;
 
+        const { model, providerOptions } = selectModel({ effort: 'medium' });
         const result = streamText({
-            model: groq('llama-3.3-70b-versatile'),
+            model,
+            providerOptions,
             system: systemPrompt,
             prompt: `ORIGINAL TEXT:\n\n${sectionContent}\n\nGenerate the enhanced version now:`,
         });

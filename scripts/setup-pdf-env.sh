@@ -21,8 +21,8 @@ echo "Verifying environment variables..."
 required_vars=(
     "DATABASE_URL"
     "BETTER_AUTH_SECRET"
-    "GOOGLE_API_KEY"
-    "GROQ_API_KEY"
+    "GEMINI_API_KEY"
+    "OPENROUTER_API_KEY"
 )
 
 missing_vars=()

@@ -1,15 +1,6 @@
 import { generateText } from 'ai';
 import { z } from 'zod';
-import { groq, Models } from '@/lib/ai/providers';
-import { createGroq } from '@ai-sdk/groq';
-
-// Lazy initialization of Groq provider
-const getGroqProvider = () => {
-    if (!process.env.GROQ_API_KEY && !groq) {
-        throw new Error("GROQ_API_KEY is not set in environment variables");
-    }
-    return groq || createGroq({ apiKey: process.env.GROQ_API_KEY || '' });
-};
+import { selectModel } from '@/lib/ai/router';
 
 // Schema for input validation
 const inputSchema = z.object({
@@ -67,12 +58,12 @@ export async function POST(req: Request) {
         const safeTopic = sanitizeInput(topic);
         const safeDept = sanitizeInput(department);
 
-        // Using generateText for maximum compatibility (some Groq models fail with generateObject/json_schema)
+        const { model, providerOptions } = selectModel();
         const { text } = await generateText({
-            model: getGroqProvider()(Models.GROQ.GPT_OSS_120B),
+            model,
+            providerOptions,
             system: ANALYSIS_PROMPT,
             prompt: `Department: ${safeDept}\nTopic: ${safeTopic}`,
-            temperature: 0.5,
         });
 
         // Robust JSON extraction
