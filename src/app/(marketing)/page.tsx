@@ -7,15 +7,15 @@ import { getLandingPageTimer } from '@/features/marketing/actions/marketing-acti
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: "Dominating Final Year Projects",
-    description: "The #1 AI-powered platform for Nigerian students to research, write, and complete their final year projects.",
+    title: "Start your final year project",
+    description: "Plan, research and write your final year project with J-Star Projects, or ask the J-Star team for help.",
 };
 
 export default async function MarketingPage() {
     const { startDate, targetDate } = await getLandingPageTimer();
 
     return (
-        <div className="bg-dark min-h-screen font-sans text-white overflow-x-hidden">
+        <div className="min-h-screen overflow-x-hidden">
             <Hero startDate={startDate} targetDate={targetDate} />
             <Marquee />
             <Pricing />

@@ -105,7 +105,7 @@ export function VersionHistoryDropdown({
             {/* Trigger Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors flex items-center gap-1.5"
+                className="p-2 hover:bg-selection rounded text-ink-muted hover:text-ink transition-colors flex items-center gap-1.5"
                 title="Version History"
             >
                 <History className="w-4 h-4" />
@@ -122,12 +122,12 @@ export function VersionHistoryDropdown({
                     />
 
                     {/* Panel */}
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-gray-900 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
-                        <div className="p-3 border-b border-white/10 flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-white">Version History</h3>
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-writing border border-rule rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="p-3 border-b border-rule flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-ink">Version History</h3>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="text-gray-400 hover:text-white p-1"
+                                className="text-ink-muted hover:text-ink p-1"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -136,25 +136,25 @@ export function VersionHistoryDropdown({
                         <div className="max-h-64 overflow-y-auto">
                             {loading ? (
                                 <div className="p-6 flex items-center justify-center">
-                                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                                    <Loader2 className="w-5 h-5 animate-spin text-ink-muted" />
                                 </div>
                             ) : versions.length === 0 ? (
-                                <div className="p-6 text-center text-gray-500 text-sm">
+                                <div className="p-6 text-center text-ink-muted text-sm">
                                     No previous versions yet.
                                     <br />
                                     <span className="text-xs">Versions are created when you generate or edit content.</span>
                                 </div>
                             ) : (
-                                <div className="divide-y divide-white/5">
+                                <div className="divide-y divide-rule">
                                     {versions.map((v, idx) => (
                                         <div
                                             key={v.version}
-                                            className="p-3 hover:bg-white/5 transition-colors"
+                                            className="p-3 hover:bg-selection transition-colors"
                                         >
                                             <div className="flex items-center justify-between mb-1">
-                                                <span className="text-sm font-medium text-white">
+                                                <span className="text-sm font-medium text-ink">
                                                     Version {v.version}
-                                                    {idx === 0 && <span className="ml-2 text-xs text-green-400">(Latest)</span>}
+                                                    {idx === 0 && <span className="ml-2 text-xs text-ink">(Latest)</span>}
                                                 </span>
                                                 <div className="flex gap-1">
                                                     <button
@@ -162,7 +162,7 @@ export function VersionHistoryDropdown({
                                                             setPreviewVersion(v);
                                                             setViewMode('diff');
                                                         }}
-                                                        className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white"
+                                                        className="p-1.5 hover:bg-selection rounded text-ink-muted hover:text-ink"
                                                         title="Preview & Diff"
                                                     >
                                                         <FileDiff className="w-3.5 h-3.5" />
@@ -170,14 +170,14 @@ export function VersionHistoryDropdown({
                                                     <button
                                                         onClick={() => handleRestore(v)}
                                                         disabled={restoring}
-                                                        className="p-1.5 hover:bg-primary/20 rounded text-gray-400 hover:text-primary"
+                                                        className="p-1.5 hover:bg-selection rounded text-ink-muted hover:text-rust"
                                                         title="Restore"
                                                     >
                                                         <RotateCcw className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <div className="flex items-center gap-2 text-xs text-ink-muted">
                                                 <Clock className="w-3 h-3" />
                                                 {formatDate(v.createdAt)}
                                                 <span>•</span>
@@ -198,19 +198,19 @@ export function VersionHistoryDropdown({
                 <div className="fixed inset-0 z-[100] grid place-items-center p-4 sm:p-6">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewVersion(null)} />
 
-                    <div className={`relative bg-[#0A0A0A] border border-white/10 rounded-2xl w-full ${viewMode === 'diff' && diffMode === 'split' ? 'max-w-7xl' : 'max-w-3xl'} max-h-[85vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-auto`}>
+                    <div className={`relative bg-writing border border-rule rounded-2xl w-full ${viewMode === 'diff' && diffMode === 'split' ? 'max-w-7xl' : 'max-w-3xl'} max-h-[85vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-auto`}>
                         {/* Header */}
-                        <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex flex-col gap-4 shrink-0">
+                        <div className="px-6 py-4 border-b border-rule bg-selection flex flex-col gap-4 shrink-0">
                             <div className="flex items-center justify-between w-full">
                                 <div>
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                         Version {previewVersion.version}
-                                        <span className="text-xs font-normal text-gray-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
+                                        <span className="text-xs font-normal text-ink-muted bg-selection px-2 py-0.5 rounded-full border border-rule">
                                             {formatDate(previewVersion.createdAt)}
                                         </span>
                                     </h3>
-                                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-primary/50"></span>
+                                    <p className="text-xs text-ink-muted mt-1 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-rust"></span>
                                         {previewVersion.wordCount} words
                                     </p>
                                 </div>
@@ -219,17 +219,17 @@ export function VersionHistoryDropdown({
                                     {/* Desktop View Toggles */}
                                     {isDesktop && (
                                         <>
-                                            <div className="flex bg-black/20 p-1 rounded-lg border border-white/5">
+                                            <div className="flex bg-paper p-1 rounded-lg border border-rule">
                                                 <button
                                                     onClick={() => setViewMode('diff')}
-                                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-2 ${viewMode === 'diff' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-2 ${viewMode === 'diff' ? 'bg-rust text-writing shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                                                 >
                                                     <FileDiff className="w-3.5 h-3.5" />
                                                     Changes
                                                 </button>
                                                 <button
                                                     onClick={() => setViewMode('raw')}
-                                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-2 ${viewMode === 'raw' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-2 ${viewMode === 'raw' ? 'bg-rust text-writing shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                                                 >
                                                     <FileText className="w-3.5 h-3.5" />
                                                     Full Text
@@ -237,17 +237,17 @@ export function VersionHistoryDropdown({
                                             </div>
 
                                             {viewMode === 'diff' && (
-                                                <div className="flex bg-black/20 p-1 rounded-lg border border-white/5">
+                                                <div className="flex bg-paper p-1 rounded-lg border border-rule">
                                                     <button
                                                         onClick={() => setDiffMode('split')}
-                                                        className={`p-1.5 rounded-md transition-all ${diffMode === 'split' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                                                        className={`p-1.5 rounded-md transition-all ${diffMode === 'split' ? 'bg-selection text-ink' : 'text-ink-muted hover:text-ink'}`}
                                                         title="Split View"
                                                     >
                                                         <Columns className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => setDiffMode('unified')}
-                                                        className={`p-1.5 rounded-md transition-all ${diffMode === 'unified' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                                                        className={`p-1.5 rounded-md transition-all ${diffMode === 'unified' ? 'bg-selection text-ink' : 'text-ink-muted hover:text-ink'}`}
                                                         title="Unified View"
                                                     >
                                                         <AlignJustify className="w-4 h-4" />
@@ -255,12 +255,12 @@ export function VersionHistoryDropdown({
                                                 </div>
                                             )}
 
-                                            <div className="h-6 w-px bg-white/10" />
+                                            <div className="h-6 w-px bg-selection" />
 
                                             <button
                                                 onClick={() => handleRestore(previewVersion)}
                                                 disabled={restoring}
-                                                className="px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:shadow-none"
+                                                className="px-4 py-2 bg-rust hover:bg-rust/90 text-writing text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-none disabled:opacity-50 disabled:shadow-none"
                                             >
                                                 {restoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                                                 <span>Restore Version</span>
@@ -270,7 +270,7 @@ export function VersionHistoryDropdown({
 
                                     <button
                                         onClick={() => setPreviewVersion(null)}
-                                        className="p-2 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors border border-transparent hover:border-white/5"
+                                        className="p-2 hover:bg-selection text-ink-muted hover:text-ink rounded-lg transition-colors border border-transparent hover:border-rule"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -278,16 +278,16 @@ export function VersionHistoryDropdown({
                             </div>
 
                             {!isDesktop && (
-                                <div className="flex w-full bg-black/20 p-1 rounded-lg border border-white/5">
+                                <div className="flex w-full bg-paper p-1 rounded-lg border border-rule">
                                     <button
                                         onClick={() => setViewMode('diff')}
-                                        className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'diff' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                                        className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'diff' ? 'bg-selection text-ink shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                                     >
                                         <FileDiff className="w-3.5 h-3.5" /> Changes
                                     </button>
                                     <button
                                         onClick={() => setViewMode('raw')}
-                                        className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'raw' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                                        className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'raw' ? 'bg-selection text-ink shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                                     >
                                         <FileText className="w-3.5 h-3.5" /> Full Text
                                     </button>
@@ -299,18 +299,18 @@ export function VersionHistoryDropdown({
 
                         {/* Diff Legend (Fixed) */}
                         {viewMode === 'diff' && (
-                            <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-wider px-6 py-2 bg-[#0A0A0A] border-b border-white/5 shadow-sm shrink-0 z-20">
+                            <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-wider px-6 py-2 bg-writing border-b border-rule shadow-sm shrink-0 z-20">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-red-500 rounded-sm"></div>
-                                    <span className="text-gray-400">Removed</span>
+                                    <span className="text-ink-muted">Removed</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-green-500 rounded-sm"></div>
-                                    <span className="text-gray-400">Added</span>
+                                    <span className="text-ink-muted">Added</span>
                                 </div>
                             </div>
                         )}
-                        <div className="flex-1 overflow-y-auto bg-[#050505] p-0 relative">
+                        <div className="flex-1 overflow-y-auto bg-paper p-0 relative">
                             {viewMode === 'diff' ? (
                                 <div className="min-h-full">
                                     <div className="p-4 sm:p-6 pb-24 sm:pb-6">
@@ -323,7 +323,7 @@ export function VersionHistoryDropdown({
                                 </div>
                             ) : (
                                 <div className="p-4 sm:p-6 pb-24 sm:pb-6">
-                                    <pre className="text-sm text-gray-300 whitespace-pre-wrap font-serif leading-relaxed max-w-3xl mx-auto">
+                                    <pre className="text-sm text-ink whitespace-pre-wrap font-serif leading-relaxed max-w-3xl mx-auto">
                                         {previewVersion.content}
                                     </pre>
                                 </div>
@@ -332,11 +332,11 @@ export function VersionHistoryDropdown({
 
                         {/* Mobile Restore Footer */}
                         {!isDesktop && (
-                            <div className="p-4 border-t border-white/5 bg-black/40 backdrop-blur pb-safe shrink-0">
+                            <div className="p-4 border-t border-rule bg-paper backdrop-blur pb-safe shrink-0">
                                 <button
                                     onClick={() => handleRestore(previewVersion)}
                                     disabled={restoring}
-                                    className="w-full py-3 bg-primary hover:bg-primary/90 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:shadow-none"
+                                    className="w-full py-3 bg-rust hover:bg-rust/90 text-writing text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-none disabled:opacity-50 disabled:shadow-none"
                                 >
                                     {restoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                                     Restore This Version

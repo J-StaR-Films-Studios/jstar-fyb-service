@@ -8,7 +8,7 @@ interface ResourceCardProps {
     type: "DOC" | "PDF";
     filename: string;
     size: string;
-    status: "ready" | "compiling";
+    status: "ready" | "compiling" | "failed";
     downloadUrl?: string;
 }
 
@@ -44,24 +44,24 @@ const ResourceCard = ({ type, filename, size, status, downloadUrl }: ResourceCar
     return (
         <div
             className={cn(
-                "p-4 rounded-xl glass-panel flex items-center justify-between group cursor-pointer border border-white/10 transition-colors",
-                status === "ready" ? "hover:bg-white/5" : "opacity-60 cursor-not-allowed"
+                "p-4 rounded-md bg-writing text-ink flex items-center justify-between group cursor-pointer border border-rule transition-colors",
+                status === "ready" ? "hover:bg-selection" : "cursor-not-allowed"
             )}
         >
             <div className="flex items-center gap-4">
                 <div
                     className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs shrink-0",
-                        type === "DOC" && "bg-blue-500/20 text-blue-400",
-                        type === "PDF" && "bg-red-500/20 text-red-400"
+                        type === "DOC" && "bg-selection text-ink",
+                        type === "PDF" && "bg-selection text-ink"
                     )}
                 >
                     {type}
                 </div>
                 <div>
-                    <p className="font-bold text-sm text-gray-200">{filename}</p>
-                    <p className="text-xs text-gray-500">
-                        {status === "ready" ? `${size} • Ready` : "Compiling..."}
+                    <p className="font-bold text-sm text-ink">{filename}</p>
+                    <p className="text-xs text-ink-muted">
+                        {status === "ready" ? `${size} • Ready` : status === "failed" ? "Processing failed" : "Processing..."}
                     </p>
                 </div>
             </div>
@@ -69,17 +69,17 @@ const ResourceCard = ({ type, filename, size, status, downloadUrl }: ResourceCar
                 <button
                     onClick={handleDownload}
                     disabled={isDownloading}
-                    className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors disabled:opacity-50"
+                    className="w-11 h-11 rounded-md border border-rule flex items-center justify-center hover:bg-selection transition-colors disabled:opacity-50"
                 >
                     {isDownloading ? (
-                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        <Loader2 className="w-4 h-4 text-rust animate-spin" />
                     ) : (
-                        <Download className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
+                        <Download className="w-4 h-4 text-ink-muted group-hover:text-rust transition-colors" />
                     )}
                 </button>
-            ) : (
-                <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
-            )}
+            ) : status === "compiling" ? (
+                <Loader2 className="w-4 h-4 text-ink-muted animate-spin" aria-label="Processing" />
+            ) : null}
         </div>
     );
 };
@@ -93,7 +93,7 @@ export const ResourceDownloads = ({ documents }: { documents: DashboardDocument[
     return (
         <div>
             <h3 className="text-lg font-bold font-display mb-4 flex items-center gap-2">
-                <DownloadCloud className="w-5 h-5 text-accent" /> Resources
+                <DownloadCloud className="w-5 h-5 text-rust" /> Resources
             </h3>
             <div className="space-y-3">
                 {documents && documents.length > 0 ? (
@@ -103,12 +103,12 @@ export const ResourceDownloads = ({ documents }: { documents: DashboardDocument[
                             type={doc.fileType === "pdf" ? "PDF" : "DOC"}
                             filename={doc.fileName}
                             size="N/A" // Size not in schema yet
-                            status={doc.status === "PROCESSED" ? "ready" : "compiling"}
+                            status={doc.status === "PROCESSED" ? "ready" : doc.status === "FAILED" || doc.status === "ERROR" ? "failed" : "compiling"}
                             downloadUrl={`/api/documents/${doc.id}/serve`}
                         />
                     ))
                 ) : (
-                    <div className="p-4 rounded-xl glass-panel text-center text-gray-500 text-sm">
+                    <div className="p-4 rounded-md bg-writing text-ink text-center text-ink-muted text-sm">
                         No resources available yet.
                     </div>
                 )}

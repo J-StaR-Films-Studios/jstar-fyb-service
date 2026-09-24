@@ -25,9 +25,9 @@ export function PaywallGate({
     if (isVerifying) {
         return (
             <div className="flex flex-col items-center justify-center py-32 text-center">
-                <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-                <h2 className="text-2xl font-bold text-white mb-2">Verifying Payment...</h2>
-                <p className="text-gray-400">Please wait while we confirm your transaction.</p>
+                <Loader2 className="w-12 h-12 text-rust animate-spin mb-4" />
+                <h2 className="text-2xl font-bold text-ink mb-2">Verifying Payment...</h2>
+                <p className="text-ink-muted">Please wait while we confirm your transaction.</p>
             </div>
         );
     }
@@ -46,7 +46,7 @@ export function PaywallGate({
             </div>
 
             {/* Paywall overlay with gradient fade */}
-            <div className="absolute inset-0 paywall-gradient flex flex-col items-center justify-end pb-10 z-10">
+            <div className="absolute inset-0 bg-gradient-to-b from-paper/60 to-paper flex flex-col items-center justify-end pb-10 z-10">
                 <PricingOverlay onUnlock={onUnlock} />
             </div>
         </div>

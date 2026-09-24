@@ -263,55 +263,55 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
+        className="font-margin text-ink bg-writing border border-rule rounded-2xl shadow-2xl w-full max-w-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/5 bg-gradient-to-r from-purple-500/5 to-blue-500/5">
+        <div className="flex items-center justify-between p-5 border-b border-rule bg-selection">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
-              <Search className="w-5 h-5 text-purple-400" />
+            <div className="w-10 h-10 rounded-xl bg-selection flex items-center justify-center">
+              <Search className="w-5 h-5 text-rust" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Deep Research</h2>
-              <p className="text-xs text-gray-500">Semantic Scholar + Gemini Grounding</p>
+              <h2 className="text-lg font-semibold text-ink">Deep Research</h2>
+              <p className="text-xs text-ink-muted">Semantic Scholar + Gemini Grounding</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-colors"
+            className="p-2 hover:bg-selection rounded-lg text-ink-muted hover:text-ink transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Progress Steps */}
-        <div className="px-5 py-3 border-b border-white/5 bg-white/[0.01]">
+        <div className="px-5 py-3 border-b border-rule bg-paper">
           <div className="flex items-center justify-between max-w-sm mx-auto">
             {['configure', 'planning', 'review', 'executing', 'curate'].map((s, i) => (
               <div key={s} className="flex items-center">
                 <div className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
-                  step === s ? "bg-purple-500 text-white" :
-                    ['planning', 'review', 'executing', 'curate'].indexOf(step) > i ? "bg-green-500 text-white" :
-                      "bg-white/10 text-gray-500"
+                  "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
+                  step === s ? "bg-rust text-writing" :
+                    ['planning', 'review', 'executing', 'curate'].indexOf(step) > i ? "bg-ink text-writing" :
+                      "bg-selection text-ink-muted"
                 )}>
                   {['planning', 'review', 'executing', 'curate'].indexOf(step) > i ? <Check className="w-3 h-3" /> : i + 1}
                 </div>
                 {i < 4 && (
                   <div className={cn(
                     "w-8 h-0.5 transition-colors",
-                    ['planning', 'review', 'executing', 'curate'].indexOf(step) > i ? "bg-green-500" : "bg-white/10"
+                    ['planning', 'review', 'executing', 'curate'].indexOf(step) > i ? "bg-ink" : "bg-selection"
                   )} />
                 )}
               </div>
             ))}
           </div>
           <div className="flex items-center justify-between max-w-sm mx-auto mt-1.5">
-            <span className="text-[10px] text-gray-500 w-10 text-center">Setup</span>
-            <span className="text-[10px] text-gray-500 w-10 text-center">Plan</span>
-            <span className="text-[10px] text-gray-500 w-10 text-center">Review</span>
-            <span className="text-[10px] text-gray-500 w-10 text-center">Search</span>
-            <span className="text-[10px] text-gray-500 w-10 text-center">Curate</span>
+            <span className="text-xs text-ink-muted w-10 text-center">Setup</span>
+            <span className="text-xs text-ink-muted w-10 text-center">Plan</span>
+            <span className="text-xs text-ink-muted w-10 text-center">Review</span>
+            <span className="text-xs text-ink-muted w-10 text-center">Search</span>
+            <span className="text-xs text-ink-muted w-10 text-center">Curate</span>
           </div>
         </div>
 
@@ -328,17 +328,17 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                 className="space-y-4"
               >
                 {/* Info Card */}
-                <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-4">
+                <div className="bg-selection border border-rule rounded-xl p-4">
                   <div className="flex items-start gap-3">
                     <div className="flex items-center gap-2 mt-0.5">
-                      <BookOpen className="w-4 h-4 text-blue-400" />
-                      <Globe className="w-4 h-4 text-purple-400" />
+                      <BookOpen className="w-4 h-4 text-ink" />
+                      <Globe className="w-4 h-4 text-rust" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium text-white mb-1">Hybrid Search</h4>
-                      <p className="text-xs text-gray-400 leading-relaxed">
-                        Searches <span className="text-blue-300">Semantic Scholar</span> for academic papers
-                        and <span className="text-purple-300">Gemini Grounding</span> for web sources simultaneously.
+                      <h4 className="text-sm font-medium text-ink mb-1">Hybrid Search</h4>
+                      <p className="text-xs text-ink-muted leading-relaxed">
+                        Searches <span className="text-ink">Semantic Scholar</span> for academic papers
+                        and <span className="text-ink">Gemini Grounding</span> for web sources simultaneously.
                         Results are saved as metadata — no file downloads.
                       </p>
                     </div>
@@ -347,28 +347,28 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
 
                 {/* Project Info */}
                 {projectData.topic && (
-                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
-                    <label className="text-xs text-gray-500 mb-1 block">Current Project Topic</label>
-                    <p className="text-sm text-white">{projectData.topic}</p>
+                  <div className="bg-paper border border-rule rounded-xl p-4">
+                    <label className="text-xs text-ink-muted mb-1 block">Current Project Topic</label>
+                    <p className="text-sm text-ink">{projectData.topic}</p>
                     {projectData.twist && (
-                      <p className="text-xs text-gray-400 mt-1">{projectData.twist}</p>
+                      <p className="text-xs text-ink-muted mt-1">{projectData.twist}</p>
                     )}
                   </div>
                 )}
 
                 {/* Custom Goal */}
                 <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">
-                    Research Focus <span className="text-gray-600">(optional)</span>
+                  <label className="text-xs text-ink-muted mb-1.5 block">
+                    Research Focus <span className="text-ink-muted">(optional)</span>
                   </label>
                   <textarea
                     value={customGoal}
                     onChange={(e) => setCustomGoal(e.target.value)}
                     placeholder={projectTopic || "E.g. Focus on recent advances in deep learning for image classification..."}
                     rows={3}
-                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+                    className="w-full bg-paper border border-rule rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:border-rust transition-colors resize-none"
                   />
-                  <p className="text-[10px] text-gray-600 mt-1">
+                  <p className="text-xs text-ink-muted mt-1">
                     Customize what the AI should focus on during research
                   </p>
                 </div>
@@ -384,11 +384,11 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                 exit={{ opacity: 0, x: 20 }}
                 className="flex flex-col items-center justify-center py-12"
               >
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center mb-4">
-                  <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                <div className="w-16 h-16 rounded-2xl bg-selection flex items-center justify-center mb-4">
+                  <Loader2 className="w-8 h-8 text-rust animate-spin" />
                 </div>
-                <h3 className="text-lg font-medium text-white mb-2">Generating Search Plan</h3>
-                <p className="text-sm text-gray-400 text-center max-w-sm">
+                <h3 className="text-lg font-medium text-ink mb-2">Generating Search Plan</h3>
+                <p className="text-sm text-ink-muted text-center max-w-sm">
                   AI is analyzing your topic and creating targeted search queries for academic databases...
                 </p>
               </motion.div>
@@ -403,15 +403,15 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                 exit={{ opacity: 0, x: 20 }}
                 className="space-y-4"
               >
-                <div className="flex items-center gap-2 text-green-400">
+                <div className="flex items-center gap-2 text-ink">
                   <Check className="w-4 h-4" />
                   <span className="text-sm font-medium">Search Plan Generated</span>
                 </div>
 
                 <div className="space-y-3">
                   {Object.entries(generatedPlan).map(([key, queries]) => (
-                    <div key={key} className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
-                      <h5 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
+                    <div key={key} className="bg-paper border border-rule rounded-xl p-4">
+                      <h5 className="text-xs font-bold text-ink-muted uppercase mb-3 flex items-center gap-2">
                         {key.includes('core') && <FileText className="w-3 h-3" />}
                         {key.includes('technical') && <Zap className="w-3 h-3" />}
                         {key.includes('context') && <Globe className="w-3 h-3" />}
@@ -419,12 +419,12 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                       </h5>
                       <ul className="space-y-1.5">
                         {(queries as string[]).slice(0, 3).map((q, i) => (
-                          <li key={i} className="text-xs text-gray-300 pl-3 border-l-2 border-purple-500/30">
+                          <li key={i} className="text-xs text-ink pl-3 border-l-2 border-rust">
                             {q}
                           </li>
                         ))}
                         {(queries as string[]).length > 3 && (
-                          <li className="text-[10px] text-gray-500 pl-3">
+                          <li className="text-xs text-ink-muted pl-3">
                             +{(queries as string[]).length - 3} more queries
                           </li>
                         )}
@@ -433,8 +433,8 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                   ))}
                 </div>
 
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-                  <p className="text-xs text-blue-200">
+                <div className="bg-selection border border-rule rounded-xl p-3">
+                  <p className="text-xs text-ink">
                     <strong>{Object.values(generatedPlan).flat().length} search queries</strong> will be executed
                     across Semantic Scholar and Gemini Grounding in parallel.
                   </p>
@@ -452,35 +452,35 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                 className="space-y-3"
               >
                 {/* Terminal */}
-                <div className="bg-black/40 border border-white/10 rounded-xl overflow-hidden font-mono text-xs">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-white/5 border-b border-white/5">
+                <div className="bg-paper border border-rule rounded-xl overflow-hidden font-mono text-xs">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-selection border-b border-rule">
                     <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/50" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-rust" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-ink-muted" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-ink/50" />
                     </div>
-                    <span className="text-gray-400 text-[10px]">Research Terminal</span>
-                    {isDone && <span className="text-green-400 text-[10px] ml-auto">✓ Complete</span>}
-                    {hasError && <span className="text-red-400 text-[10px] ml-auto">✗ Failed</span>}
+                    <span className="text-ink-muted text-xs">Research Terminal</span>
+                    {isDone && <span className="text-ink text-xs ml-auto">✓ Complete</span>}
+                    {hasError && <span className="text-ink text-xs ml-auto">✗ Failed</span>}
                     {!isDone && !hasError && (
-                      <span className="text-blue-400 text-[10px] ml-auto flex items-center gap-1">
+                      <span className="text-ink text-xs ml-auto flex items-center gap-1">
                         <Loader2 className="w-3 h-3 animate-spin" /> Running
                       </span>
                     )}
                   </div>
                   <div className="h-48 overflow-y-auto p-3 space-y-1.5">
                     {logs.length === 0 && (
-                      <div className="text-gray-600 italic">Initializing...</div>
+                      <div className="text-ink-muted italic">Initializing...</div>
                     )}
                     {logs.map((log, i) => (
                       <div key={i} className="flex gap-2">
-                        <span className="text-gray-600 shrink-0">&gt;</span>
+                        <span className="text-ink-muted shrink-0">&gt;</span>
                         <span className={cn(
                           "break-words",
-                          log.step === 'failed' ? "text-red-400" :
-                            log.step === 'completed' ? "text-green-400" :
-                              log.step === 'processing' ? "text-blue-300" :
-                                "text-gray-300"
+                          log.step === 'failed' ? "text-ink" :
+                            log.step === 'completed' ? "text-ink" :
+                              log.step === 'processing' ? "text-ink" :
+                                "text-ink"
                         )}>
                           {log.message}
                         </span>
@@ -488,8 +488,8 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                     ))}
                     {!isDone && !hasError && (
                       <div className="flex gap-2">
-                        <span className="text-gray-600">&gt;</span>
-                        <span className="w-2 h-4 bg-purple-500/50 animate-pulse" />
+                        <span className="text-ink-muted">&gt;</span>
+                        <span className="w-2 h-4 bg-rust animate-pulse" />
                       </div>
                     )}
                   </div>
@@ -500,11 +500,11 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center"
+                    className="bg-selection border border-rule rounded-xl p-4 text-center"
                   >
-                    <Check className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                    <p className="text-sm text-white font-medium">Research Complete!</p>
-                    <p className="text-xs text-gray-400 mt-1">Documents saved to your Research Library</p>
+                    <Check className="w-8 h-8 text-ink mx-auto mb-2" />
+                    <p className="text-sm text-ink font-medium">Research Complete!</p>
+                    <p className="text-xs text-ink-muted mt-1">Documents saved to your Research Library</p>
                   </motion.div>
                 )}
               </motion.div>
@@ -522,20 +522,20 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                 {/* Stats bar */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
-                    <ListChecks className="w-4 h-4 text-purple-400" />
-                    <span className="text-white font-medium">
+                    <ListChecks className="w-4 h-4 text-rust" />
+                    <span className="text-ink font-medium">
                       {totalSelected} selected
                     </span>
-                    <span className="text-[10px] text-gray-500">
+                    <span className="text-xs text-ink-muted">
                       (max {totalCap})
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px]">
-                    <span className="text-green-400">{selectedCounts.free}/{CAPS.FREE_PAPERS} free</span>
-                    <span className="text-gray-600">·</span>
-                    <span className="text-orange-400">{selectedCounts.paywalled}/{CAPS.PAYWALLED_PAPERS} paywalled</span>
-                    <span className="text-gray-600">·</span>
-                    <span className="text-blue-400">{selectedWebIds.size}/{CAPS.WEB} web</span>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-ink">{selectedCounts.free}/{CAPS.FREE_PAPERS} free</span>
+                    <span className="text-ink-muted">·</span>
+                    <span className="text-ink">{selectedCounts.paywalled}/{CAPS.PAYWALLED_PAPERS} paywalled</span>
+                    <span className="text-ink-muted">·</span>
+                    <span className="text-ink">{selectedWebIds.size}/{CAPS.WEB} web</span>
                   </div>
                 </div>
 
@@ -543,33 +543,33 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={selectAll}
-                    className="px-3 py-1.5 text-[11px] bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-colors"
+                    className="px-3 py-1.5 text-xs bg-selection hover:bg-selection border border-rule rounded-lg text-ink transition-colors"
                   >
                     Select All
                   </button>
                   <button
                     onClick={deselectAll}
-                    className="px-3 py-1.5 text-[11px] bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-colors"
+                    className="px-3 py-1.5 text-xs bg-selection hover:bg-selection border border-rule rounded-lg text-ink transition-colors"
                   >
                     Deselect All
                   </button>
                   <button
                     onClick={deselectPaywalled}
-                    className="px-3 py-1.5 text-[11px] bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 rounded-lg text-orange-300 transition-colors flex items-center gap-1.5"
+                    className="px-3 py-1.5 text-xs bg-paper hover:bg-selection border border-rule rounded-lg text-ink transition-colors flex items-center gap-1.5"
                   >
                     <Lock className="w-3 h-3" />
                     Deselect Paywalled
                   </button>
                   <button
                     onClick={selectFreeOnly}
-                    className="px-3 py-1.5 text-[11px] bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-lg text-green-300 transition-colors flex items-center gap-1.5"
+                    className="px-3 py-1.5 text-xs bg-selection hover:bg-selection border border-rule rounded-lg text-ink transition-colors flex items-center gap-1.5"
                   >
                     <Download className="w-3 h-3" />
                     Free Only
                   </button>
                   <button
                     onClick={deselectWeb}
-                    className="px-3 py-1.5 text-[11px] bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg text-blue-300 transition-colors flex items-center gap-1.5"
+                    className="px-3 py-1.5 text-xs bg-selection hover:bg-selection border border-rule rounded-lg text-ink transition-colors flex items-center gap-1.5"
                   >
                     <Globe className="w-3 h-3" />
                     Deselect Web
@@ -579,10 +579,10 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                 {/* Academic Papers */}
                 {searchResults.academic.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-ink-muted uppercase mb-2 flex items-center gap-2">
                       <BookOpen className="w-3 h-3" />
                       Academic Papers ({searchResults.academic.length})
-                      <span className="text-[10px] font-normal text-gray-500 normal-case">
+                      <span className="text-xs font-normal text-ink-muted normal-case">
                         — max {CAPS.FREE_PAPERS} free + {CAPS.PAYWALLED_PAPERS} paywalled
                       </span>
                     </h4>
@@ -597,28 +597,28 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                             className={cn(
                               "w-full text-left px-3 py-2.5 rounded-lg border transition-all",
                               isSelected
-                                ? "bg-purple-500/10 border-purple-500/30"
-                                : "bg-white/[0.02] border-white/5 opacity-50"
+                                ? "bg-selection border-rust"
+                                : "bg-paper border-rule"
                             )}
                           >
                             <div className="flex items-start gap-2.5">
                               <div className={cn(
                                 "mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors",
-                                isSelected ? "bg-purple-500 border-purple-500" : "border-white/20"
+                                isSelected ? "bg-rust border-rust" : "border-rule"
                               )}>
-                                {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                                {isSelected && <Check className="w-2.5 h-2.5 text-writing" />}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs text-white font-medium leading-snug line-clamp-2">{paper.title}</p>
+                                <p className="text-xs text-ink font-medium leading-snug line-clamp-2">{paper.title}</p>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                  {paper.year && <span className="text-[10px] text-gray-500">{paper.year}</span>}
+                                  {paper.year && <span className="text-xs text-ink-muted">{paper.year}</span>}
                                   {paper.citationCount > 0 && (
-                                    <span className="text-[10px] text-gray-500">{paper.citationCount} citations</span>
+                                    <span className="text-xs text-ink-muted">{paper.citationCount} citations</span>
                                   )}
                                   {hasOpen ? (
-                                    <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">Free PDF</span>
+                                    <span className="text-xs text-ink bg-selection px-1.5 py-0.5 rounded">Free PDF</span>
                                   ) : (
-                                    <span className="text-[10px] text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                    <span className="text-xs text-ink bg-paper px-1.5 py-0.5 rounded flex items-center gap-0.5">
                                       <Lock className="w-2.5 h-2.5" /> Paywalled
                                     </span>
                                   )}
@@ -635,10 +635,10 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                 {/* Web Sources */}
                 {searchResults.web.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-ink-muted uppercase mb-2 flex items-center gap-2">
                       <Globe className="w-3 h-3" />
                       Web Sources ({searchResults.web.length})
-                      <span className="text-[10px] font-normal text-gray-500 normal-case">
+                      <span className="text-xs font-normal text-ink-muted normal-case">
                         — max {CAPS.WEB}
                       </span>
                     </h4>
@@ -652,20 +652,20 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
                             className={cn(
                               "w-full text-left px-3 py-2.5 rounded-lg border transition-all",
                               isSelected
-                                ? "bg-blue-500/10 border-blue-500/30"
-                                : "bg-white/[0.02] border-white/5 opacity-50"
+                                ? "bg-selection border-rust"
+                                : "bg-paper border-rule"
                             )}
                           >
                             <div className="flex items-start gap-2.5">
                               <div className={cn(
                                 "mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors",
-                                isSelected ? "bg-blue-500 border-blue-500" : "border-white/20"
+                                isSelected ? "bg-rust border-rust" : "border-rule"
                               )}>
-                                {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                                {isSelected && <Check className="w-2.5 h-2.5 text-writing" />}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs text-white font-medium leading-snug line-clamp-2">{source.title}</p>
-                                <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1">{source.snippet}</p>
+                                <p className="text-xs text-ink font-medium leading-snug line-clamp-2">{source.title}</p>
+                                <p className="text-xs text-ink-muted mt-0.5 line-clamp-1">{source.snippet}</p>
                               </div>
                             </div>
                           </button>
@@ -680,12 +680,12 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end p-4 border-t border-white/5 gap-2 bg-white/[0.01]">
+        <div className="flex justify-end p-4 border-t border-rule gap-2 bg-paper">
           {step === 'configure' && (
             <button
               onClick={handleGeneratePlan}
               disabled={isLoading}
-              className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+              className="flex items-center gap-2 bg-rust hover:bg-rust/90 text-writing px-5 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-75"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
               Generate Search Plan
@@ -696,13 +696,13 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
             <>
               <button
                 onClick={() => setStep('configure')}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-ink-muted hover:text-ink hover:bg-selection transition-colors"
               >
                 Back
               </button>
               <button
                 onClick={handleExecute}
-                className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                className="flex items-center gap-2 bg-rust hover:bg-rust/90 text-writing px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
               >
                 <Zap className="w-4 h-4" />
                 Execute Research
@@ -713,7 +713,7 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
           {step === 'executing' && hasError && (
             <button
               onClick={onClose}
-              className="bg-white/10 text-white hover:bg-white/20 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
+              className="bg-selection text-ink hover:bg-selection px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
             >
               Close
             </button>
@@ -723,21 +723,21 @@ export function ResearchModal({ isOpen, onClose, projectId, projectTopic, onComp
             <>
               <button
                 onClick={() => setStep('executing')}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-ink-muted hover:text-ink hover:bg-selection transition-colors"
               >
                 Back
               </button>
               <button
                 onClick={() => handleSaveSelected(false)}
                 disabled={totalSelected === 0 || isSaving}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-ink hover:text-ink bg-selection hover:bg-selection border border-rule transition-colors disabled:opacity-75"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : `Save ${totalSelected} Selected`}
               </button>
               <button
                 onClick={() => handleSaveSelected(true)}
                 disabled={totalSelected === 0 || isSaving}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+                className="flex items-center gap-2 bg-rust hover:bg-rust/90 text-writing px-5 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-75"
               >
                 {isSyncing ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Syncing...</>

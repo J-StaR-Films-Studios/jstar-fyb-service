@@ -224,9 +224,9 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
     if (isVerifying) {
         return (
             <div className="flex flex-col items-center justify-center py-32 text-center">
-                <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-                <h2 className="text-2xl font-bold text-white mb-2">Verifying Payment...</h2>
-                <p className="text-gray-400">Please wait while we confirm your transaction.</p>
+                <Loader2 className="w-12 h-12 text-rust animate-spin mb-4" />
+                <h2 className="text-2xl font-bold text-ink mb-2">Verifying Payment...</h2>
+                <p className="text-ink-muted">Please wait while we confirm your transaction.</p>
             </div>
         );
     }
@@ -237,11 +237,11 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
             <div className="flex flex-col items-center justify-center py-24">
                 <div className="text-red-500 mb-4 text-center">
                     <p className="font-bold">Generation Failed</p>
-                    <p className="text-sm text-gray-400 mt-1">Something went wrong. Please try again.</p>
+                    <p className="text-sm text-ink-muted mt-1">Something went wrong. Please try again.</p>
                 </div>
                 <button
                     onClick={handleRetry}
-                    className="flex items-center gap-2 px-6 py-3 bg-primary/20 border border-primary/40 rounded-xl text-primary hover:bg-primary/30 transition-colors"
+                    className="flex items-center gap-2 px-6 py-3 bg-selection border border-rule rounded-xl text-rust hover:bg-paper transition-colors"
                 >
                     <RefreshCw className="w-4 h-4" />
                     Retry Generation
@@ -259,17 +259,17 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
                 transition={{ duration: 0.4 }}
                 className="text-center mb-10"
             >
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 text-green-500 mb-4 border border-green-500/20">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-selection text-ink mb-4 border border-rule">
                     {isLoading ? (
                         <Loader2 className="w-8 h-8 animate-spin" />
                     ) : (
                         <Check className="w-8 h-8" />
                     )}
                 </div>
-                <h1 className="text-3xl font-display font-bold mb-2">
+                <h1 className="text-3xl font-margin font-bold mb-2">
                     {isLoading ? 'Generating Your Project...' : 'Structure Generated'}
                 </h1>
-                <p className="text-gray-400">
+                <p className="text-ink-muted">
                     {isLoading
                         ? 'AI is crafting your distinction-grade outline...'
                         : "We've crafted a distinction-grade abstract and outline for your project."}
@@ -280,7 +280,7 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
                     isProjectLocked ? (
                         <button
                             onClick={() => setShowAbstractEditor(true)}
-                            className="mt-4 text-xs text-primary hover:text-white flex items-center gap-1 transition-colors mx-auto"
+                            className="mt-4 text-xs text-rust hover:text-ink flex items-center gap-1 transition-colors mx-auto"
                         >
                             <FileText className="w-3 h-3" />
                             Edit Abstract
@@ -288,7 +288,7 @@ export function ChapterOutliner({ isReferred }: { isReferred?: boolean }) {
                     ) : (
                         <button
                             onClick={() => isPaid ? setShowTopicResetWarning(true) : setShowTopicResetWarning(true)}
-                            className="mt-4 text-xs text-gray-500 hover:text-white underline transition-colors mx-auto"
+                            className="mt-4 text-xs text-ink-muted hover:text-ink underline transition-colors mx-auto"
                         >
                             Change Topic
                         </button>

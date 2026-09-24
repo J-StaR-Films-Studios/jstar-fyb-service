@@ -41,15 +41,15 @@ const ChapterNode = memo(function ChapterNode({ number, title, status, subsectio
         <div
             onClick={handleClick}
             className={cn(
-                "group rounded-xl p-3 transition-all border border-transparent relative",
-                isActive ? "bg-primary/10 border-primary/20 cursor-default" :
-                    status === 'locked' ? "opacity-50 cursor-not-allowed" : "hover:bg-white/5 hover:border-white/5 cursor-pointer"
+                "group rounded-md p-3 transition-colors border-l-[3px] border-transparent relative",
+                isActive ? "bg-selection border-rust cursor-default" :
+                    status === 'locked' ? "text-ink-muted cursor-not-allowed" : "hover:bg-selection cursor-pointer"
             )}
         >
             <div className="flex items-center justify-between mb-2">
                 <span className={cn(
                     "text-xs font-bold",
-                    isActive ? "text-primary" : "text-gray-500"
+                    isActive ? "text-rust" : "text-ink-muted"
                 )}>
                     Chapter {number}
                 </span>
@@ -57,13 +57,13 @@ const ChapterNode = memo(function ChapterNode({ number, title, status, subsectio
                 <div className="flex items-center gap-2">
                     {/* Status Icons */}
                     {status === 'complete' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                    {status === 'locked' && <Lock className="w-3 h-3 text-gray-600" />}
+                    {status === 'locked' && <Lock className="w-3 h-3 text-ink-muted" />}
 
                     {/* Generate Button - Always visible for empty chapters */}
                     {showGenerate && (
                         <button
                             onClick={handleGenerate}
-                            className="bg-primary/20 hover:bg-primary/30 p-1.5 rounded-lg text-primary transition-all hover:scale-110"
+                            className="bg-selection hover:bg-paper min-w-11 min-h-11 flex items-center justify-center rounded-md text-rust transition-colors"
                             title="Generate Chapter with AI"
                         >
                             <Sparkles className="w-3.5 h-3.5" />
@@ -74,7 +74,7 @@ const ChapterNode = memo(function ChapterNode({ number, title, status, subsectio
                     {showRegenerate && (
                         <button
                             onClick={handleGenerate}
-                            className="bg-orange-500/10 hover:bg-orange-500/20 p-1.5 rounded-lg text-orange-400 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+                            className="bg-selection hover:bg-paper min-w-11 min-h-11 flex items-center justify-center rounded-md text-rust transition-colors"
                             title="Regenerate Chapter (will replace existing content)"
                         >
                             <RefreshCw className="w-3.5 h-3.5" />
@@ -83,25 +83,25 @@ const ChapterNode = memo(function ChapterNode({ number, title, status, subsectio
 
                     {/* Generating Spinner */}
                     {(isGenerating || (status === 'in-progress' && !isActive)) && (
-                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        <Loader2 className="w-4 h-4 text-rust animate-spin" />
                     )}
 
-                    {isActive && <MoreHorizontal className="w-4 h-4 text-primary/50 group-hover:text-primary cursor-pointer" />}
+                    {isActive && <MoreHorizontal className="w-4 h-4 text-rust/50 group-hover:text-rust cursor-pointer" />}
                 </div>
             </div>
 
             <h3 className={cn(
                 "font-bold text-sm mb-1",
-                isActive ? "text-white" : "text-gray-300"
+                isActive ? "text-ink" : "text-ink"
             )}>
                 {/* Only show title if it's not just "Chapter N" (avoid duplication) */}
                 {title.toLowerCase().startsWith('chapter') ? null : title}
             </h3>
 
             {isActive && subsections && (
-                <div className="space-y-1 pl-2 border-l border-primary/20 mt-2">
+                <div className="space-y-1 pl-2 border-l border-rule mt-2">
                     {subsections.map((sub, idx) => (
-                        <p key={idx} className="text-xs text-gray-400 hover:text-white transition-colors cursor-pointer flex items-center gap-2">
+                        <p key={idx} className="text-xs text-ink-muted hover:text-ink transition-colors cursor-pointer flex items-center gap-2">
                             <span>{sub}</span>
                         </p>
                     ))}
@@ -109,7 +109,7 @@ const ChapterNode = memo(function ChapterNode({ number, title, status, subsectio
             )}
 
             {status === 'in-progress' && !isActive && !isGenerating && (
-                <div className="w-full h-1 bg-white/5 rounded-full mt-2">
+                <div className="w-full h-1 bg-selection rounded-full mt-2">
                     <div className="w-1/3 h-full bg-gray-600 rounded-full"></div>
                 </div>
             )}
@@ -135,28 +135,28 @@ export interface TimelineSidebarProps {
 // Bolt: Memoized to prevent re-renders when parent state (like search query or active tab) changes
 export const TimelineSidebar = memo(function TimelineSidebar({ projectTitle, chapters, activeChapterNumber, onChapterSelect, onGenerateChapter }: TimelineSidebarProps) {
     return (
-        <aside className="w-80 flex flex-col glass-panel z-20 h-full border-r border-white/5 bg-dark/50 backdrop-blur-xl">
+        <aside className="w-64 xl:w-72 flex flex-col z-20 h-full border-r border-rule bg-paper text-ink">
             {/* Brand Header */}
-            <Link href="/dashboard" className="h-16 flex items-center px-6 border-b border-white/5 shrink-0 hover:bg-white/5 transition-colors group">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-display font-bold text-white mr-3 group-hover:scale-105 transition-transform">
+            <Link href="/dashboard" className="h-16 flex items-center px-6 border-b border-rule shrink-0 hover:bg-selection transition-colors group">
+                <div className="w-8 h-8 bg-rust rounded-md flex items-center justify-center font-margin font-bold text-writing mr-3">
                     J
                 </div>
                 <div className="flex flex-col">
-                    <span className="font-display font-bold text-lg text-white tracking-wide">J Star</span>
-                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider group-hover:text-primary transition-colors">← Dashboard</span>
+                    <span className="font-margin font-bold text-base text-ink tracking-wide">J-Star Projects</span>
+                    <span className="text-xs text-ink-muted font-bold uppercase tracking-wider group-hover:text-rust transition-colors">← Dashboard</span>
                 </div>
             </Link>
 
             {/* Project Info */}
-            <div className="p-6 border-b border-white/5 shrink-0">
-                <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block">Current Project</span>
-                <h2 className="text-white font-bold leading-tight mb-2 line-clamp-2">{projectTitle || 'Loading Project...'}</h2>
+            <div className="p-6 border-b border-rule shrink-0">
+                <span className="text-xs text-ink-muted font-bold uppercase tracking-wider mb-2 block">Current Project</span>
+                <h2 className="text-ink font-bold leading-tight mb-2 line-clamp-2">{projectTitle || 'Loading Project...'}</h2>
                 <div className="flex items-center gap-3 text-xs">
-                    <span className="text-gray-400">
+                    <span className="text-ink-muted">
                         {chapters.reduce((acc, c) => acc + (c.wordCount || 0), 0).toLocaleString()} words
                     </span>
-                    <span className="text-gray-600">•</span>
-                    <span className="text-primary font-bold">
+                    <span className="text-ink-muted">•</span>
+                    <span className="text-rust font-bold">
                         {Math.round((chapters.filter(c => (c.wordCount || 0) > 50).length / 5) * 100)}% complete
                     </span>
                 </div>

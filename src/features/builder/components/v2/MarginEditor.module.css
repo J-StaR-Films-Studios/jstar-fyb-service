@@ -1,0 +1,47 @@
+.surface :global(.ProseMirror) {
+  font-family: var(--font-dm-sans), Arial, sans-serif;
+  color: #193E35 !important;
+}
+
+.surface :global(.ProseMirror h1),
+.surface :global(.ProseMirror h2),
+.surface :global(.ProseMirror h3),
+.surface :global(.ProseMirror h4) {
+  color: #193E35 !important;
+}
+
+.surface :global(.ProseMirror strong),
+.surface :global(.ProseMirror em) {
+  color: #193E35 !important;
+}
+
+.surface :global(.ProseMirror a) {
+  color: #B34D39 !important;
+}
+
+.surface :global(.ProseMirror blockquote) {
+  border-left-color: #B34D39;
+  color: #52685F !important;
+}
+
+.surface :global(.ProseMirror pre) {
+  background: #EDF1ED;
+  color: #193E35 !important;
+}
+
+.surface :global(.ProseMirror code) {
+  background: #E1E9E1;
+  color: #193E35 !important;
+}
+
+.surface :global(.ProseMirror pre code) {
+  background: transparent;
+}
+
+.surface :global(.ProseMirror hr) {
+  border-top-color: #C9D3CA;
+}
+
+.surface :global(.ProseMirror p.is-editor-empty:first-child::before) {
+  color: #52685F !important;
+}

@@ -93,11 +93,11 @@ export function AbstractGenerator() {
             {/* Header / Status */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-display font-bold text-white mb-1">Project Context</h2>
-                    <p className="text-sm text-gray-400">Review and refine the AI-generated abstract before structuring the chapters.</p>
+                    <h2 className="text-2xl font-margin font-bold text-ink mb-1">Project Context</h2>
+                    <p className="text-sm text-ink-muted">Review and refine the AI-generated abstract before structuring the chapters.</p>
                 </div>
                 {isLoading && (
-                    <div className="flex items-center gap-2 text-primary bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+                    <div className="flex items-center gap-2 text-ink bg-selection px-4 py-2 rounded-md border border-rule">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span className="font-mono text-xs uppercase tracking-wider font-bold">AI Writing...</span>
                     </div>
@@ -108,11 +108,11 @@ export function AbstractGenerator() {
             <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative"
+                className="bg-writing border border-rule rounded-md overflow-hidden relative"
             >
                 {/* Editor Toolbar */}
-                <div className="px-6 py-4 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
-                    <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-accent/80">
+                <div className="px-6 py-4 border-b border-rule bg-writing flex justify-between items-center">
+                    <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-ink-muted">
                         <Edit3 className="w-3.5 h-3.5" />
                         <span className="hidden md:inline">Abstract Editor</span>
                     </div>
@@ -122,7 +122,7 @@ export function AbstractGenerator() {
                         {!isLoading && (
                             <button
                                 onClick={() => setIsPreviewMode(!isPreviewMode)}
-                                className={`text-xs transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${isPreviewMode ? 'bg-primary/20 text-primary' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                                className={`text-xs transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${isPreviewMode ? 'bg-selection text-rust' : 'text-ink-muted hover:text-rust hover:bg-selection'}`}
                             >
                                 {isPreviewMode ? <Pencil className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                                 {isPreviewMode ? 'Edit' : 'Preview'}
@@ -131,7 +131,7 @@ export function AbstractGenerator() {
 
                         <button
                             onClick={() => complete("", { body: { topic: data.topic, twist: data.twist } })}
-                            className="text-xs text-gray-500 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/5"
+                            className="text-xs text-ink-muted hover:text-rust transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-selection"
                             disabled={isLoading}
                         >
                             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -141,9 +141,9 @@ export function AbstractGenerator() {
                 </div>
 
                 {/* Content Area */}
-                <div className="p-4 sm:p-6 md:p-8 bg-gradient-to-b from-transparent to-black/20 min-h-[200px] md:min-h-[350px]">
+                <div className="p-4 sm:p-6 md:p-8 bg-writing min-h-[200px] md:min-h-[350px]">
                     {isLoading || isPreviewMode ? (
-                        <div className="prose prose-invert prose-lg max-w-none font-serif leading-relaxed prose-headings:font-display prose-headings:text-white prose-p:text-gray-300 prose-strong:text-white">
+                        <div className="prose prose-lg max-w-[75ch] font-margin leading-relaxed prose-headings:text-ink prose-p:text-ink prose-strong:text-ink">
                             {completion ? (
                                 <ReactMarkdown>{completion}</ReactMarkdown>
                             ) : (
@@ -158,21 +158,20 @@ export function AbstractGenerator() {
                                 setCompletion(e.target.value);
                                 updateData({ abstract: e.target.value });
                             }}
-                            className="w-full min-h-[150px] md:min-h-[300px] bg-transparent border-none focus:ring-0 text-base md:text-lg font-serif leading-relaxed text-gray-200 resize-none p-0 placeholder-gray-700 focus:outline-none selection:bg-primary/30"
+                            className="w-full min-h-[150px] md:min-h-[300px] bg-transparent border-none focus:ring-0 text-base md:text-lg font-margin leading-relaxed text-ink resize-none p-0 placeholder-ink-muted focus:outline-none selection:bg-primary/30"
                             placeholder="Waiting for AI generation..."
                         />
                     )}
                 </div>
 
                 {/* AI Command Bar */}
-                <div className="p-5 bg-black/40 border-t border-white/5">
+                <div className="p-5 bg-paper border-t border-rule">
                     <div className="flex flex-col md:flex-row gap-4 items-center">
 
                         {/* Refine Input */}
                         <div className="relative flex-1 w-full group">
-                            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
-                            <div className="relative flex items-center bg-black/60 border border-white/10 rounded-xl overflow-hidden focus-within:border-white/20 transition-colors">
-                                <div className="pl-4 text-primary">
+                            <div className="relative flex items-center bg-writing border border-rule rounded-md overflow-hidden focus-within:border-rust transition-colors">
+                                <div className="pl-4 text-rust">
                                     <Sparkles className="w-5 h-5" />
                                 </div>
                                 <input
@@ -181,13 +180,13 @@ export function AbstractGenerator() {
                                     onChange={(e) => setRefineInput(e.target.value)}
                                     disabled={isLoading}
                                     placeholder="Give instructions to refine (e.g. 'Make it more academic')"
-                                    className="w-full bg-transparent border-none px-4 py-3.5 text-sm text-white focus:ring-0 placeholder-gray-500 font-light"
+                                    className="w-full bg-transparent border-none px-4 py-3.5 text-sm text-ink focus:ring-0 placeholder-ink-muted font-light"
                                     onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
                                 />
                                 <button
                                     onClick={handleRefine}
                                     disabled={!refineInput || isLoading}
-                                    className="mr-2 p-2 bg-white/10 rounded-lg hover:bg-primary hover:text-white transition-all disabled:opacity-0 disabled:scale-90"
+                                    className="mr-2 min-w-11 min-h-11 flex items-center justify-center bg-selection rounded-md text-ink hover:bg-rust hover:text-writing transition-colors disabled:bg-paper disabled:text-ink-muted"
                                 >
                                     <Send className="w-4 h-4" />
                                 </button>
@@ -195,13 +194,13 @@ export function AbstractGenerator() {
                         </div>
 
                         {/* Divider for Mobile */}
-                        <div className="w-full h-px bg-white/10 md:hidden" />
+                        <div className="w-full h-px bg-rule md:hidden" />
 
                         {/* Approve Button */}
                         <button
                             onClick={handleApprove}
                             disabled={isLoading}
-                            className="w-full md:w-auto px-8 py-3.5 bg-green-600 hover:bg-green-500 rounded-xl font-display font-bold text-sm uppercase tracking-wide shadow-[0_0_20px_rgba(22,163,74,0.3)] hover:shadow-[0_0_30px_rgba(22,163,74,0.5)] transform hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:shadow-none text-white"
+                            className="w-full md:w-auto px-8 py-3.5 bg-rust hover:bg-rust/90 rounded-md font-margin font-bold text-sm uppercase tracking-wide  transition-all flex items-center justify-center gap-2 disabled:bg-selection disabled:text-ink-muted text-writing"
                         >
                             <Check className="w-5 h-5" />
                             Confirm & Generate

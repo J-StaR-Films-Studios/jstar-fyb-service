@@ -14,74 +14,79 @@ interface MobileFloatingNavProps {
 export const MobileFloatingNav = memo(function MobileFloatingNav({ activeTab, onTabChange }: MobileFloatingNavProps) {
 
     return (
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#030014]/90 backdrop-blur-2xl border border-white/10 rounded-full p-2 shadow-2xl flex items-center gap-1 z-50 max-w-[95vw] overflow-hidden">
+        <nav aria-label="Workspace views" className="fixed bottom-0 left-0 right-0 bg-writing border-t border-rule p-2 pb-[calc(.5rem+env(safe-area-inset-bottom))] flex items-center justify-around gap-0.5 z-50 text-ink">
 
             <button
                 onClick={() => onTabChange('write')}
+                aria-label="Write" aria-current={activeTab === 'write' ? 'page' : undefined}
                 className={cn(
-                    "flex items-center gap-2 rounded-full transition-all duration-300 shrink-0",
+                    "flex items-center gap-2 rounded-md transition-colors min-w-0 min-h-11 flex-1 justify-center",
                     activeTab === 'write'
-                        ? "px-6 py-3 bg-primary text-white shadow-lg shadow-primary/30"
-                        : "w-12 h-12 justify-center text-gray-400 hover:bg-white/10 hover:text-white"
+                        ? "px-1 py-2 bg-selection text-rust"
+                        : "px-1 py-2 text-ink-muted hover:bg-selection hover:text-ink"
                 )}
             >
                 <PenTool className="w-5 h-5" />
-                {activeTab === 'write' && <span className="font-bold text-xs uppercase animate-in fade-in slide-in-from-left-2">Write</span>}
+                {activeTab === 'write' && <span className="font-bold text-xs">Write</span>}
             </button>
 
             <button
                 onClick={() => onTabChange('research')}
+                aria-label="Research" aria-current={activeTab === 'research' ? 'page' : undefined}
                 className={cn(
-                    "flex items-center gap-2 rounded-full transition-all duration-300 shrink-0",
+                    "flex items-center gap-2 rounded-md transition-colors min-w-0 min-h-11 flex-1 justify-center",
                     activeTab === 'research'
-                        ? "px-6 py-3 bg-accent text-white shadow-lg shadow-accent/30"
-                        : "w-12 h-12 justify-center text-gray-400 hover:bg-white/10 hover:text-white"
+                        ? "px-1 py-2 bg-selection text-rust"
+                        : "px-1 py-2 text-ink-muted hover:bg-selection hover:text-ink"
                 )}
             >
                 <Library className="w-5 h-5" />
-                {activeTab === 'research' && <span className="font-bold text-xs uppercase animate-in fade-in slide-in-from-left-2">Research</span>}
+                {activeTab === 'research' && <span className="font-bold text-xs">Research</span>}
             </button>
 
             <button
                 onClick={() => onTabChange('chat')}
+                aria-label="AI Chat" aria-current={activeTab === 'chat' ? 'page' : undefined}
                 className={cn(
-                    "flex items-center gap-2 rounded-full transition-all duration-300 shrink-0",
+                    "flex items-center gap-2 rounded-md transition-colors min-w-0 min-h-11 flex-1 justify-center",
                     activeTab === 'chat'
-                        ? "px-6 py-3 bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
-                        : "w-12 h-12 justify-center text-gray-400 hover:bg-white/10 hover:text-white"
+                        ? "px-1 py-2 bg-selection text-rust"
+                        : "px-1 py-2 text-ink-muted hover:bg-selection hover:text-ink"
                 )}
             >
                 <div className="relative">
                     <MessageSquare className="w-5 h-5" />
                     {/* Optional: Add unread indicator here if needed */}
                 </div>
-                {activeTab === 'chat' && <span className="font-bold text-xs uppercase animate-in fade-in slide-in-from-left-2">AI Chat</span>}
+                {activeTab === 'chat' && <span className="font-bold text-xs">AI Chat</span>}
             </button>
 
             <button
                 onClick={() => onTabChange('diagrams')}
+                aria-label="Diagrams" aria-current={activeTab === 'diagrams' ? 'page' : undefined}
                 className={cn(
-                    "flex items-center gap-2 rounded-full transition-all duration-300 shrink-0",
+                    "flex items-center gap-2 rounded-md transition-colors min-w-0 min-h-11 flex-1 justify-center",
                     activeTab === 'diagrams'
-                        ? "px-6 py-3 bg-pink-500 text-white shadow-lg shadow-pink-500/30"
-                        : "w-12 h-12 justify-center text-gray-400 hover:bg-white/10 hover:text-white"
+                        ? "px-1 py-2 bg-selection text-rust"
+                        : "px-1 py-2 text-ink-muted hover:bg-selection hover:text-ink"
                 )}
             >
                 <Network className="w-5 h-5" />
-                {activeTab === 'diagrams' && <span className="font-bold text-xs uppercase animate-in fade-in slide-in-from-left-2">Diagrams</span>}
+                {activeTab === 'diagrams' && <span className="font-bold text-xs">Diagrams</span>}
             </button>
 
             <button
                 onClick={() => onTabChange('settings')}
+                aria-label="Settings" aria-current={activeTab === 'settings' ? 'page' : undefined}
                 className={cn(
-                    "flex items-center gap-2 rounded-full transition-all duration-300 shrink-0",
+                    "flex items-center gap-2 rounded-md transition-colors min-w-0 min-h-11 flex-1 justify-center",
                     activeTab === 'settings'
-                        ? "px-6 py-3 bg-gray-700 text-white shadow-lg shadow-gray-700/30"
-                        : "w-12 h-12 justify-center text-gray-400 hover:bg-white/10 hover:text-white"
+                        ? "px-1 py-2 bg-selection text-rust"
+                        : "px-1 py-2 text-ink-muted hover:bg-selection hover:text-ink"
                 )}
             >
                 <Settings className="w-5 h-5" />
-                {activeTab === 'settings' && <span className="font-bold text-xs uppercase animate-in fade-in slide-in-from-left-2">Settings</span>}
+                {activeTab === 'settings' && <span className="font-bold text-xs">Settings</span>}
             </button>
 
         </nav>

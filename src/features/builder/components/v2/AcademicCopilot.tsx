@@ -486,10 +486,10 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
     }, [isLoading]);
 
     return (
-        <div className="flex flex-col h-full bg-dark/20 overflow-hidden relative">
+        <div className="flex flex-col h-full bg-writing overflow-hidden relative">
 
             {/* Header with Thread Selector */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0 z-30 bg-zinc-950/95 backdrop-blur-md shadow-sm pointer-events-auto">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-rule shrink-0 z-30 bg-writing backdrop-blur-md shadow-sm pointer-events-auto">
                 <div className="flex items-center gap-3">
                     {onClose ? (
                         <button
@@ -497,13 +497,13 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                 e.stopPropagation();
                                 onClose();
                             }}
-                            className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-all z-50 shadow-sm"
+                            className="w-8 h-8 rounded-full bg-selection border border-rule flex items-center justify-center hover:bg-selection text-ink-muted hover:text-ink transition-all z-50 shadow-sm"
                         >
-                            <ChevronLeft className="w-4 h-4 text-white" />
+                            <ChevronLeft className="w-4 h-4 text-ink" />
                         </button>
                     ) : (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                            <Sparkles className="w-4 h-4 text-white" />
+                        <div className="w-8 h-8 rounded-full bg-rust flex items-center justify-center">
+                            <Sparkles className="w-4 h-4 text-writing" />
                         </div>
                     )}
                     <div className="flex flex-col">
@@ -517,14 +517,13 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                 </div>
 
                 {/* Context Indicator */}
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-medium text-gray-400 shadow-sm">
-                    <Layout className="w-3 h-3 text-primary/70" />
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-selection border border-rule text-xs font-medium text-ink-muted shadow-sm">
+                    <Layout className="w-3 h-3 text-rust" />
                     {activeChapterNumber ? `Ch ${activeChapterNumber}` : 'Full Project'}
                 </div>
             </div>
 
             {/* Ambient Background Glow */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none"></div>
 
             {/* Chat Body */}
             <div
@@ -556,23 +555,23 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                     </div>
                                     {/* AI Icon */}
                                     <div className={cn(
-                                        "absolute inset-0 flex items-center justify-center bg-primary/20 border-2 border-primary/30 rounded-2xl transition-all duration-700 ease-in-out",
+                                        "absolute inset-0 flex items-center justify-center bg-selection border-2 border-rule rounded-2xl transition-all duration-700 ease-in-out",
                                         showAI ? "opacity-100 scale-100" : "opacity-0 scale-110"
                                     )}>
-                                        <BrainCircuit className="w-8 h-8 text-primary" />
+                                        <BrainCircuit className="w-8 h-8 text-rust" />
                                     </div>
                                 </div>
-                                <h3 className="font-display font-bold text-white text-lg transition-all duration-500">
+                                <h3 className="font-margin font-bold text-ink text-lg transition-all duration-500">
                                     {showAI ? "Academic AI" : "Monji"}
                                 </h3>
-                                <div className="text-xs text-gray-400 max-w-[220px] mx-auto leading-relaxed min-h-[48px] flex flex-col items-center justify-center">
+                                <div className="text-xs text-ink-muted max-w-[220px] mx-auto leading-relaxed min-h-[48px] flex flex-col items-center justify-center">
                                     <span className="transition-opacity duration-500 block mb-1">
                                         {showAI
-                                            ? "Powered by your research library."
+                                            ? "Ask about your project or research."
                                             : "Your academic copilot."
                                         }
                                     </span>
-                                    <span className="text-primary/70 block">
+                                    <span className="text-rust block">
                                         {activeChapterNumber
                                             ? `Focused on Chapter ${activeChapterNumber}`
                                             : "Ready to help plan or research."
@@ -584,7 +583,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                 {lastKnownThread && !activeThreadId && (
                                     <button
                                         onClick={() => handleThreadSelect(lastKnownThread.id)}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 text-sm text-primary hover:bg-primary/20 transition-all mt-4 group"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-selection border border-rule text-sm text-rust hover:bg-selection transition-all mt-4 group"
                                     >
                                         <MessageSquare className="w-4 h-4" />
                                         <span>Continue: {lastKnownThread.title || 'Last Chat'}</span>
@@ -629,7 +628,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
 
                     {isLoading && (
                         <motion.div className="flex justify-start w-full">
-                            <div className="bg-white/5 rounded-2xl rounded-bl-none px-4 py-3 border border-white/5 flex gap-1 items-center">
+                            <div className="bg-selection rounded-2xl rounded-bl-none px-4 py-3 border border-rule flex gap-1 items-center">
                                 <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
                                 <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
                                 <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
@@ -640,7 +639,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
             </div>
 
             {/* Floating Command Center Input */}
-            <div className="p-4 pb-2 md:pb-6 absolute bottom-0 left-0 right-0 bg-gradient-to-t from-dark via-dark/80 to-transparent pt-12">
+            <div className="p-4 pb-2 md:pb-6 absolute bottom-0 left-0 right-0 bg-writing border-t border-rule pt-12">
                 {/* Quick Actions (Contextual) */}
                 <AnimatePresence>
                     {messages.length === 0 && (
@@ -660,9 +659,9 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                                 <button
                                     key={`quick-action-${i}`}
                                     onClick={() => handleQuickAction(action)}
-                                    className="whitespace-nowrap px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-gray-400 hover:text-white hover:bg-white/10 hover:border-primary/30 transition-all flex items-center gap-2 hover:-translate-y-0.5 shadow-sm"
+                                    className="whitespace-nowrap px-4 py-2 rounded-full bg-selection border border-rule text-xs text-ink-muted hover:text-ink hover:bg-selection hover:border-rule transition-all flex items-center gap-2 hover:-translate-y-0.5 shadow-sm"
                                 >
-                                    <Sparkles className="w-3 h-3 text-primary/70" />
+                                    <Sparkles className="w-3 h-3 text-rust" />
                                     {action}
                                 </button>
                             ))}
@@ -672,24 +671,24 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
 
                 <form onSubmit={handleSend} className="relative group">
                     <div className={cn(
-                        "absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-600/20 rounded-3xl blur-xl transition-opacity duration-500",
+                        "absolute inset-0 bg-transparent rounded-md blur-xl transition-opacity duration-500",
                         input ? "opacity-100" : "opacity-0"
                     )} />
 
-                    <div className="relative flex items-end p-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl shadow-black/50 transition-all duration-300 group-focus-within:border-primary/50 group-focus-within:bg-black/40 group-focus-within:shadow-primary/10">
+                    <div className="relative flex items-end p-2 bg-selection backdrop-blur-xl border border-rule rounded-md shadow-2xl shadow-black/50 transition-all duration-300 group-focus-within:border-rust group-focus-within:bg-writing group-focus-within:shadow-primary/10">
                         <textarea
                             ref={textareaRef}
                             value={input}
                             onChange={handleInputChange}
                             onKeyDown={handleKeyDown}
                             placeholder={activeChapterNumber ? `Ask about Chapter ${activeChapterNumber}...` : "How can I help you write?"}
-                            className="flex-1 bg-transparent border-none text-sm text-white placeholder-gray-500 px-4 py-3 focus:ring-0 outline-none min-h-[44px] max-h-[200px] resize-none overflow-y-auto w-full custom-scrollbar"
+                            className="flex-1 bg-transparent border-none text-sm text-ink placeholder-ink-muted px-4 py-3 focus:ring-0 outline-none min-h-[44px] max-h-[200px] resize-none overflow-y-auto w-full custom-scrollbar"
                             rows={1}
                         />
                         <button
                             type="submit"
                             disabled={!input.trim() || isLoading}
-                            className="mb-1 mr-1 p-2 rounded-xl bg-primary text-white disabled:opacity-50 disabled:bg-gray-700 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 shrink-0"
+                            className="mb-1 mr-1 p-2 rounded-md min-w-11 min-h-11 bg-rust text-writing disabled:bg-selection disabled:text-ink-muted transition-colors shrink-0"
                         >
                             {isLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -699,7 +698,7 @@ export function AcademicCopilot({ projectId, activeChapterId, activeChapterNumbe
                         </button>
                     </div>
                 </form>
-                <div className="text-[10px] text-center text-gray-600 mt-2 font-medium">
+                <div className="text-xs text-center text-ink-muted mt-2 font-medium">
                     Monji can make mistakes. Verify important info.
                 </div>
             </div>

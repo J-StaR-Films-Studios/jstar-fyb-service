@@ -44,8 +44,8 @@ function ToolStatusIndicator({ toolName, state }: { toolName: string; state: str
             className={cn(
                 "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-2",
                 isComplete
-                    ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                    : "bg-primary/10 border border-primary/20 text-primary"
+                    ? "bg-selection border border-rule text-ink"
+                    : "bg-paper border border-rule text-rust"
             )}
         >
             <IconComponent className="w-3.5 h-3.5" />
@@ -66,7 +66,7 @@ function ReasoningAccordion({ reasoning, hasContent }: { reasoning: string; hasC
         <div className={cn("text-xs", hasContent && "mb-3")}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors font-mono uppercase tracking-wider"
+                className="flex items-center gap-2 text-ink-muted hover:text-rust transition-colors font-mono uppercase tracking-wider"
             >
                 <span className={cn("transform transition-transform", isOpen ? "rotate-90" : "")}>▶</span>
                 Thinking Process
@@ -77,13 +77,13 @@ function ReasoningAccordion({ reasoning, hasContent }: { reasoning: string; hasC
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="mt-2 pl-4 border-l-2 border-primary/20 text-gray-400 italic font-mono whitespace-pre-wrap text-[11px] leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar"
+                        className="mt-2 pl-4 border-l-2 border-rule text-ink-muted italic font-mono whitespace-pre-wrap text-[11px] leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar"
                     >
                         {reasoning}
                     </motion.div>
                 )}
             </AnimatePresence>
-            {hasContent && <div className="h-px w-full bg-white/10 mt-3" />}
+            {hasContent && <div className="h-px w-full bg-rule mt-3" />}
         </div>
     );
 }
@@ -172,17 +172,17 @@ export function AcademicMessageBubble({
         >
             {/* Assistant Avatar */}
             {!isUser && (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/20">
+                <div className="w-8 h-8 rounded-full bg-rust flex items-center justify-center shrink-0">
                     <Bot className="w-4 h-4 text-white" />
                 </div>
             )}
 
             {/* Message Content */}
             <div className={cn(
-                "rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm backdrop-blur-sm transition-all duration-300",
+                "rounded-md px-4 py-3 text-sm leading-relaxed border border-rule",
                 isUser
-                    ? "max-w-[85%] bg-gradient-to-br from-primary to-purple-600 text-white rounded-br-sm shadow-purple-500/10 order-first"
-                    : "w-full bg-white/10 text-gray-100 rounded-bl-sm border border-white/5 shadow-black/20"
+                    ? "max-w-[85%] bg-selection text-ink order-first"
+                    : "w-full bg-writing text-ink"
             )}>
                 {isUser ? (
                     // User message - simple text
@@ -216,7 +216,7 @@ export function AcademicMessageBubble({
 
                         {/* Main Text Content */}
                         {textContent && (
-                            <div className="prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:text-white prose-p:text-gray-200 prose-p:leading-relaxed prose-strong:text-white prose-strong:font-semibold prose-em:text-gray-300 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-ul:text-gray-200 prose-ol:text-gray-200 prose-li:marker:text-primary/70 prose-code:bg-white/10 prose-code:text-primary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-table:border-collapse prose-th:border prose-th:border-white/20 prose-th:bg-white/5 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-td:border prose-td:border-white/10 prose-td:px-3 prose-td:py-2 prose-blockquote:border-l-primary prose-blockquote:text-gray-300 prose-hr:border-white/10">
+                            <div className="prose prose-sm max-w-none text-ink prose-headings:font-margin prose-headings:text-ink prose-p:text-ink prose-strong:text-ink prose-em:text-ink prose-a:text-rust hover:prose-a:underline prose-li:text-ink prose-code:text-ink prose-code:bg-selection prose-pre:bg-paper prose-pre:text-ink prose-th:text-ink prose-td:text-ink prose-blockquote:border-l-rust prose-blockquote:text-ink-muted">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {textContent}
                                 </ReactMarkdown>
@@ -234,9 +234,9 @@ export function AcademicMessageBubble({
                                         return (
                                             <div
                                                 key={`${message.id}-tool-loading-${idx}`}
-                                                className="bg-white/5 rounded-2xl px-4 py-3 border border-white/5 mb-2"
+                                                className="bg-selection rounded-md px-4 py-3 border border-rule mb-2"
                                             >
-                                                <div className="flex items-center gap-2 text-sm text-gray-400">
+                                                <div className="flex items-center gap-2 text-sm text-ink-muted">
                                                     <Loader2 className="w-4 h-4 animate-spin" />
                                                     <span>Executing {toolName}...</span>
                                                 </div>

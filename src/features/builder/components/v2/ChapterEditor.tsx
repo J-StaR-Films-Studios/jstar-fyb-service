@@ -448,12 +448,12 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
         }
     };
 
-    if (isLoading) return <div className="flex h-screen items-center justify-center text-primary animate-pulse">Loading Workspace...</div>;
+    if (isLoading) return <div className="flex h-screen items-center justify-center bg-paper text-ink">Loading Workspace...</div>;
 
     // Desktop Layout
     if (isDesktop) {
         return (
-            <div className="flex h-screen w-full bg-dark text-gray-300 overflow-hidden font-sans">
+            <div className="flex h-screen w-full bg-paper text-ink overflow-hidden font-margin">
                 {/* Left Sidebar */}
                 <div className="hidden md:flex shrink-0 h-full">
                     <TimelineSidebar
@@ -466,7 +466,7 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                 </div>
 
                 {/* Main Content */}
-                <main className="flex-1 flex flex-col relative h-full w-full">
+                <main className="flex-1 min-w-0 flex flex-col relative h-full w-full">
                     <WritingCanvas
                         projectId={projectId}
                         title={activeChapter?.title?.toLowerCase().startsWith('chapter')
@@ -491,7 +491,7 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                                 )}
                                 <button
                                     onClick={() => setShowExportModal(true)}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-rule text-xs font-medium text-ink hover:text-rust hover:bg-selection min-h-11 transition-all"
                                 >
                                     <Download className="w-4 h-4" />
                                     <span>Export</span>
@@ -507,13 +507,13 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                 </main>
 
                 {/* Right Context Sidebar */}
-                <aside className="hidden lg:flex w-96 flex-col glass-panel border-l border-white/5 bg-dark/95 backdrop-blur-xl z-20">
-                    <div className="flex border-b border-white/5 shrink-0">
+                <aside className="hidden lg:flex w-72 xl:w-80 flex-col border-l border-rule bg-writing z-20">
+                    <div className="flex border-b border-rule shrink-0">
                         <button
                             onClick={() => setActiveTab('research')}
                             className={cn(
                                 "flex-1 py-4 text-sm font-bold border-b-2 transition-colors",
-                                activeTab === 'research' ? "border-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"
+                                activeTab === 'research' ? "border-rust text-ink" : "border-transparent text-ink-muted hover:text-ink"
                             )}
                         >
                             Research
@@ -522,7 +522,7 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                             onClick={() => setActiveTab('chat')}
                             className={cn(
                                 "flex-1 py-4 text-sm font-bold border-b-2 transition-colors",
-                                activeTab === 'chat' ? "border-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"
+                                activeTab === 'chat' ? "border-rust text-ink" : "border-transparent text-ink-muted hover:text-ink"
                             )}
                         >
                             AI Chat
@@ -531,7 +531,7 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                             onClick={() => setActiveTab('diagrams')}
                             className={cn(
                                 "flex-1 py-4 text-sm font-bold border-b-2 transition-colors",
-                                activeTab === 'diagrams' ? "border-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"
+                                activeTab === 'diagrams' ? "border-rust text-ink" : "border-transparent text-ink-muted hover:text-ink"
                             )}
                         >
                             Diagrams
@@ -539,15 +539,15 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                     </div>
 
                     {activeTab === 'research' && (
-                        <div className="p-4 border-b border-white/5 shrink-0">
+                        <div className="p-4 border-b border-rule shrink-0">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted w-4 h-4" />
                                 <input
                                     type="text"
                                     placeholder="Search references..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-black/20 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm outline-none focus:border-primary/50 text-gray-300 placeholder-gray-600"
+                                    className="w-full bg-writing border border-rule rounded-md py-2 pl-9 pr-4 text-sm outline-none focus:border-rust text-ink placeholder-ink-muted"
                                 />
                             </div>
                         </div>
@@ -616,13 +616,14 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
 
     // Mobile Layout
     return (
-        <div className="flex flex-col min-h-screen bg-dark text-white font-sans">
-            <header className="fixed top-0 w-full z-40 px-6 pt-6 pb-4 flex justify-between items-start bg-gradient-to-b from-dark via-dark/80 to-transparent pointer-events-none">
-                <div className="flex flex-col pointer-events-auto mt-2">
-                    <Link href="/dashboard" className="flex items-center gap-1 text-[10px] text-primary font-bold uppercase tracking-widest mb-1 hover:underline">
+        <div className="flex flex-col min-h-screen bg-paper text-ink font-margin">
+            <header className="fixed top-0 w-full z-40 px-4 pt-3 pb-3 gap-2 flex justify-between items-start bg-writing border-b border-rule pointer-events-none">
+                <div className="flex flex-col pointer-events-auto mt-2 min-w-0">
+                    <Link href="/dashboard" className="flex items-center gap-1 text-xs text-rust font-bold uppercase tracking-widest mb-1 hover:underline">
                         <ChevronLeft className="w-3 h-3" /> Back to Dashboard
                     </Link>
-                    <h1 className="font-display font-bold text-2xl leading-tight text-white line-clamp-2 max-w-[200px]">{projectTitle || "Workspace"}</h1>
+                    <span className="text-xs text-ink-muted font-margin-mono">J-Star Projects</span>
+                    <h1 className="font-margin font-bold text-lg leading-tight text-ink line-clamp-2 break-words max-w-[135px] sm:max-w-[220px]">{projectTitle || "Workspace"}</h1>
                 </div>
                 <div className="pointer-events-auto mt-2 shrink-0">
                     <SaveStatusBadge
@@ -674,18 +675,18 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
             )}
 
             {mobileView === 'context' && (
-                <div className="fixed inset-0 z-50 bg-dark flex flex-col pb-24 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="fixed inset-0 z-50 bg-paper text-ink flex flex-col pt-20 pb-24">
                     <div className="flex-1 overflow-y-auto">
                         {activeTab === 'research' ? (
                             <div className="p-6 space-y-6">
                                 <div className="relative mb-4">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted w-4 h-4" />
                                     <input
                                         type="text"
                                         placeholder="Search references..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm outline-none focus:border-primary/50 text-gray-300 placeholder-gray-600"
+                                        className="w-full bg-writing border border-rule rounded-md py-3 pl-10 pr-4 text-sm outline-none focus:border-rust text-ink placeholder-ink-muted"
                                     />
                                 </div>
                                 <ResearchStatus projectId={projectId} />

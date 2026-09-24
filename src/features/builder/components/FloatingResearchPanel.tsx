@@ -173,22 +173,22 @@ export function FloatingResearchPanel() {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed top-0 right-0 w-full md:w-[400px] h-full bg-[#111118] border-l border-white/10 z-50 flex flex-col shadow-2xl"
+                        className="fixed top-0 right-0 w-full md:w-[400px] h-full bg-writing border-l border-rule z-50 flex flex-col shadow-2xl"
                     >
                         {/* Header */}
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111118]/95 backdrop-blur-md sticky top-0 z-10">
+                        <div className="p-6 border-b border-rule flex justify-between items-center bg-writing/95 backdrop-blur-md sticky top-0 z-10">
                             <div>
-                                <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
-                                    <FileText className="w-5 h-5 text-purple-400" />
+                                <h2 className="text-xl font-margin font-bold text-writing flex items-center gap-2">
+                                    <FileText className="w-5 h-5 text-rust" />
                                     Research Library
                                 </h2>
-                                <p className="text-xs text-gray-400 mt-1">
+                                <p className="text-xs text-ink-muted mt-1">
                                     {counts.all} relevant {counts.all === 1 ? 'source' : 'sources'} found
                                 </p>
                             </div>
                             <button
                                 onClick={closeResearchPanel}
-                                className="p-2 hover:bg-white/5 rounded-lg transition-colors text-gray-400 hover:text-white"
+                                className="p-2 hover:bg-selection rounded-lg transition-colors text-ink-muted hover:text-ink"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -201,12 +201,12 @@ export function FloatingResearchPanel() {
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: 'auto', opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden bg-purple-500/10 border-b border-purple-500/20"
+                                    className="overflow-hidden bg-selection border-b border-rule"
                                 >
                                     <div className="px-6 py-2.5 flex items-center justify-between">
                                         <div className="flex items-center gap-2.5">
-                                            <Loader2 className="w-4 h-4 text-purple-400 animate-spin shrink-0" />
-                                            <span className="text-xs font-medium text-purple-200">
+                                            <Loader2 className="w-4 h-4 text-rust animate-spin shrink-0" />
+                                            <span className="text-xs font-medium text-ink">
                                                 AI is processing documents. Please do not close the page.
                                             </span>
                                         </div>
@@ -216,7 +216,7 @@ export function FloatingResearchPanel() {
                         </AnimatePresence>
 
                         {/* Tabs */}
-                        <div className="px-6 py-4 flex gap-2 border-b border-white/5 overflow-x-auto custom-scrollbar">
+                        <div className="px-6 py-4 flex gap-2 border-b border-rule overflow-x-auto custom-scrollbar">
                             {tabs.map((tab) => (
                                 <button
                                     key={tab.id}
@@ -224,15 +224,15 @@ export function FloatingResearchPanel() {
                                     className={cn(
                                         'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap flex items-center gap-1.5',
                                         viewMode === tab.id
-                                            ? 'bg-purple-500/10 text-white border border-purple-500/20'
-                                            : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                                            ? 'bg-selection text-ink border border-rule'
+                                            : 'bg-transparent text-ink-muted hover:text-ink hover:bg-selection border border-transparent'
                                     )}
                                 >
                                     {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
                                     {tab.label}
                                     <span className={cn(
                                         "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
-                                        viewMode === tab.id ? "bg-purple-500/30 text-purple-200" : "bg-white/10 text-gray-400"
+                                        viewMode === tab.id ? "bg-selection text-ink" : "bg-paper text-ink-muted"
                                     )}>
                                         {tab.count}
                                     </span>
@@ -242,7 +242,7 @@ export function FloatingResearchPanel() {
 
                         {/* Access Filters (only for papers) */}
                         {viewMode === 'papers' && (
-                            <div className="px-6 py-2 flex gap-2 border-b border-white/5 overflow-x-auto bg-[#111118]/80">
+                            <div className="px-6 py-2 flex gap-2 border-b border-rule overflow-x-auto bg-writing/80">
                                 {accessFilters.map((filter) => (
                                     <button
                                         key={filter.id}
@@ -250,8 +250,8 @@ export function FloatingResearchPanel() {
                                         className={cn(
                                             'px-3 py-1 text-[10px] font-semibold rounded-full transition-all whitespace-nowrap flex items-center gap-1.5',
                                             accessFilter === filter.id
-                                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                                                : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                                                ? 'bg-selection text-ink border border-rule'
+                                                : 'bg-paper text-ink-muted hover:text-ink hover:bg-selection'
                                         )}
                                     >
                                         <filter.icon className="w-3 h-3" />
@@ -264,13 +264,13 @@ export function FloatingResearchPanel() {
                         {/* Search */}
                         <div className="px-6 py-4">
                             <div className="relative group">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" />
                                 <input
                                     type="text"
                                     placeholder="Search sources..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-black/20 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-gray-600 outline-none focus:border-purple-500/50 transition-colors"
+                                    className="w-full bg-writing border border-rule rounded-lg pl-10 pr-4 py-2.5 text-sm text-ink placeholder:text-ink-muted outline-none focus:border-rust transition-colors"
                                 />
                             </div>
                         </div>
@@ -280,14 +280,14 @@ export function FloatingResearchPanel() {
                             {filteredDocs.length > 0 || uploadingFiles.length > 0 ? (
                                 <>
                                     {uploadingFiles.map((fileName, idx) => (
-                                        <div key={`uploading-${idx}`} className="group bg-white/[0.02] border border-white/5 rounded-xl p-3 mb-3 transition-all duration-200 animate-pulse">
+                                        <div key={`uploading-${idx}`} className="group bg-white/[0.02] border border-rule rounded-xl p-3 mb-3 transition-all duration-200 animate-pulse">
                                             <div className="flex items-start gap-3">
-                                                <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-purple-500/10">
-                                                    <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                                                <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-selection">
+                                                    <Loader2 className="w-4 h-4 text-rust animate-spin" />
                                                 </div>
                                                 <div className="flex-1 min-w-0 flex flex-col justify-center min-h-[36px]">
-                                                    <p className="text-sm font-medium text-white line-clamp-1">{fileName}</p>
-                                                    <span className="text-[10px] text-purple-300">Uploading...</span>
+                                                    <p className="text-sm font-medium text-ink line-clamp-1">{fileName}</p>
+                                                    <span className="text-[10px] text-ink-muted">Uploading...</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -306,11 +306,11 @@ export function FloatingResearchPanel() {
                                 </>
                             ) : (
                                 <div className="py-12 text-center">
-                                    <FileText className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-                                    <p className="text-sm text-gray-400 mb-1">
+                                    <FileText className="w-10 h-10 text-ink-muted mx-auto mb-3" />
+                                    <p className="text-sm text-ink-muted mb-1">
                                         {searchQuery ? 'No matching sources' : 'No research sources yet'}
                                     </p>
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-ink-muted">
                                         {searchQuery ? 'Try a different search' : 'Run Deep Research or upload documents'}
                                     </p>
                                 </div>
@@ -318,10 +318,10 @@ export function FloatingResearchPanel() {
                         </div>
 
                         {/* Footer */}
-                        <div className="p-6 border-t border-white/10 bg-[#111118] absolute bottom-0 w-full">
+                        <div className="p-6 border-t border-rule bg-writing absolute bottom-0 w-full">
                             <button
                                 onClick={() => setIsResearchModalOpen(true)}
-                                className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all"
+                                className="w-full py-3 bg-rust hover:bg-rust/90 rounded-md font-bold text-writing flex items-center justify-center gap-2 transition-all"
                             >
                                 <Sparkles className="w-4 h-4" />
                                 Deep Research
@@ -337,7 +337,7 @@ export function FloatingResearchPanel() {
                                         <button
                                             onClick={onClick}
                                             disabled={isUploading}
-                                            className="w-full py-3 border border-white/10 rounded-xl mt-3 text-gray-300 hover:bg-white/5 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                                            className="w-full py-3 border border-rule rounded-xl mt-3 text-ink hover:bg-selection flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                                         >
                                             {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                                             {isUploading ? "Uploading..." : "Upload Document"}

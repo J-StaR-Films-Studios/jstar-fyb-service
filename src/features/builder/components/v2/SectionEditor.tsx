@@ -155,27 +155,27 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-[#030014] text-white flex flex-col animate-in slide-in-from-bottom duration-300">
+        <div className="fixed inset-0 z-50 bg-paper text-ink flex flex-col animate-in slide-in-from-bottom duration-300">
 
             {/* Top Bar */}
-            <header className="px-6 py-4 flex justify-between items-center border-b border-white/5 bg-black/20 shrink-0">
-                <button onClick={onClose} className="text-gray-400 hover:text-white p-2 -ml-2">
+            <header className="px-3 sm:px-6 py-3 flex justify-between items-center gap-2 border-b border-rule bg-writing shrink-0">
+                <button onClick={onClose} className="text-ink-muted hover:text-rust p-2 -ml-2">
                     <X className="w-6 h-6" />
                 </button>
-                <div className="text-center">
-                    <h2 className="font-bold text-sm text-gray-200">{title}</h2>
+                <div className="text-center min-w-0">
+                    <h2 className="font-bold text-sm text-ink truncate">{title}</h2>
                     {/* Status Indicator */}
                     {saveStatus === 'idle' ? (
-                        <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
+                        <span className="text-xs text-ink-muted flex items-center justify-center gap-1">
                             <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div> Editing
                         </span>
                     ) : saveStatus === 'saving' ? (
-                        <span className="text-[10px] text-yellow-400 flex items-center justify-center gap-1">
+                        <span className="text-xs text-ink-muted flex items-center justify-center gap-1">
                             <Loader2 className="w-2.5 h-2.5 animate-spin" /> Saving...
                         </span>
                     ) : (
-                        <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
-                            <Check className="w-2.5 h-2.5" /> Saved
+                        <span className="text-xs text-ink-muted flex items-center justify-center gap-1">
+                            <Check className="w-2.5 h-2.5" /> Save requested
                         </span>
                     )}
                 </div>
@@ -199,27 +199,27 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
                     {onExport && (
                         <button
                             onClick={onExport}
-                            className="text-gray-400 hover:text-white p-2"
+                            className="text-ink-muted hover:text-rust p-2"
                             title="Export"
                         >
                             <Download className="w-5 h-5" />
                         </button>
                     )}
-                    <button onClick={handleDone} className="text-primary font-bold text-sm">
+                    <button onClick={handleDone} className="text-rust font-bold text-sm min-h-11 px-2">
                         Done
                     </button>
                 </div>
             </header>
 
             {/* Editor Canvas */}
-            <main className="flex-1 p-6 pb-32 overflow-y-auto">
+            <main className="flex-1 p-4 sm:p-6 pb-32 overflow-y-auto"><div className="max-w-[75ch] min-h-full mx-auto bg-writing border border-rule border-l-[5px] border-l-rust p-4 sm:p-8">
                 <NovelEditor
                     content={initialContent}
                     onUpdate={handleContentUpdate}
                     projectId={projectId}
                     onEditorReady={handleEditorReady}
                     className="min-h-[calc(100vh-250px)]"
-                />
+                /></div>
             </main>
 
             {/* Image Picker Dialog */}
@@ -232,11 +232,11 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
             )}
 
             {/* Floating Formatting Pill */}
-            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur border border-white/10 rounded-full px-4 py-2 flex items-center gap-4 shadow-xl z-50">
+            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-writing border border-rule rounded-md px-2 py-1 flex items-center gap-1 max-w-[calc(100vw-2rem)] z-50">
                 <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => toggleFormatting('bold')}
-                    className="text-white hover:text-primary transition-colors"
+                    className="text-ink hover:text-rust transition-colors"
                     title="Bold"
                 >
                     <Bold className="w-4 h-4" />
@@ -244,7 +244,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
                 <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => toggleFormatting('italic')}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="text-ink-muted hover:text-rust transition-colors"
                     title="Italic"
                 >
                     <Italic className="w-4 h-4" />
@@ -252,7 +252,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
                 <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => toggleFormatting('heading')}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="text-ink-muted hover:text-rust transition-colors"
                     title="Heading"
                 >
                     <Heading className="w-4 h-4" />
@@ -260,7 +260,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
                 <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => toggleFormatting('list')}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="text-ink-muted hover:text-rust transition-colors"
                     title="List"
                 >
                     <List className="w-4 h-4" />
@@ -269,7 +269,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
                 <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => toggleFormatting('image')}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="text-ink-muted hover:text-rust transition-colors"
                     title="Image"
                 >
                     <Image className="w-4 h-4" />
@@ -277,7 +277,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
                 <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => toggleFormatting('table')}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="text-ink-muted hover:text-rust transition-colors"
                     title="Table"
                 >
                     <TableIcon className="w-4 h-4" />
@@ -285,15 +285,15 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
             </div>
 
             {/* Bottom Action Bar */}
-            <footer className="h-16 border-t border-white/10 bg-black/40 px-6 flex items-center justify-between shrink-0 mb-safe">
-                <span className="text-xs text-gray-500 font-mono">{currentWordCount} words</span>
+            <footer className="min-h-16 border-t border-rule bg-writing px-3 sm:px-6 flex items-center justify-between gap-1 shrink-0 mb-safe">
+                <span className="text-xs text-ink-muted font-mono">{currentWordCount} words</span>
 
                 {/* Smart Action Button */}
                 <button
                     onClick={handleEnhance}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent rounded-lg text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+                    className="flex items-center gap-1 px-2 sm:px-4 min-h-11 bg-rust rounded-md text-writing text-xs font-bold transition-colors"
                 >
-                    <Sparkles className="w-4 h-4 fill-white" /> Enhance
+                    <Sparkles className="w-4 h-4" /> Enhance
                 </button>
 
                 <div className="flex gap-2">
@@ -303,12 +303,12 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
                                 onSave(latestContentRef.current);
                                 onOpenChat();
                             }}
-                            className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
+                            className="p-2 bg-selection rounded-md hover:bg-paper transition-colors text-ink-muted hover:text-rust"
                         >
                             <MessageSquare className="w-4 h-4" />
                         </button>
                     )}
-                    <button className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+                    <button className="p-2 bg-selection rounded-md hover:bg-paper transition-colors">
                         <Mic className="w-4 h-4 text-gray-400" />
                     </button>
                 </div>

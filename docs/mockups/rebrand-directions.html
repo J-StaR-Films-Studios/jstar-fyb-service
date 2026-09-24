@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>J-Star FYB | Rebrand directions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: #e3e4e1; color: #202725; font: 15px/1.5 'DM Sans', Arial, sans-serif; }
+    a { color: inherit; }
+    button { font: inherit; }
+    .guide { max-width: 1220px; margin: auto; padding: 42px 26px 28px; }
+    .guide h1 { font-size: clamp(28px, 4vw, 44px); letter-spacing: -.055em; line-height: 1.1; margin: 8px 0 12px; }
+    .guide p { max-width: 680px; margin: 0; color: #505b57; }
+    .guide .eyebrow, .plate-label, .kicker, .meta, .workspace .chapter-id, .section-cap { font: 600 10px/1.4 'IBM Plex Mono', monospace; letter-spacing: .13em; text-transform: uppercase; }
+    .jump { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 22px; }
+    .jump a { text-decoration: none; border: 1px solid #b7c0b9; padding: 8px 14px; border-radius: 5px; font-size: 13px; font-weight: 700; }
+    .jump a:hover, .jump a:focus-visible { background: #d3dad4; outline-offset: 3px; }
+    .direction { --bg: #edf1ed; --ink: #193e35; --muted: #52685f; --accent: #b34d39; --accent-ink: #fffaf5; --panel: #fffefa; --rule: #c9d3ca; --soft: #e1e9e1; --font: 'DM Sans', Arial, sans-serif; max-width: 1220px; margin: 0 auto 52px; scroll-margin-top: 12px; }
+    .direction.index { --bg: #e6edf0; --ink: #163950; --muted: #50677a; --accent: #206b79; --accent-ink: #fff; --panel: #f8faf9; --rule: #b8cbd2; --soft: #d6e5e7; --font: 'Source Sans 3', Arial, sans-serif; }
+    .direction.night { --bg: #17222a; --ink: #f2efe7; --muted: #b0bec0; --accent: #ddac76; --accent-ink: #19272d; --panel: #24333a; --rule: #46575b; --soft: #2e4248; --font: 'Manrope', Arial, sans-serif; }
+    .plate-label { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 2px 10px; color: #414c48; }
+    .plate-label strong { font: 700 15px/1.3 'DM Sans', Arial, sans-serif; letter-spacing: 0; text-transform: none; }
+    .description { padding: 0 2px 15px; color: #4a5955; font-size: 13px; }
+    .frame { background: var(--bg); color: var(--ink); font-family: var(--font); border: 1px solid rgba(0,0,0,.12); overflow: hidden; box-shadow: 0 14px 42px rgba(19,34,29,.10); }
+    .site-nav { height: 72px; padding: 0 5%; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--rule); }
+    .brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; font-weight: 800; letter-spacing: -.05em; font-size: 21px; white-space: nowrap; }
+    .brand-mark { display: grid; place-items: center; width: 33px; height: 33px; background: var(--ink); color: var(--bg); font-size: 15px; font-weight: 800; letter-spacing: -.08em; border-radius: 4px; }
+    .index .brand-mark { border-radius: 50%; }
+    .night .brand-mark { background: var(--accent); color: var(--accent-ink); }
+    .nav-links { display: flex; gap: 30px; align-items: center; font-size: 13px; font-weight: 700; }
+    .nav-links a { text-decoration: none; }
+    .nav-links a:hover { text-decoration: underline; text-underline-offset: 4px; }
+    .nav-button, .button { display: inline-block; background: var(--accent); color: var(--accent-ink); font-weight: 800; text-decoration: none; border-radius: 4px; padding: 11px 18px; border: 1px solid var(--accent); font-size: 13px; white-space: nowrap; }
+    .button:hover, .nav-button:hover { filter: brightness(.93); }
+    .button:focus-visible, .nav-button:focus-visible, .frame a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .button.secondary { background: transparent; border-color: var(--rule); color: var(--ink); }
+    .hero { display: grid; grid-template-columns: minmax(0,1fr) minmax(0, .86fr); min-height: 460px; gap: 5%; padding: 67px 5% 72px; align-items: center; }
+    .hero-copy { max-width: 590px; }
+    .kicker { color: var(--accent); margin: 0 0 22px; }
+    .hero h2 { font-size: clamp(38px, 5.3vw, 71px); line-height: 1.03; letter-spacing: -.065em; margin: 0 0 22px; font-weight: 800; }
+    .hero-copy > p:not(.kicker) { max-width: 450px; color: var(--muted); margin: 0 0 25px; font-size: 16px; line-height: 1.65; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .subnote { margin-top: 20px; color: var(--muted); font-size: 12px; }
+    .hero-visual { min-height: 340px; position: relative; display: grid; place-items: center; }
+    .paper { background: var(--panel); color: var(--ink); border: 1px solid var(--rule); width: min(100%, 410px); padding: 31px 32px 35px; box-shadow: 8px 11px 0 var(--soft); transform: rotate(-2deg); }
+    .paper .chapter-id { color: var(--accent); padding-bottom: 15px; border-bottom: 1px solid var(--rule); }
+    .paper h3 { font-size: 26px; letter-spacing: -.045em; line-height: 1.2; margin: 21px 0 9px; }
+    .paper p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .paper .line { height: 6px; border-radius: 2px; margin-top: 13px; background: var(--soft); }
+    .paper .line.short { width: 67%; }
+    .paper .tag { display: inline-block; color: var(--accent); border: 1px solid var(--accent); padding: 5px 8px; margin-top: 26px; font: 600 10px 'IBM Plex Mono', monospace; text-transform: uppercase; }
+    .margin .paper { border-left: 5px solid var(--accent); }
+    .margin .hero-visual::before { content: ''; position: absolute; width: 75%; height: 79%; border: 1px solid var(--rule); transform: rotate(3deg) translate(12px,12px); }
+    .index .hero { grid-template-columns: minmax(0,.86fr) minmax(0,1fr); }
+    .index .hero-copy { order: 2; }
+    .index .hero-visual { order: 1; }
+    .index .paper { transform: rotate(0); box-shadow: 13px 13px 0 #c9dade; border-top: 5px solid var(--accent); }
+    .index .hero h2 { font-weight: 700; }
+    .index .paper .tag { background: var(--soft); border-color: var(--rule); color: var(--ink); }
+    .night .hero { min-height: 480px; }
+    .night .hero h2 { max-width: 620px; }
+    .night .paper { transform: rotate(2deg); box-shadow: -13px 14px 0 #31464a; border-left: 1px solid var(--rule); }
+    .night .paper .line { opacity: .7; }
+    .divider { margin: 0 5%; padding: 12px 0; border-top: 1px solid var(--rule); color: var(--muted); font: 600 10px 'IBM Plex Mono', monospace; letter-spacing: .13em; text-transform: uppercase; }
+    .workspace { margin: 8px 5% 52px; background: var(--panel); color: var(--ink); border: 1px solid var(--rule); box-shadow: 5px 6px 0 var(--soft); }
+    .workspace-bar { height: 53px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--rule); padding: 0 20px; font-size: 12px; font-weight: 700; }
+    .workspace-bar .saved { color: var(--muted); font-weight: 500; }
+    .workspace-grid { display: grid; grid-template-columns: 165px minmax(0, 1fr) 190px; min-height: 295px; }
+    .workspace aside { padding: 21px 16px; }
+    .workspace .left { border-right: 1px solid var(--rule); }
+    .workspace .right { border-left: 1px solid var(--rule); }
+    .section-cap { color: var(--muted); margin: 0 0 18px; }
+    .workspace .left span { display: block; font-size: 12px; padding: 8px 7px; color: var(--muted); }
+    .workspace .left .selected { color: var(--ink); background: var(--soft); font-weight: 700; border-left: 3px solid var(--accent); }
+    .document { padding: 27px clamp(20px, 5vw, 62px); }
+    .document .chapter-id { color: var(--accent); }
+    .document h3 { font-size: clamp(19px, 2.4vw, 28px); letter-spacing: -.045em; line-height: 1.18; margin: 12px 0 14px; }
+    .document p { color: var(--muted); font-size: 13px; line-height: 1.65; max-width: 520px; }
+    .document .highlight { background: var(--soft); color: var(--ink); padding: 1px 3px; }
+    .source { padding: 11px 0; border-bottom: 1px solid var(--rule); }
+    .source strong { display: block; font-size: 11px; line-height: 1.35; }
+    .source small { display: block; color: var(--muted); font-size: 10px; margin-top: 5px; }
+    .rail-footer { color: var(--accent); font-size: 11px; font-weight: 700; margin-top: 18px; }
+    .index .workspace { box-shadow: none; }
+    .night .workspace { box-shadow: none; }
+    .night .workspace .left .selected { background: var(--soft); }
+    .tokens { margin: 0 5% 40px; padding-top: 14px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .swatch { display: flex; align-items: center; gap: 8px; font: 500 10px 'IBM Plex Mono', monospace; color: var(--muted); }
+    .swatch::before { content: ''; display: inline-block; width: 19px; height: 19px; background: var(--swatch); border: 1px solid var(--rule); }
+    .foot { padding: 0 26px 48px; max-width: 1220px; margin: auto; font-size: 13px; color: #505b57; }
+    @media (max-width: 780px) {
+      .guide { padding: 28px 16px 24px; }
+      .direction { margin: 0 10px 38px; }
+      .plate-label { align-items: flex-start; flex-direction: column; gap: 2px; }
+      .description { line-height: 1.5; }
+      .nav-links a:not(.nav-button) { display: none; }
+      .site-nav { height: 60px; }
+      .hero, .index .hero { grid-template-columns: 1fr; gap: 28px; min-height: 0; padding: 42px 5% 48px; }
+      .hero-copy, .index .hero-copy { order: 1; }
+      .hero-visual, .index .hero-visual { order: 2; min-height: 270px; }
+      .hero h2 { font-size: clamp(36px, 10vw, 58px); }
+      .paper { width: min(91%, 410px); padding: 24px; }
+      .workspace-grid { grid-template-columns: 1fr; }
+      .workspace .left { border-right: 0; border-bottom: 1px solid var(--rule); padding: 11px 14px; display: flex; align-items: center; gap: 5px; overflow-x: auto; }
+      .workspace .left .section-cap { display: none; }
+      .workspace .left span { white-space: nowrap; padding: 7px 10px; }
+      .workspace .left .selected { border-left: 0; border-bottom: 3px solid var(--accent); }
+      .workspace .right { border-left: 0; border-top: 1px solid var(--rule); padding: 15px 20px; }
+      .workspace .right .section-cap { margin-bottom: 6px; }
+      .source { display: inline-block; width: min(49%, 220px); vertical-align: top; padding-right: 10px; }
+      .document { padding: 23px 20px; }
+    }
+    @media (max-width: 430px) {
+      .nav-button { padding: 9px 10px; }
+      .brand { font-size: 17px; }
+      .brand-mark { width: 28px; height: 28px; }
+      .hero-copy > p:not(.kicker) { font-size: 14px; }
+      .paper h3 { font-size: 21px; }
+      .workspace-bar { padding: 0 12px; }
+      .workspace-bar .saved { font-size: 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <header class="guide">
+    <span class="eyebrow">J-Star FYB / visual exploration</span>
+    <h1>Less sci-fi. More actual work.</h1>
+    <p>Three directions for the same product. Each shows a landing-page opening and the writing workspace. These are visual studies, not working app screens. Copy and project details are illustrative.</p>
+    <nav class="jump" aria-label="Jump to a direction">
+      <a href="#margin">A / Margin</a><a href="#index">B / Index</a><a href="#night">C / Night desk</a>
+    </nav>
+  </header>
+
+  <section class="direction margin" id="margin" aria-labelledby="margin-name">
+    <div class="plate-label"><strong id="margin-name">A / Margin</strong><span>Recommended / focused and approachable</span></div>
+    <p class="description">A project notebook with a rust-red margin rule. Green ink, pale grey paper, one deliberate red accent. No floating tech icons.</p>
+    <div class="frame">
+      <nav class="site-nav" aria-label="Margin sample navigation"><span class="brand"><span class="brand-mark">J.</span> J-Star FYB</span><div class="nav-links"><a href="#margin-workspace">How it works</a><a href="#margin-workspace">Your workspace</a><a class="nav-button" href="#margin-workspace">Start a project</a></div></nav>
+      <div class="hero"><div class="hero-copy"><p class="kicker">Final year, with a plan</p><h2>Get your project out of your head and onto the page.</h2><p>Choose a topic, build your outline, keep your research close and write each chapter in one place. Need a hand? Ask Monji as you go.</p><div class="actions"><a class="button" href="#margin-workspace">Start your project</a><a class="button secondary" href="#margin-workspace">See the workspace</a></div><div class="subnote">Write it yourself or get help from the J-Star team.</div></div><div class="hero-visual"><div class="paper"><div class="chapter-id">Project file / chapter 01</div><h3>Mobile payments and small businesses in Lagos</h3><p>Introduction and background of the study</p><div class="line"></div><div class="line"></div><div class="line short"></div><span class="tag">Draft in progress</span></div></div></div>
+      <div class="divider" id="margin-workspace">Inside the writing workspace</div>
+      <div class="workspace"><div class="workspace-bar"><span>J-Star FYB / Mobile payments and small businesses in Lagos</span><span class="saved">● &nbsp;Saved</span></div><div class="workspace-grid"><aside class="left"><div class="section-cap">Your chapters</div><span>Outline</span><span class="selected">01 &nbsp; Introduction</span><span>02 &nbsp; Literature review</span><span>03 &nbsp; Methodology</span></aside><main class="document"><div class="chapter-id">Chapter 01 / working draft</div><h3>Background of the study</h3><p>Digital payment tools have changed how small businesses take payments across Lagos. <span class="highlight">This study examines adoption, everyday use and the barriers owners still face.</span></p><p>Keep your sources next to your draft. Ask Monji to help clarify a passage without losing track of what you wrote.</p></main><aside class="right"><div class="section-cap">Research shelf / 2</div><div class="source"><strong>CBN payment systems report</strong><small>PDF · Added to project</small></div><div class="source"><strong>Small business survey</strong><small>PDF · Added to project</small></div><div class="rail-footer">+ Add a source</div></aside></div></div>
+      <div class="tokens"><span class="swatch" style="--swatch:#edf1ed">#EDF1ED paper</span><span class="swatch" style="--swatch:#193e35">#193E35 ink</span><span class="swatch" style="--swatch:#b34d39">#B34D39 action</span><span class="swatch" style="--swatch:#fffefa">#FFFEFA writing</span></div>
+    </div>
+  </section>
+
+  <section class="direction index" id="index" aria-labelledby="index-name">
+    <div class="plate-label"><strong id="index-name">B / Index</strong><span>Research-led / orderly and credible</span></div>
+    <p class="description">A reference-file look with cool blue-grey panels and deep marine type. The source shelf is the visual anchor, not the chatbot.</p>
+    <div class="frame">
+      <nav class="site-nav" aria-label="Index sample navigation"><span class="brand"><span class="brand-mark">J.</span> J-Star FYB</span><div class="nav-links"><a href="#index-workspace">How it works</a><a href="#index-workspace">Your workspace</a><a class="nav-button" href="#index-workspace">Start a project</a></div></nav>
+      <div class="hero"><div class="hero-copy"><p class="kicker">Your research, organised</p><h2>Make a case for your project.</h2><p>Turn an idea into an outline, collect the sources behind it and work through every chapter. The work stays yours, with help there when you need it.</p><div class="actions"><a class="button" href="#index-workspace">Start your project</a><a class="button secondary" href="#index-workspace">See the workspace</a></div><div class="subnote">For final-year students writing a paper or building software.</div></div><div class="hero-visual"><div class="paper"><div class="chapter-id">Research file / Lagos / 001</div><h3>What do we know so far?</h3><p>Mobile payments and small businesses in Lagos</p><div class="line"></div><div class="line short"></div><div class="line"></div><span class="tag">2 sources filed</span></div></div></div>
+      <div class="divider" id="index-workspace">Inside the writing workspace</div>
+      <div class="workspace"><div class="workspace-bar"><span>J-Star FYB / Mobile payments and small businesses in Lagos</span><span class="saved">● &nbsp;Saved</span></div><div class="workspace-grid"><aside class="left"><div class="section-cap">Project index</div><span>Outline</span><span class="selected">01 &nbsp; Introduction</span><span>02 &nbsp; Literature review</span><span>03 &nbsp; Methodology</span></aside><main class="document"><div class="chapter-id">Chapter 01 / working draft</div><h3>Background of the study</h3><p>Digital payment tools have changed how small businesses take payments across Lagos. <span class="highlight">This study examines adoption, everyday use and the barriers owners still face.</span></p><p>Keep your sources next to your draft. Ask Monji to help clarify a passage without losing track of what you wrote.</p></main><aside class="right"><div class="section-cap">Sources on file / 2</div><div class="source"><strong>CBN payment systems report</strong><small>PDF · Added to project</small></div><div class="source"><strong>Small business survey</strong><small>PDF · Added to project</small></div><div class="rail-footer">+ Add a source</div></aside></div></div>
+      <div class="tokens"><span class="swatch" style="--swatch:#e6edf0">#E6EDF0 canvas</span><span class="swatch" style="--swatch:#163950">#163950 ink</span><span class="swatch" style="--swatch:#206b79">#206B79 action</span><span class="swatch" style="--swatch:#f8faf9">#F8FAF9 writing</span></div>
+    </div>
+  </section>
+
+  <section class="direction night" id="night" aria-labelledby="night-name">
+    <div class="plate-label"><strong id="night-name">C / Night desk</strong><span>Closest to the current dark app / least disruptive</span></div>
+    <p class="description">Keeps the late-night feel, removes purple and cyan glow. Charcoal, parchment text and warm brass make it feel more like a place to work.</p>
+    <div class="frame">
+      <nav class="site-nav" aria-label="Night desk sample navigation"><span class="brand"><span class="brand-mark">J.</span> J-Star FYB</span><div class="nav-links"><a href="#night-workspace">How it works</a><a href="#night-workspace">Your workspace</a><a class="nav-button" href="#night-workspace">Start a project</a></div></nav>
+      <div class="hero"><div class="hero-copy"><p class="kicker">A quieter place to finish</p><h2>One project. One desk. Keep going.</h2><p>Build your outline, write the chapters and keep your sources in reach. Get help when you're stuck, then get back to the work.</p><div class="actions"><a class="button" href="#night-workspace">Start your project</a><a class="button secondary" href="#night-workspace">See the workspace</a></div><div class="subnote">DIY writing tools and support from the J-Star team.</div></div><div class="hero-visual"><div class="paper"><div class="chapter-id">Open document / 01 of 05</div><h3>Mobile payments and small businesses in Lagos</h3><p>Introduction and background of the study</p><div class="line"></div><div class="line"></div><div class="line short"></div><span class="tag">Writing in progress</span></div></div></div>
+      <div class="divider" id="night-workspace">Inside the writing workspace</div>
+      <div class="workspace"><div class="workspace-bar"><span>J-Star FYB / Mobile payments and small businesses in Lagos</span><span class="saved">● &nbsp;Saved</span></div><div class="workspace-grid"><aside class="left"><div class="section-cap">Chapters</div><span>Outline</span><span class="selected">01 &nbsp; Introduction</span><span>02 &nbsp; Literature review</span><span>03 &nbsp; Methodology</span></aside><main class="document"><div class="chapter-id">Chapter 01 / working draft</div><h3>Background of the study</h3><p>Digital payment tools have changed how small businesses take payments across Lagos. <span class="highlight">This study examines adoption, everyday use and the barriers owners still face.</span></p><p>Keep your sources next to your draft. Ask Monji to help clarify a passage without losing track of what you wrote.</p></main><aside class="right"><div class="section-cap">Research / 2 files</div><div class="source"><strong>CBN payment systems report</strong><small>PDF · Added to project</small></div><div class="source"><strong>Small business survey</strong><small>PDF · Added to project</small></div><div class="rail-footer">+ Add a source</div></aside></div></div>
+      <div class="tokens"><span class="swatch" style="--swatch:#17222a">#17222A canvas</span><span class="swatch" style="--swatch:#f2efe7">#F2EFE7 text</span><span class="swatch" style="--swatch:#ddac76">#DDAC76 action</span><span class="swatch" style="--swatch:#24333a">#24333A writing</span></div>
+    </div>
+  </section>
+  <footer class="foot">Concept only. Names, pricing, routes and production files are unchanged. Fonts fall back to system faces when offline.</footer>
+</body>
+</html>

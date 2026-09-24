@@ -15,9 +15,9 @@ const TimelineStep = ({ label, subLabel, status, stepNumber }: TimelineStepProps
             <div
                 className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border transition-all",
-                    status === "completed" && "bg-green-500/20 text-green-500 border-transparent",
-                    status === "current" && "bg-primary/20 text-primary border-primary/50 animate-pulse",
-                    status === "pending" && "bg-white/5 text-gray-500 border-white/10"
+                    status === "completed" && "bg-selection text-ink border-rule",
+                    status === "current" && "bg-writing text-rust border-rust",
+                    status === "pending" && "bg-paper text-ink-muted border-rule"
                 )}
             >
                 {status === "completed" ? (
@@ -27,8 +27,8 @@ const TimelineStep = ({ label, subLabel, status, stepNumber }: TimelineStepProps
                 )}
             </div>
             <div className="flex-1">
-                <p className={cn("text-sm font-bold", status === "pending" && "text-gray-500")}>{label}</p>
-                {subLabel && <p className="text-xs text-accent">{subLabel}</p>}
+                <p className={cn("text-sm font-bold", status === "pending" && "text-ink-muted")}>{label}</p>
+                {subLabel && <p className="text-xs text-ink-muted">{subLabel}</p>}
             </div>
         </div>
     );

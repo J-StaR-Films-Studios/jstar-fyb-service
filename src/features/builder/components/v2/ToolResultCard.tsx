@@ -5,11 +5,8 @@ import {
     BookOpen,
     List,
     CheckCircle,
-    Info,
     Terminal,
     Search,
-    FileText,
-    Layout,
     GitBranch,
     Plus,
     AlertCircle,
@@ -211,10 +208,10 @@ function ErrorCard({ toolName, message }: { toolName: string; message: string })
         >
             <div className="p-3 bg-red-500/10 flex items-center gap-3 border-b border-red-500/10">
                 <XCircle className="w-4 h-4 text-red-400" />
-                <span className="text-sm font-semibold text-red-200">{toolName} Failed</span>
+                <span className="text-sm font-semibold text-ink">{toolName} Failed</span>
             </div>
             <div className="p-4">
-                <p className="text-sm text-red-300">{message}</p>
+                <p className="text-sm text-ink">{message}</p>
             </div>
         </motion.div>
     );
@@ -245,10 +242,10 @@ function SearchResultCard({
             >
                 <div className="p-3 bg-amber-500/10 flex items-center gap-2 border-b border-amber-500/10">
                     <AlertCircle className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs font-bold text-amber-300 uppercase">No Research Library</span>
+                    <span className="text-xs font-bold text-ink uppercase">No Research Library</span>
                 </div>
                 <div className="p-4">
-                    <p className="text-sm text-amber-200">
+                    <p className="text-sm text-ink">
                         {message || 'No research documents have been uploaded for this project. Upload documents to enable research search.'}
                     </p>
                 </div>
@@ -264,11 +261,11 @@ function SearchResultCard({
         >
             <div className="p-2 bg-amber-500/10 flex items-center gap-2 border-b border-amber-500/10">
                 <Search className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-xs font-bold text-amber-500/80 uppercase">Research Findings</span>
+                <span className="text-xs font-bold text-ink uppercase">Research Findings</span>
             </div>
             <div className="p-3">
-                <p className="text-xs text-gray-500 mb-2">Query: "{query}"</p>
-                <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{text}</p>
+                <p className="text-xs text-ink-muted mb-2">Query: &quot;{query}&quot;</p>
+                <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">{text}</p>
                 {sources && sources.length > 0 && (
                     <div className="mt-3 pt-2 border-t border-white/5">
                         <p className="text-xs text-gray-500">
@@ -299,7 +296,7 @@ function ChapterListCard({
                 className="my-3 bg-white/5 border border-white/10 rounded-xl overflow-hidden"
             >
                 <div className="p-4">
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-ink-muted">
                         No chapters found. Generate an outline to get started.
                     </p>
                 </div>
@@ -371,19 +368,19 @@ function ChapterLoadCard({
         >
             <div className="p-3 bg-blue-500/10 flex items-center gap-3 border-b border-blue-500/10">
                 <BookOpen className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-semibold text-blue-200">
+                <span className="text-sm font-semibold text-ink">
                     Loaded Chapter {chapterNumber}
                 </span>
-                <span className="ml-auto text-[10px] uppercase tracking-wider bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full">
+                <span className="ml-auto text-xs uppercase tracking-wider bg-selection text-ink px-2 py-0.5 rounded-full">
                     {status}
                 </span>
             </div>
             <div className="p-4">
-                <h4 className="text-md font-bold text-white mb-2">{title}</h4>
+                <h4 className="text-md font-bold text-ink mb-2">{title}</h4>
                 <p className="text-xs text-gray-500 mb-2">{wordCount.toLocaleString()} words</p>
                 {contentPreview && (
-                    <div className="text-xs text-gray-400 italic font-serif leading-relaxed line-clamp-6 bg-black/20 p-3 rounded-lg border border-white/5">
-                        "{contentPreview}"
+                    <div className="text-xs text-ink-muted italic font-serif leading-relaxed line-clamp-6 bg-writing p-3 rounded-md border border-rule">
+                        &quot;{contentPreview}&quot;
                     </div>
                 )}
             </div>
@@ -422,9 +419,9 @@ function SectionGeneratedCard({
                     <CheckCircle className="w-4 h-4 text-green-500" />
                 </div>
                 <div>
-                    <div className="text-sm font-bold text-green-100">Section Generated</div>
-                    <div className="text-xs text-green-400/80">
-                        "{sectionTitle}" added to Chapter {chapterNumber}
+                    <div className="text-sm font-bold text-ink">Section Generated</div>
+                    <div className="text-xs text-ink-muted">
+                        &quot;{sectionTitle}&quot; added to Chapter {chapterNumber}
                         {isNewChapter && ' (new chapter created)'}
                     </div>
                 </div>
@@ -438,12 +435,12 @@ function SectionGeneratedCard({
                 <div className="px-4 pb-3">
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className="text-[10px] text-green-500/60 hover:text-green-400 flex items-center gap-1 mt-1"
+                        className="text-xs text-rust hover:underline flex items-center gap-1 mt-1"
                     >
                         {isExpanded ? 'Hide Content' : 'View Generated Content'}
                     </button>
                     {isExpanded && (
-                        <div className="mt-2 text-xs text-gray-400 bg-black/20 p-2 rounded border border-white/5 font-serif max-h-60 overflow-y-auto custom-scrollbar">
+                        <div className="mt-2 text-xs text-ink-muted bg-writing p-2 rounded border border-rule font-serif max-h-60 overflow-y-auto custom-scrollbar">
                             {generatedContent}
                         </div>
                     )}
@@ -451,7 +448,7 @@ function SectionGeneratedCard({
             )}
             {message && (
                 <div className="px-4 pb-3">
-                    <p className="text-xs text-gray-400">{message}</p>
+                    <p className="text-xs text-ink-muted">{message}</p>
                 </div>
             )}
         </motion.div>
@@ -481,15 +478,15 @@ function ChapterAddedCard({
                     <Plus className="w-4 h-4 text-green-500" />
                 </div>
                 <div>
-                    <div className="text-sm font-bold text-green-100">Chapter Created</div>
-                    <div className="text-xs text-green-400/80">
-                        Chapter {number}: "{title}"
+                    <div className="text-sm font-bold text-ink">Chapter Created</div>
+                    <div className="text-xs text-ink-muted">
+                        Chapter {number}: &quot;{title}&quot;
                     </div>
                 </div>
             </div>
             {message && (
                 <div className="px-4 pb-3">
-                    <p className="text-xs text-gray-400">{message}</p>
+                    <p className="text-xs text-ink-muted">{message}</p>
                 </div>
             )}
         </motion.div>
@@ -514,7 +511,7 @@ function OutlineCard({
         >
             <div className="p-3 bg-white/5 border-b border-white/5 flex items-center gap-2">
                 <GitBranch className="w-4 h-4 text-primary" />
-                <span className="text-xs font-bold text-gray-300 uppercase">Generated Outline</span>
+                <span className="text-xs font-bold text-ink uppercase">Generated Outline</span>
             </div>
             <div className="p-4">
                 {focus && (
@@ -522,7 +519,7 @@ function OutlineCard({
                 )}
                 <ol className="space-y-2">
                     {outline.map((item) => (
-                        <li key={item.number} className="text-sm text-gray-300">
+                        <li key={item.number} className="text-sm text-ink">
                             <span className="font-medium">{item.number}.</span> {item.title}
                             {item.description && (
                                 <p className="text-xs text-gray-500 ml-4 mt-0.5">{item.description}</p>
@@ -543,7 +540,7 @@ function ContextSavedCard() {
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="my-2 inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-xs text-gray-400"
+            className="my-2 inline-flex items-center gap-2 px-3 py-1.5 bg-selection border border-rule rounded-md text-xs text-ink"
         >
             <CheckCircle className="w-3 h-3 text-primary" />
             Context saved successfully.
@@ -565,13 +562,13 @@ function GenericToolCard({
 }) {
     return (
         <div className="my-2 bg-black/20 rounded-lg border border-white/5 text-xs overflow-hidden">
-            <div className="p-2 bg-white/5 flex items-center gap-2 text-gray-500 border-b border-white/5">
+            <div className="p-2 bg-selection flex items-center gap-2 text-ink-muted border-b border-rule">
                 <Terminal className="w-3 h-3" />
                 <span className="font-mono">{toolName} Result</span>
             </div>
             <div className="p-3">
-                {message && <p className="text-sm text-gray-300 mb-2">{message}</p>}
-                <pre className="text-gray-400 whitespace-pre-wrap font-mono text-[11px] overflow-x-auto">
+                {message && <p className="text-sm text-ink mb-2">{message}</p>}
+                <pre className="text-ink-muted whitespace-pre-wrap font-mono text-xs overflow-x-auto">
                     {JSON.stringify(output, null, 2)}
                 </pre>
             </div>

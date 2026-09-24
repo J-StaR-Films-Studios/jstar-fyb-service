@@ -129,8 +129,8 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
         return (
             <div className="w-full flex items-center justify-center min-h-[400px]">
                 <div className="text-center">
-                    <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
-                    <p className="text-gray-400 text-sm">Loading your project...</p>
+                    <Loader2 className="w-10 h-10 text-rust animate-spin mx-auto mb-4" />
+                    <p className="text-ink-muted text-sm">Loading your project...</p>
                 </div>
             </div>
         );
@@ -139,28 +139,25 @@ export function BuilderClient({ serverProject, serverIsPaid = false, serverIsRef
 
     return (
         <div className="w-full relative">
-            {/* Ambient Background Blobs */}
-            <div className="fixed rounded-full blur-[100px] z-[-1] opacity-30 pointer-events-none bg-purple-900/40 w-96 h-96 top-0 -left-20" aria-hidden="true" />
-            <div className="fixed rounded-full blur-[100px] z-[-1] opacity-30 pointer-events-none bg-blue-900/20 w-[500px] h-[500px] bottom-0 -right-20" aria-hidden="true" />
 
             {/* Payment Verification Loading Overlay */}
             {isVerifying && (
-                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
-                    <div className="text-center">
-                        <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-                        <p className="text-white font-bold text-lg">Verifying Payment...</p>
-                        <p className="text-gray-400 text-sm">Please wait while we confirm your payment.</p>
+                <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center">
+                    <div className="text-center rounded-md border border-rule bg-writing p-8">
+                        <Loader2 className="w-12 h-12 text-rust animate-spin mx-auto mb-4" />
+                        <p className="text-ink font-bold text-lg">Verifying Payment...</p>
+                        <p className="text-ink-muted text-sm">Please wait while we confirm your payment.</p>
                     </div>
                 </div>
             )}
 
             {/* Progress Section */}
-            <div id="progress-header" className="mb-6 relative z-10 transition-all duration-500 max-w-7xl mx-auto px-4 w-full pt-20">
+            <div id="progress-header" className="mb-6 relative z-10 transition-all duration-500 max-w-[1200px] mx-auto px-4 md:px-8 w-full pt-20">
                 <ProgressStepper />
             </div>
 
             {/* Main Content Area - with enhanced step transitions */}
-            <main className="relative px-4 md:px-8 max-w-7xl mx-auto min-h-screen flex flex-col">
+            <main className="relative px-4 md:px-8 max-w-[1200px] mx-auto min-h-screen flex flex-col">
                 <AnimatePresence mode="wait">
                     {step === 'TOPIC' && (
                         <motion.div

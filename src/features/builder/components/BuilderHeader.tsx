@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useBuilderLayout } from '../context/BuilderLayoutContext';
-import { ProgressStepper } from './ProgressStepper';
-import { ChevronLeft, BookOpen, MoreVertical } from 'lucide-react';
+import { ChevronLeft, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -43,13 +42,13 @@ export function BuilderHeader() {
     }, [projectData.projectId]);
 
     return (
-        <header className="fixed top-0 w-full z-40 transition-all duration-300 backdrop-blur-md border-b border-white/5 bg-dark/80 h-16 flex items-center justify-between px-4">
+        <header className="fixed top-0 w-full z-40 transition-all duration-300 backdrop-blur-md border-b border-rule bg-writing/95 h-16 flex items-center justify-between px-4">
             {/* Left Section: Back + Title + Save Status */}
             <div className="flex items-center gap-3 overflow-hidden shrink-0">
                 {/* Back Button */}
                 <Link
                     href="/dashboard"
-                    className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5 shrink-0"
+                    className="p-2 -ml-2 text-ink-muted hover:text-rust transition-colors rounded-full hover:bg-selection shrink-0"
                     aria-label="Back to dashboard"
                 >
                     <ChevronLeft className="w-6 h-6" />
@@ -57,7 +56,8 @@ export function BuilderHeader() {
 
                 {/* Title & Save Status */}
                 <div className="flex flex-col justify-center overflow-hidden">
-                    <h1 className="font-display font-bold text-sm text-white truncate max-w-[150px] md:max-w-md leading-tight">
+                    <span className="text-xs text-ink-muted font-margin-mono truncate">J-Star Projects</span>
+                    <h1 className="font-margin font-bold text-sm text-ink truncate max-w-[150px] md:max-w-md leading-tight">
                         {projectTitle}
                     </h1>
 
@@ -79,12 +79,12 @@ export function BuilderHeader() {
                             )}
                         </span>
                         <span className={cn(
-                            "text-[10px] font-medium uppercase tracking-wide",
-                            saveStatus === 'saving' ? 'text-yellow-400' :
-                                saveStatus === 'error' ? 'text-red-400' : 'text-green-400'
+                            "text-xs font-medium tracking-wide",
+                            saveStatus === 'saving' ? 'text-ink-muted' :
+                                saveStatus === 'error' ? 'text-ink' : 'text-ink-muted'
                         )}>
                             {saveStatus === 'saving' ? 'Saving...' :
-                                saveStatus === 'error' ? 'Error' : 'Saved'}
+                                saveStatus === 'error' ? 'Save error' : 'Ready to edit'}
                         </span>
                     </div>
                 </div>
@@ -95,34 +95,23 @@ export function BuilderHeader() {
                 {/* Research Toggle Button */}
                 <button
                     onClick={toggleResearchPanel}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+                    className="flex items-center gap-2 px-3 min-h-11 rounded-md bg-writing border border-rule hover:bg-selection transition-colors group"
                     aria-label="Toggle research panel"
                 >
                     <div className="relative">
-                        <BookOpen className="w-4 h-4 text-accent group-hover:text-white transition-colors" />
-                        {/* Badge dot - shows when there are research items */}
-                        {researchCount > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-2 w-2 items-center justify-center rounded-full bg-red-500 ring-2 ring-dark"></span>
-                        )}
+                        <BookOpen className="w-4 h-4 text-rust" />
                     </div>
-                    <span className="text-xs font-medium text-gray-300 group-hover:text-white hidden sm:block">
+                    <span className="text-xs font-medium text-ink group-hover:text-rust hidden sm:block">
                         Research
                     </span>
                     {/* Count badge */}
                     {researchCount > 0 && (
-                        <span className="text-[10px] font-bold text-white bg-white/10 px-1.5 rounded ml-1">
+                        <span className="text-xs font-bold text-ink bg-selection px-1.5 rounded ml-1">
                             {researchCount}
                         </span>
                     )}
                 </button>
 
-                {/* Menu Button (Mobile) */}
-                <button
-                    className="w-9 h-9 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors md:hidden"
-                    aria-label="Open menu"
-                >
-                    <MoreVertical className="w-4 h-4" />
-                </button>
             </div>
         </header>
     );

@@ -31,7 +31,7 @@ export function DashboardClient({ activeProject }: DashboardClientProps) {
       pullProgress={pullProgress}
       isRefreshing={isRefreshing}
     >
-      <div ref={containerRef} className="min-h-[calc(100vh-6rem)] relative">
+      <div ref={containerRef} className="min-h-[calc(100vh-6rem)] relative space-y-8">
         {activeProject ? (
           <>
             <ProjectCard project={activeProject} />
@@ -40,10 +40,10 @@ export function DashboardClient({ activeProject }: DashboardClientProps) {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center px-6">
-            <div className="w-20 h-20 mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <div className="w-16 h-16 mb-6 rounded-md bg-selection flex items-center justify-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-10 h-10 text-primary"
+                className="w-10 h-10 text-rust"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -56,16 +56,15 @@ export function DashboardClient({ activeProject }: DashboardClientProps) {
                 />
               </svg>
             </div>
-            <h3 className="text-2xl font-display font-bold text-white mb-3">
+            <h3 className="text-3xl font-margin font-bold text-ink mb-3">
               No projects yet
             </h3>
-            <p className="text-gray-400 max-w-xs mb-8 text-sm leading-relaxed">
-              Start your first project and let us help you dominate your final
-              year.
+            <p className="text-ink-muted max-w-sm mb-8 text-base leading-relaxed">
+              Start your first project by choosing a topic. Your chapters and research will appear here as you work.
             </p>
             <a
               href="/project/builder"
-              className="px-8 py-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+              className="min-h-11 px-8 py-3 bg-rust hover:bg-rust/90 text-writing font-bold rounded-md transition-colors focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-rust flex items-center gap-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

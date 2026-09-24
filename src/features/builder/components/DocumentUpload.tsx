@@ -129,19 +129,19 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
   // ── Status Config Helper ──────────────────────────────
   const getStatusConfig = (status: string, importedToFileSearch: boolean, importError: boolean) => {
     if (status === "PROCESSED" && importedToFileSearch) {
-      return { icon: <BrainCircuit className="w-3 h-3" />, text: "AI Ready", className: "text-emerald-400" };
+      return { icon: <BrainCircuit className="w-3 h-3" />, text: "AI Ready", className: "text-ink" };
     }
     if (importError) {
-      return { icon: <XCircle className="w-3 h-3" />, text: "Sync Failed", className: "text-red-400" };
+      return { icon: <XCircle className="w-3 h-3" />, text: "Sync Failed", className: "text-ink" };
     }
     switch (status) {
-      case "PROCESSED": return { icon: <CheckCircle className="w-3 h-3" />, text: "Ready", className: "text-green-400" };
-      case "COMPLETED": return { icon: <CheckCircle className="w-3 h-3" />, text: "Ready", className: "text-green-400" };
-      case "INDEXED": return { icon: <CheckCircle className="w-3 h-3" />, text: "Indexed", className: "text-green-400" };
-      case "FAILED": return { icon: <XCircle className="w-3 h-3" />, text: "Failed", className: "text-red-400" };
-      case "ERROR": return { icon: <XCircle className="w-3 h-3" />, text: "Error", className: "text-rose-400" };
-      case "PENDING": return { icon: <Loader2 className="w-3 h-3 animate-spin" />, text: "Processing", className: "text-yellow-400" };
-      default: return { icon: <Sparkles className="w-3 h-3" />, text: status, className: "text-gray-500" };
+      case "PROCESSED": return { icon: <CheckCircle className="w-3 h-3" />, text: "Ready", className: "text-ink" };
+      case "COMPLETED": return { icon: <CheckCircle className="w-3 h-3" />, text: "Ready", className: "text-ink" };
+      case "INDEXED": return { icon: <CheckCircle className="w-3 h-3" />, text: "Indexed", className: "text-ink" };
+      case "FAILED": return { icon: <XCircle className="w-3 h-3" />, text: "Failed", className: "text-ink" };
+      case "ERROR": return { icon: <XCircle className="w-3 h-3" />, text: "Error", className: "text-ink" };
+      case "PENDING": return { icon: <Loader2 className="w-3 h-3 animate-spin" />, text: "Processing", className: "text-ink-muted" };
+      default: return { icon: <Sparkles className="w-3 h-3" />, text: status, className: "text-ink-muted" };
     }
   };
 
@@ -162,12 +162,12 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-          <FileText className="w-4 h-4 text-purple-400" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
+          <FileText className="w-4 h-4 text-rust" />
           Research Library
           {counts.all > 0 && (
-            <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">
+            <span className="text-xs bg-selection text-ink px-2 py-0.5 rounded-full">
               {counts.all}
             </span>
           )}
@@ -176,7 +176,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
           {/* Deep Research Button */}
           <button
             onClick={() => setIsResearchModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 text-purple-300 text-xs font-medium transition-all border border-purple-500/20"
+            className="flex items-center gap-1.5 px-3 min-h-11 rounded-md bg-selection hover:bg-paper text-ink text-xs font-medium transition-colors border border-rule"
           >
             <Zap className="w-3.5 h-3.5" />
             Deep Research
@@ -184,10 +184,10 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className={cn(
-              "p-1.5 rounded-lg transition-all duration-200",
+              "min-w-11 min-h-11 flex items-center justify-center rounded-md transition-colors",
               isExpanded
-                ? "bg-purple-500/20 text-purple-400 rotate-45"
-                : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+                ? "bg-selection text-rust rotate-45"
+                : "bg-selection text-ink-muted hover:bg-selection hover:text-ink"
             )}
           >
             <Plus className="w-4 h-4" />
@@ -202,11 +202,11 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden bg-purple-500/10 border border-purple-500/20 rounded-xl"
+            className="overflow-hidden bg-selection border border-rule rounded-md"
           >
             <div className="px-4 py-2.5 flex items-center gap-2.5">
-              <Loader2 className="w-4 h-4 text-purple-400 animate-spin shrink-0" />
-              <span className="text-xs font-medium text-purple-200">
+              <Loader2 className="w-4 h-4 text-rust animate-spin shrink-0" />
+              <span className="text-xs font-medium text-ink">
                 AI is processing documents. Please do not close the page.
               </span>
             </div>
@@ -223,14 +223,14 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 space-y-3">
+            <div className="bg-writing border border-rule rounded-md p-4 space-y-3">
               {/* Tabs */}
-              <div className="flex gap-1 p-0.5 bg-black/30 rounded-lg w-fit">
+              <div className="flex gap-1 p-0.5 bg-paper rounded-lg w-fit">
                 <button
                   onClick={() => setMode("upload")}
                   className={cn(
                     "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                    mode === "upload" ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"
+                    mode === "upload" ? "bg-selection text-ink" : "text-ink-muted hover:text-ink"
                   )}
                 >
                   <Upload className="w-3 h-3 inline mr-1.5" />
@@ -240,7 +240,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                   onClick={() => setMode("link")}
                   className={cn(
                     "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                    mode === "link" ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"
+                    mode === "link" ? "bg-selection text-ink" : "text-ink-muted hover:text-ink"
                   )}
                 >
                   <LinkIcon className="w-3 h-3 inline mr-1.5" />
@@ -262,15 +262,15 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                     htmlFor="doc-upload"
                     className={cn(
                       "flex items-center justify-center gap-2 py-4 px-4 rounded-lg cursor-pointer transition-all border border-dashed",
-                      file ? "border-purple-500/50 bg-purple-500/5" : "border-white/10 hover:border-white/20 bg-black/20"
+                      file ? "border-rust bg-purple-500/5" : "border-rule hover:border-rule bg-writing"
                     )}
                   >
                     {file ? (
-                      <span className="text-sm text-purple-300 font-medium truncate">{file.name}</span>
+                      <span className="text-sm text-ink font-medium truncate">{file.name}</span>
                     ) : (
                       <>
-                        <Upload className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-400">Drop PDF or DOCX here</span>
+                        <Upload className="w-4 h-4 text-ink-muted" />
+                        <span className="text-sm text-ink-muted">Drop PDF or DOCX here</span>
                       </>
                     )}
                   </label>
@@ -281,7 +281,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                   value={link}
                   onChange={(e) => setLink(e.target.value)}
                   placeholder="https://arxiv.org/pdf/..."
-                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
+                  className="w-full bg-writing border border-rule rounded-lg px-3 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:border-rust transition-colors"
                 />
               )}
 
@@ -292,8 +292,8 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                 className={cn(
                   "w-full py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2",
                   (!file && !link) || isUploading
-                    ? "bg-white/5 text-gray-500 cursor-not-allowed"
-                    : "bg-purple-500 hover:bg-purple-600 text-white"
+                    ? "bg-selection text-ink-muted cursor-not-allowed"
+                    : "bg-rust hover:bg-rust/90 text-writing"
                 )}
               >
                 {isUploading ? (
@@ -312,7 +312,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
 
       {/* View Tabs */}
       {counts.all > 0 && (
-        <div className="flex gap-1 p-1 bg-white/[0.02] rounded-lg overflow-x-auto">
+        <div className="flex gap-1 p-1 bg-writing rounded-lg overflow-x-auto">
           {viewTabs.map((tab) => (
             <button
               key={tab.id}
@@ -320,15 +320,15 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap",
                 viewMode === tab.id
-                  ? "bg-white/10 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                  ? "bg-selection text-ink"
+                  : "text-ink-muted hover:text-ink hover:bg-selection"
               )}
             >
               {tab.icon && <tab.icon className="w-3 h-3" />}
               {tab.label}
               <span className={cn(
-                "px-1.5 py-0.5 rounded-full text-[10px]",
-                viewMode === tab.id ? "bg-purple-500/30 text-purple-200" : "bg-white/5 text-gray-500"
+                "px-1.5 py-0.5 rounded-full text-xs",
+                viewMode === tab.id ? "bg-selection text-ink" : "bg-selection text-ink-muted"
               )}>
                 {tab.count}
               </span>
@@ -340,7 +340,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
       {/* Access Filter (only show on papers tab) */}
       {
         viewMode === 'academic' && counts.academic > 0 && (
-          <div className="flex items-center gap-1 p-1 bg-white/[0.02] rounded-lg mb-4 border border-white/5 w-fit">
+          <div className="flex items-center gap-1 p-1 bg-writing rounded-lg mb-4 border border-rule w-fit">
             {accessFilters.map((filter) => (
               <button
                 key={filter.id}
@@ -348,21 +348,21 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                   accessFilter === filter.id
-                    ? 'bg-white/10 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-selection text-ink'
+                    : 'text-ink-muted hover:text-ink hover:bg-selection'
                 )}
               >
                 <filter.icon className="w-3 h-3" />
                 {filter.label}
                 <span className={cn(
-                  'px-1.5 py-0.5 rounded-full text-[10px]',
+                  'px-1.5 py-0.5 rounded-full text-xs',
                   accessFilter === filter.id
                     ? filter.id === 'open'
-                      ? 'bg-green-500/20 text-green-300'
+                      ? 'bg-green-500/20 text-ink'
                       : filter.id === 'paywalled'
-                        ? 'bg-orange-500/20 text-orange-300'
-                        : 'bg-white/10 text-gray-300'
-                    : 'bg-white/5 text-gray-500'
+                        ? 'bg-orange-500/20 text-ink'
+                        : 'bg-selection text-ink'
+                    : 'bg-selection text-ink-muted'
                 )}>
                   {filter.count}
                 </span>
@@ -401,22 +401,22 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
             animate={{ opacity: 1 }}
             className="py-8 text-center"
           >
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/10 to-blue-500/10 flex items-center justify-center mx-auto mb-3">
-              <Search className="w-6 h-6 text-purple-400/50" />
+            <div className="w-12 h-12 rounded-full bg-selection flex items-center justify-center mx-auto mb-3">
+              <Search className="w-6 h-6 text-rust/50" />
             </div>
-            <p className="text-sm text-gray-400 mb-1">No research documents yet</p>
-            <p className="text-xs text-gray-500 mb-3">Run Deep Research or upload your own sources</p>
+            <p className="text-sm text-ink-muted mb-1">No research documents yet</p>
+            <p className="text-xs text-ink-muted mb-3">Run Deep Research or upload your own sources</p>
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => setIsResearchModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 text-xs font-medium hover:bg-purple-500/30 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-selection text-ink text-xs font-medium hover:bg-selection transition-colors"
               >
                 <Zap className="w-3 h-3" />
                 Start Research
               </button>
               <button
                 onClick={() => setIsExpanded(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-gray-300 text-xs font-medium hover:bg-white/10 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-selection text-ink text-xs font-medium hover:bg-selection transition-colors"
               >
                 <Upload className="w-3 h-3" />
                 Upload
@@ -429,7 +429,7 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
             animate={{ opacity: 1 }}
             className="py-6 text-center"
           >
-            <p className="text-xs text-gray-500">No documents in this category</p>
+            <p className="text-xs text-ink-muted">No documents in this category</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -437,11 +437,11 @@ export function DocumentUpload({ projectId, searchQuery = "" }: { projectId: str
       {/* Footer */}
       {
         counts.all > 0 && (
-          <div className="flex items-center justify-between pt-2 border-t border-white/5">
-            <p className="text-[10px] text-gray-600">Documents provide AI context for generation</p>
+          <div className="flex items-center justify-between pt-2 border-t border-rule">
+            <p className="text-xs text-ink-muted">Documents provide AI context for generation</p>
             <button
               onClick={handleRetrySync}
-              className="flex items-center gap-1.5 text-[10px] text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink transition-colors disabled:opacity-50"
               title="Sync to AI knowledge base"
             >
               <RefreshCw className="w-3 h-3" />
@@ -522,20 +522,20 @@ function DocumentCard({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="group relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-white/10 rounded-xl p-3 transition-all duration-200"
+      className="group relative bg-writing hover:bg-selection border border-rule hover:border-rule rounded-md p-3 transition-all duration-200"
     >
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className={cn(
           "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center",
-          isAcademic ? "bg-blue-500/10" : isWeb ? "bg-orange-500/10" : "bg-purple-500/10"
+          isAcademic ? "bg-blue-500/10" : isWeb ? "bg-orange-500/10" : "bg-selection"
         )}>
           {isAcademic ? (
             <BookOpen className="w-4 h-4 text-blue-400" />
           ) : isWeb ? (
             <Globe className="w-4 h-4 text-orange-400" />
           ) : (
-            <FileText className="w-4 h-4 text-purple-400" />
+            <FileText className="w-4 h-4 text-rust" />
           )}
         </div>
 
@@ -546,7 +546,7 @@ function DocumentCard({
             href={doc.fileUrl || '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-white hover:text-purple-300 line-clamp-1 transition-colors"
+            className="text-sm font-medium text-ink hover:text-ink line-clamp-1 transition-colors"
             title={doc.title || doc.fileName}
           >
             {doc.title || doc.fileName}
@@ -556,13 +556,13 @@ function DocumentCard({
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {/* Source Type Badge */}
             {isAcademic && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-500/10 text-blue-300 rounded text-[10px]">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-500/10 text-ink rounded text-xs">
                 <BookOpen className="w-2.5 h-2.5" />
                 Academic
               </span>
             )}
             {isWeb && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-500/10 text-orange-300 rounded text-[10px]">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-500/10 text-ink rounded text-xs">
                 <Globe className="w-2.5 h-2.5" />
                 Web
               </span>
@@ -570,7 +570,7 @@ function DocumentCard({
 
             {/* Citation Count */}
             {isAcademic && doc.citationCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/10 text-purple-300 rounded text-[10px]">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-selection text-ink rounded text-xs">
                 <Quote className="w-2.5 h-2.5" />
                 {doc.citationCount.toLocaleString()}
               </span>
@@ -578,11 +578,11 @@ function DocumentCard({
 
             {/* Year */}
             {doc.year && (
-              <span className="text-[10px] text-gray-500">{doc.year}</span>
+              <span className="text-xs text-ink-muted">{doc.year}</span>
             )}
 
             {/* Status */}
-            <span className={cn("flex items-center gap-1 text-[10px]", status.className)}>
+            <span className={cn("flex items-center gap-1 text-xs", status.className)}>
               {status.icon}
               {status.text}
             </span>
@@ -590,14 +590,14 @@ function DocumentCard({
 
           {/* Snippet (for web sources) */}
           {isWeb && doc.snippet && (
-            <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">
+            <p className="text-xs text-ink-muted mt-1.5 line-clamp-2">
               {doc.snippet}
             </p>
           )}
 
           {/* Abstract Preview (for academic) */}
           {isAcademic && doc.abstractText && (
-            <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">
+            <p className="text-xs text-ink-muted mt-1.5 line-clamp-2">
               {doc.abstractText}
             </p>
           )}
@@ -605,14 +605,14 @@ function DocumentCard({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-white/5">
+      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-rule">
         {/* Open Access PDF */}
         {hasOpenAccess && (
           <a
             href={doc.openAccessUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 hover:bg-green-500/20 text-green-300 text-[10px] font-medium transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 hover:bg-green-500/20 text-ink text-xs font-medium transition-colors"
           >
             <Download className="w-3 h-3" />
             PDF
@@ -621,7 +621,7 @@ function DocumentCard({
 
         {/* Paywalled */}
         {isAcademic && !hasOpenAccess && (
-          <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-500/10 text-gray-400 text-[10px]">
+          <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-500/10 text-ink-muted text-xs">
             <Lock className="w-3 h-3" />
             Paywalled
           </span>
@@ -631,7 +631,7 @@ function DocumentCard({
         {doc.status === "PROCESSED" && (
           <button
             onClick={onView}
-            className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-gray-400 text-[10px] transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-selection hover:bg-selection text-ink-muted text-xs transition-colors"
           >
             <Eye className="w-3 h-3" />
             View
@@ -644,7 +644,7 @@ function DocumentCard({
             href={doc.fileUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 text-[10px] transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-ink text-xs transition-colors"
           >
             <ExternalLink className="w-3 h-3" />
             Open
@@ -656,7 +656,7 @@ function DocumentCard({
           <button
             onClick={onRetry}
             disabled={isExtracting}
-            className="flex items-center gap-1 px-2 py-1 rounded-md bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 text-[10px] transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-orange-500/10 hover:bg-orange-500/20 text-ink text-xs transition-colors"
           >
             <RefreshCw className={cn("w-3 h-3", isExtracting && "animate-spin")} />
             Retry
@@ -668,7 +668,7 @@ function DocumentCard({
           <button
             onClick={onManualFetch}
             disabled={isExtracting}
-            className="flex items-center gap-1 px-2 py-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-[10px] font-medium transition-colors ml-1"
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-selection hover:bg-selection text-ink text-xs font-medium transition-colors ml-1"
             title="Manually force a PDF download attempt"
           >
             {isExtracting ? (
@@ -683,7 +683,7 @@ function DocumentCard({
         {/* Delete */}
         <button
           onClick={onDelete}
-          className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-red-500/10 text-gray-500 hover:text-red-400 text-[10px] transition-colors ml-auto"
+          className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-red-500/10 text-ink-muted hover:text-ink text-xs transition-colors ml-auto"
         >
           <Trash2 className="w-3 h-3" />
         </button>

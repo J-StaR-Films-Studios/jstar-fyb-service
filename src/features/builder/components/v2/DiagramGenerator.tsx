@@ -158,7 +158,7 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
   const [activeTab, setActiveTab] = useState<'ai' | 'manual'>('ai');
 
   return (
-    <Card className="w-full h-full border-0 bg-transparent shadow-none flex flex-col">
+    <Card className="w-full h-full border-0 bg-transparent text-ink font-margin shadow-none flex flex-col">
       <CardHeader className="px-0 pt-0 pb-4 shrink-0">
         <div className="flex justify-between items-center">
           <div>
@@ -173,10 +173,10 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
         </div>
 
         {/* Tabs Toggle */}
-        <div className="flex p-1 bg-white/5 rounded-lg w-fit mt-4 border border-white/5">
+        <div className="flex p-1 bg-selection rounded-lg w-fit mt-4 border border-rule">
           <button
             onClick={() => setActiveTab('ai')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeTab === 'ai' ? 'bg-primary/20 text-primary shadow-sm' : 'text-gray-400 hover:text-gray-200'
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeTab === 'ai' ? 'bg-selection text-rust shadow-sm' : 'text-ink-muted hover:text-ink'
               }`}
           >
             <Wand2 className="w-3.5 h-3.5" />
@@ -184,7 +184,7 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
           </button>
           <button
             onClick={() => setActiveTab('manual')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeTab === 'manual' ? 'bg-primary/20 text-primary shadow-sm' : 'text-gray-400 hover:text-gray-200'
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeTab === 'manual' ? 'bg-selection text-rust shadow-sm' : 'text-ink-muted hover:text-ink'
               }`}
           >
             <Code className="w-3.5 h-3.5" />
@@ -200,12 +200,12 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium mb-1 block text-gray-400">Diagram Type</label>
+                <label className="text-sm font-medium mb-1 block text-ink-muted">Diagram Type</label>
                 <Select value={diagramType} onValueChange={setDiagramType}>
-                  <SelectTrigger className="w-full bg-black/20 border-white/10">
+                  <SelectTrigger className="w-full bg-writing border-rule text-ink">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-800">
+                  <SelectContent className="bg-writing border-rule text-ink [&_[role=option]]:text-ink [&_[role=option][data-highlighted]]:bg-selection [&_[role=option][data-highlighted]]:text-ink">
                     <SelectItem value="flowchart">Flowchart</SelectItem>
                     <SelectItem value="sequence">Sequence Diagram</SelectItem>
                     <SelectItem value="class">Class Diagram</SelectItem>
@@ -218,12 +218,12 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-1 block text-gray-400">Theme</label>
+                <label className="text-sm font-medium mb-1 block text-ink-muted">Theme</label>
                 <Select value={theme} onValueChange={(v: any) => setTheme(v)}>
-                  <SelectTrigger className="w-full bg-black/20 border-white/10">
+                  <SelectTrigger className="w-full bg-writing border-rule text-ink">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-800">
+                  <SelectContent className="bg-writing border-rule text-ink [&_[role=option]]:text-ink [&_[role=option][data-highlighted]]:bg-selection [&_[role=option][data-highlighted]]:text-ink">
                     <SelectItem value="dark">Dark</SelectItem>
                     <SelectItem value="default">Light</SelectItem>
                     <SelectItem value="forest">Forest</SelectItem>
@@ -234,10 +234,10 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1 block text-gray-400">Description</label>
+              <label className="text-sm font-medium mb-1 block text-ink-muted">Description</label>
               <Textarea
                 placeholder="Describe the process, system, or relationship..."
-                className="h-24 resize-none bg-black/20 border-white/10"
+                className="h-24 resize-none bg-writing border-rule text-ink placeholder:text-ink-muted"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
               />
@@ -246,7 +246,7 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
             <Button
               onClick={handleGenerate}
               disabled={isGenerating || !prompt}
-              className="w-full"
+              className="w-full bg-rust text-writing hover:bg-rust/90"
             >
               {isGenerating ? (
                 <>
@@ -266,21 +266,21 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
             {/* Manual Mode Controls */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium mb-1 block text-gray-400">Title</label>
+                <label className="text-sm font-medium mb-1 block text-ink-muted">Title</label>
                 <input
-                  className="flex h-9 w-full rounded-md border border-white/10 bg-black/20 px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-9 w-full rounded-md border border-rule bg-writing text-ink px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-ink-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rust disabled:cursor-not-allowed disabled:opacity-50"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="My Diagram"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block text-gray-400">Theme</label>
+                <label className="text-sm font-medium mb-1 block text-ink-muted">Theme</label>
                 <Select value={theme} onValueChange={(v: any) => setTheme(v)}>
-                  <SelectTrigger className="w-full bg-black/20 border-white/10">
+                  <SelectTrigger className="w-full bg-writing border-rule text-ink">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-800">
+                  <SelectContent className="bg-writing border-rule text-ink [&_[role=option]]:text-ink [&_[role=option][data-highlighted]]:bg-selection [&_[role=option][data-highlighted]]:text-ink">
                     <SelectItem value="dark">Dark</SelectItem>
                     <SelectItem value="default">Light</SelectItem>
                     <SelectItem value="forest">Forest</SelectItem>
@@ -299,17 +299,17 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
                 onChange={handleImageUpload}
                 disabled={isGenerating}
               />
-              <div className="border-2 border-dashed border-white/10 rounded-lg p-6 text-center group-hover:border-primary/50 group-hover:bg-primary/5 transition-all">
+              <div className="border-2 border-dashed border-rule rounded-lg p-6 text-center group-hover:border-rust group-hover:bg-selection transition-all">
                 {isGenerating ? (
                   <div className="flex flex-col items-center">
-                    <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-                    <span className="text-sm text-gray-400">Analyzing image...</span>
+                    <Loader2 className="h-8 w-8 text-rust animate-spin mb-2" />
+                    <span className="text-sm text-ink-muted">Analyzing image...</span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center">
-                    <ImageIcon className="h-8 w-8 text-gray-500 mb-2 group-hover:text-primary transition-colors" />
-                    <span className="text-sm font-medium text-gray-300">Upload Image to Convert</span>
-                    <span className="text-xs text-gray-500 mt-1">Drop a screenshot or whiteboard sketch</span>
+                    <ImageIcon className="h-8 w-8 text-ink-muted mb-2 group-hover:text-rust transition-colors" />
+                    <span className="text-sm font-medium text-ink">Upload Image to Convert</span>
+                    <span className="text-xs text-ink-muted mt-1">Drop a screenshot or whiteboard sketch</span>
                   </div>
                 )}
               </div>
@@ -317,13 +317,13 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
 
             {/* Code Editor */}
             <div>
-              <label className="text-sm font-medium mb-1 block text-gray-400 flex items-center justify-between">
+              <label className="text-sm font-medium mb-1 block text-ink-muted flex items-center justify-between">
                 <span>Mermaid Code</span>
-                <span className="text-xs text-gray-500">Editable</span>
+                <span className="text-xs text-ink-muted">Editable</span>
               </label>
               <Textarea
                 placeholder="Paste or write Mermaid code here..."
-                className="h-48 resize-none bg-black/20 border-white/10 font-mono text-xs leading-relaxed"
+                className="h-48 resize-none bg-writing border-rule text-ink placeholder:text-ink-muted font-mono text-xs leading-relaxed"
                 value={generatedCode}
                 onChange={(e) => setGeneratedCode(e.target.value)}
               />
@@ -333,8 +333,8 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
 
         {/* Preview Section - Stacked below now */}
         <div className="space-y-4 pb-4">
-          <div className="flex justify-between items-center pt-4 border-t border-white/5">
-            <label className="text-sm font-medium text-gray-400">Preview</label>
+          <div className="flex justify-between items-center pt-4 border-t border-rule">
+            <label className="text-sm font-medium text-ink-muted">Preview</label>
             <div className="flex gap-2">
               {onInsert && (
                 <Button
@@ -342,7 +342,7 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
                   onClick={() => generatedCode && onInsert({ mermaidCode: `%%{init: {'theme':'${theme}'}}%%\n${generatedCode}`, title })}
                   disabled={!generatedCode}
                   variant="outline"
-                  className="h-7 text-xs bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-7 text-xs bg-writing hover:bg-selection text-rust border-rule disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="mr-1.5 h-3 w-3" />
                   Insert
@@ -353,7 +353,7 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
                 onClick={handleSave}
                 disabled={!generatedCode}
                 variant="secondary"
-                className="h-7 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-7 text-xs bg-writing border border-rule text-ink hover:bg-selection disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="mr-2 h-3 w-3" />
                 Save
@@ -363,20 +363,20 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
 
           <div className="relative">
             {!generatedCode && activeTab === 'ai' && (
-              <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-black/60 rounded text-[10px] text-white/50 border border-white/5 pointer-events-none">
+              <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-writing rounded text-xs text-ink-muted border border-rule pointer-events-none">
                 Example Preview
               </div>
             )}
             <DiagramPreview
               code={generatedCode || (activeTab === 'ai' ? DIAGRAM_EXAMPLES[diagramType] : '')}
               theme={theme}
-              className="bg-black/20 min-h-[200px]"
+              className="bg-writing border-rule min-h-[200px]"
             />
           </div>
 
           {activeTab === 'ai' && explanation && (
-            <div className="text-sm text-muted-foreground bg-white/5 p-3 rounded-md">
-              <p className="font-medium mb-1 text-xs uppercase tracking-wider text-primary">AI Explanation</p>
+            <div className="text-sm text-ink-muted bg-selection p-3 rounded-md">
+              <p className="font-medium mb-1 text-xs uppercase tracking-wider text-rust">AI Explanation</p>
               <p className="text-xs leading-relaxed">{explanation}</p>
             </div>
           )}

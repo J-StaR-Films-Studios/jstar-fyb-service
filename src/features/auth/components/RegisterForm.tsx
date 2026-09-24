@@ -50,7 +50,7 @@ export function RegisterForm() {
                 }
                 router.push(callbackUrl);
             }
-        } catch (err) {
+        } catch {
             setError('An unexpected error occurred');
         } finally {
             setIsLoading(false);
@@ -73,7 +73,7 @@ export function RegisterForm() {
         : '/auth/login';
 
     return (
-        <div className="w-full max-w-md p-8">
+        <div className="auth-card w-full max-w-md rounded-md border border-rule bg-writing p-6 sm:p-8">
             <div className="fixed top-6 left-6 z-50 flex items-center gap-2">
                 <button
                     onClick={() => {
@@ -83,31 +83,32 @@ export function RegisterForm() {
                             router.push('/');
                         }
                     }}
-                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                    title="Go Back"
+                    className="flex h-11 w-11 items-center justify-center rounded-md border border-rule bg-writing text-ink"
+                    aria-label="Go back"
                 >
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <Link
                     href="/"
-                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                    title="Go Home"
+                    className="flex h-11 w-11 items-center justify-center rounded-md border border-rule bg-writing text-ink"
+                    aria-label="Go home"
                 >
                     <Home className="w-5 h-5" />
                 </Link>
             </div>
             <div className="text-center mb-8">
-                <h1 className="text-3xl font-display font-bold text-white mb-2">
-                    Create Account
+                <p className="mb-3 font-margin-mono text-xs font-semibold uppercase tracking-wider text-rust">J-Star Projects</p>
+                <h1 className="text-3xl font-margin font-bold text-ink mb-2">
+                    Create account
                 </h1>
                 <p className="text-gray-400">
-                    Join J-Star FYB to dominate your final year
+                    Start your final year project
                 </p>
             </div>
 
             {/* Referral Code - Placed top/visible for all users */}
             <div className="mb-6">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+                <div className="rounded-md border border-rule bg-paper p-3">
                     <label htmlFor="referralCode" className="block text-xs font-medium text-primary mb-1 uppercase tracking-wider">
                         Have a Referral Code?
                     </label>
@@ -116,7 +117,7 @@ export function RegisterForm() {
                         type="text"
                         value={referralCode}
                         onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                        className="w-full bg-transparent text-white placeholder-gray-600 focus:outline-none text-sm font-mono uppercase"
+                        className="w-full rounded-md border border-rule bg-writing px-3 text-sm font-margin-mono uppercase text-ink placeholder:text-ink-muted"
                         placeholder="ENTER CODE HERE"
                     />
                 </div>
@@ -160,7 +161,7 @@ export function RegisterForm() {
 
             <form onSubmit={handleRegister} className="space-y-4">
                 {error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                    <div role="alert" id="register-error" className="rounded-md border border-rule bg-paper p-3 text-sm text-ink">
                         {error}
                     </div>
                 )}
@@ -175,6 +176,7 @@ export function RegisterForm() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
+                        aria-describedby={error ? 'register-error' : undefined}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all"
                         placeholder="John Doe"
                     />
@@ -190,6 +192,7 @@ export function RegisterForm() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        aria-describedby={error ? 'register-error' : undefined}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all"
                         placeholder="you@example.com"
                     />
@@ -206,6 +209,7 @@ export function RegisterForm() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         minLength={8}
+                        aria-describedby={error ? 'register-error' : undefined}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all"
                         placeholder="••••••••"
                     />

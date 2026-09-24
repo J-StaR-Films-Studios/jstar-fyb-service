@@ -9,6 +9,7 @@ import {
 } from 'novel';
 import { TableBubbleMenu } from './TableBubbleMenu';
 import { defaultExtensions } from './editor/extensions/defaultExtensions';
+import styles from './MarginEditor.module.css';
 
 interface NovelEditorProps {
     content: string; // Markdown string
@@ -100,15 +101,15 @@ export const NovelEditor = memo(({ content, onUpdate, projectId, className, onEd
     }, [content, onEditorReady]);
 
     return (
-        <div className={`novel-editor-wrapper w-full h-full ${className || ''}`}>
+        <div className={`novel-editor-wrapper w-full h-full ${styles.surface} ${className || ''}`}>
             <EditorRoot>
                 <EditorContent
                     initialContent={undefined}
                     extensions={extensions as any}
-                    className="prose prose-invert prose-lg max-w-none min-h-[500px] w-full focus:outline-none"
+                    className="prose prose-lg max-w-none min-h-[500px] w-full focus:outline-none"
                     editorProps={{
                         attributes: {
-                            class: 'prose prose-invert prose-lg max-w-none min-h-[500px] w-full bg-transparent text-gray-300 font-serif text-lg leading-loose focus:outline-none p-0',
+                            class: 'prose prose-lg max-w-none min-h-[500px] w-full bg-transparent text-ink font-margin text-lg leading-loose focus:outline-none p-0',
                         },
                     }}
                     onCreate={handleCreate}

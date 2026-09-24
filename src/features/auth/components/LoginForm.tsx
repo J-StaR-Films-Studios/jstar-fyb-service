@@ -32,7 +32,7 @@ export function LoginForm() {
             } else {
                 router.push(callbackUrl);
             }
-        } catch (err) {
+        } catch {
             setError('An unexpected error occurred');
         } finally {
             setIsLoading(false);
@@ -52,7 +52,7 @@ export function LoginForm() {
         : '/auth/register';
 
     return (
-        <div className="w-full max-w-md p-8">
+        <div className="auth-card w-full max-w-md rounded-md border border-rule bg-writing p-6 sm:p-8">
             <div className="fixed top-6 left-6 z-50 flex items-center gap-2">
                 <button
                     onClick={() => {
@@ -62,25 +62,26 @@ export function LoginForm() {
                             router.push('/');
                         }
                     }}
-                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                    title="Go Back"
+                    className="flex h-11 w-11 items-center justify-center rounded-md border border-rule bg-writing text-ink"
+                    aria-label="Go back"
                 >
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <Link
                     href="/"
-                    className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                    title="Go Home"
+                    className="flex h-11 w-11 items-center justify-center rounded-md border border-rule bg-writing text-ink"
+                    aria-label="Go home"
                 >
                     <Home className="w-5 h-5" />
                 </Link>
             </div>
             <div className="text-center mb-8">
-                <h1 className="text-3xl font-display font-bold text-white mb-2">
-                    Welcome Back
+                <p className="mb-3 font-margin-mono text-xs font-semibold uppercase tracking-wider text-rust">J-Star Projects</p>
+                <h1 className="text-3xl font-margin font-bold text-ink mb-2">
+                    Welcome back
                 </h1>
                 <p className="text-gray-400">
-                    Sign in to continue to J-Star FYB
+                    Sign in to continue your project
                 </p>
             </div>
 
@@ -123,7 +124,7 @@ export function LoginForm() {
             {/* Email/Password Login */}
             <form onSubmit={handleEmailLogin} className="space-y-4">
                 {error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                    <div role="alert" id="login-error" className="rounded-md border border-rule bg-paper p-3 text-sm text-ink">
                         {error}
                     </div>
                 )}
@@ -138,6 +139,7 @@ export function LoginForm() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        aria-describedby={error ? 'login-error' : undefined}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all"
                         placeholder="you@example.com"
                     />
@@ -161,6 +163,7 @@ export function LoginForm() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        aria-describedby={error ? 'login-error' : undefined}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-all"
                         placeholder="••••••••"
                     />
@@ -176,7 +179,7 @@ export function LoginForm() {
             </form>
 
             <p className="mt-6 text-center text-gray-500 text-sm">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <Link href={registerLink} className="text-primary hover:underline">
                     Sign up
                 </Link>

@@ -17,29 +17,29 @@ export default async function ProfilePage() {
     return (
         <SaasShell user={user}>
             <div className="max-w-2xl mx-auto">
-                <h1 className="text-3xl font-display font-bold mb-8">My Profile</h1>
+                <h1 className="text-3xl font-margin font-bold mb-8 text-ink">My profile</h1>
 
                 {/* Payment Verification Handler */}
                 <TopicSwitchPaymentVerifier />
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+                <div className="bg-writing border border-rule rounded-md p-6 sm:p-8">
                     <div className="flex flex-col md:flex-row items-center gap-6 mb-8 text-center md:text-left">
                         <UserAvatar name={user.name} image={user.image} size="lg" className="w-24 h-24 text-3xl shrink-0" />
                         <div>
-                            <h2 className="text-2xl font-bold text-white">{user.name}</h2>
-                            <p className="text-gray-400">{user.email}</p>
-                            <div className="mt-2 inline-flex px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold uppercase tracking-wider">
+                            <h2 className="text-2xl font-bold text-ink">{user.name}</h2>
+                            <p className="text-ink-muted break-all">{user.email}</p>
+                            <div className="mt-2 inline-flex px-3 py-1 rounded-md bg-selection border border-rule text-ink text-xs font-bold uppercase tracking-wider">
                                 Active Account
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-6">
-                        <div className="p-4 rounded-xl bg-black/20 border border-white/5">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Account ID</h3>
-                            <p className="font-mono text-sm text-gray-300 break-all">{user.id}</p>
+                        <div className="p-4 rounded-md bg-paper border border-rule">
+                            <h3 className="text-sm font-bold text-ink-muted uppercase tracking-wider mb-2">Account ID</h3>
+                            <p className="font-margin-mono text-sm text-ink break-all">{user.id}</p>
                         </div>
 
-                        <div className="border-t border-white/10 pt-6">
+                        <div className="border-t border-rule pt-6">
                             <ProfileClient />
                         </div>
                     </div>
@@ -65,7 +65,7 @@ export default async function ProfilePage() {
 
                     return (
                         <div className="mt-8">
-                            <h2 className="text-xl font-display font-bold mb-4">Project Settings</h2>
+                            <h2 className="text-xl font-margin font-bold mb-4 text-ink">Project settings</h2>
                             <TopicSwitchRequestForm
                                 project={project}
                                 activeRequest={activeRequest}
@@ -74,8 +74,8 @@ export default async function ProfilePage() {
                     );
                 })()}
 
-                <div className="mt-8 text-center text-sm text-gray-500">
-                    <p>J-Star FYB Service &copy; {new Date().getFullYear()}</p>
+                <div className="mt-8 text-center text-sm text-ink-muted">
+                    <p>J-Star Projects &copy; {new Date().getFullYear()}</p>
                 </div>
             </div>
         </SaasShell>

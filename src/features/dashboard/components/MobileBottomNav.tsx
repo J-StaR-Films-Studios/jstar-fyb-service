@@ -15,18 +15,18 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
     };
 
     return (
-        <nav className="fixed bottom-0 w-full bg-dark/90 backdrop-blur-xl border-t border-white/10 z-50 md:hidden pb-[env(safe-area-inset-bottom)]">
+        <nav className="fixed bottom-0 w-full bg-writing border-t border-rule z-50 md:hidden pb-[env(safe-area-inset-bottom)]">
             <div className="grid grid-cols-5 items-end h-20 pb-4 px-2">
                 {/* 1. Home */}
                 <Link
                     href="/"
                     className={cn(
                         "flex flex-col items-center gap-1 transition-colors pb-1",
-                        isActive('/') && pathname === '/' ? "text-white" : "text-gray-500 hover:text-white"
+                        isActive('/') && pathname === '/' ? "text-ink" : "text-ink-muted hover:text-rust"
                     )}
                 >
                     <Home className="w-5 h-5" aria-hidden="true" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Home</span>
                 </Link>
 
                 {/* 2. Projects */}
@@ -34,11 +34,11 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                     href="/dashboard"
                     className={cn(
                         "flex flex-col items-center gap-1 transition-colors pb-1",
-                        isActive('/dashboard') ? "text-white" : "text-gray-500 hover:text-white"
+                        isActive('/dashboard') ? "text-ink" : "text-ink-muted hover:text-rust"
                     )}
                 >
                     <Folder className="w-5 h-5" aria-hidden="true" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Projects</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Projects</span>
                 </Link>
 
                 {/* 3. FAB (Build) - Centered & Raised */}
@@ -47,10 +47,10 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                         href="/project/builder"
                         aria-label="Create Project"
                         className={cn(
-                            "flex items-center justify-center w-14 h-14 rounded-full shadow-lg transition-transform ring-4 ring-dark",
+                            "flex items-center justify-center w-14 h-14 rounded-full transition-colors ring-4 ring-writing",
                             isActive('/project/builder')
-                                ? "bg-primary text-white scale-105 shadow-primary/40"
-                                : "bg-primary/80 text-white/90 hover:bg-primary hover:scale-105"
+                                ? "bg-rust text-writing"
+                                : "bg-rust text-writing hover:bg-rust/90"
                         )}
                     >
                         <Hammer className="w-6 h-6 fill-current" aria-hidden="true" />
@@ -62,11 +62,11 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                     href={hasActiveProject ? "/hub" : "/chat"}
                     className={cn(
                         "flex flex-col items-center gap-1 transition-colors pb-1",
-                        isActive('/chat') || isActive('/hub') ? "text-white" : "text-gray-500 hover:text-white"
+                        isActive('/chat') || isActive('/hub') ? "text-ink" : "text-ink-muted hover:text-rust"
                     )}
                 >
                     <MessageSquare className="w-5 h-5" aria-hidden="true" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Chat</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Chat</span>
                 </Link>
 
                 {/* 5. Me */}
@@ -74,11 +74,11 @@ export const MobileBottomNav = ({ hasActiveProject }: { hasActiveProject?: boole
                     href="/profile"
                     className={cn(
                         "flex flex-col items-center gap-1 transition-colors pb-1",
-                        isActive('/profile') ? "text-white" : "text-gray-500 hover:text-white"
+                        isActive('/profile') ? "text-ink" : "text-ink-muted hover:text-rust"
                     )}
                 >
                     <User className="w-5 h-5" aria-hidden="true" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Me</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Me</span>
                 </Link>
             </div>
         </nav>

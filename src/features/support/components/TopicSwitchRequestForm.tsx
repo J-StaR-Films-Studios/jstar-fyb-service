@@ -83,12 +83,12 @@ export function TopicSwitchRequestForm({ project, activeRequest }: TopicSwitchRe
         // Pending Review
         if (activeRequest.status === 'pending') {
             return (
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-6 text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/20 text-amber-500 mb-4">
+                <div className="bg-writing border border-rule rounded-md p-6 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-selection text-ink mb-4">
                         <Clock className="w-6 h-6" />
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-2">Request Under Review</h3>
-                    <p className="text-gray-400 text-sm">
+                    <h3 className="text-lg font-bold text-ink mb-2">Request under review</h3>
+                    <p className="text-ink-muted text-sm">
                         Your topic switch request is being reviewed by our team. You&apos;ll be notified once a decision is made.
                     </p>
                 </div>
@@ -98,18 +98,18 @@ export function TopicSwitchRequestForm({ project, activeRequest }: TopicSwitchRe
         // Approved - Pending Payment
         if (activeRequest.status === 'pending_payment') {
             return (
-                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-500/20 text-green-500 mb-4">
+                <div className="bg-writing border border-rule rounded-md p-6 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-selection text-ink mb-4">
                         <CheckCircle className="w-6 h-6" />
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-2">Request Approved!</h3>
-                    <p className="text-gray-400 text-sm mb-6">
+                    <h3 className="text-lg font-bold text-ink mb-2">Request approved</h3>
+                    <p className="text-ink-muted text-sm mb-6">
                         Your topic switch request has been approved. Complete the payment to finalize your topic change.
                     </p>
                     <button
                         onClick={handlePaySwitch}
                         disabled={isPayingSwitch}
-                        className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                        className="w-full min-h-11 bg-rust hover:bg-rust/90 disabled:opacity-60 text-writing font-bold py-3 px-6 rounded-md flex items-center justify-center gap-2 transition-colors"
                     >
                         {isPayingSwitch ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -125,17 +125,17 @@ export function TopicSwitchRequestForm({ project, activeRequest }: TopicSwitchRe
         // Denied
         if (activeRequest.status === 'denied') {
             return (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/20 text-red-500 mb-4">
+                <div className="bg-writing border border-rule rounded-md p-6 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-selection text-ink mb-4">
                         <XCircle className="w-6 h-6" />
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-2">Request Denied</h3>
-                    <p className="text-gray-400 text-sm mb-4">
+                    <h3 className="text-lg font-bold text-ink mb-2">Request denied</h3>
+                    <p className="text-ink-muted text-sm mb-4">
                         Unfortunately, your topic switch request was not approved. You may submit a new request with additional information.
                     </p>
                     <button
                         onClick={() => router.refresh()}
-                        className="text-primary underline text-sm hover:text-white transition-colors"
+                        className="text-rust underline text-sm hover:text-ink transition-colors"
                     >
                         Submit New Request
                     </button>
@@ -146,12 +146,12 @@ export function TopicSwitchRequestForm({ project, activeRequest }: TopicSwitchRe
 
     if (isSuccess) {
         return (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-500/20 text-green-500 mb-4">
+            <div className="bg-writing border border-rule rounded-md p-6 text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-selection text-ink mb-4">
                     <CheckCircle className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">Request Submitted</h3>
-                <p className="text-gray-400 text-sm">
+                <h3 className="text-lg font-bold text-ink mb-2">Request submitted</h3>
+                <p className="text-ink-muted text-sm">
                     We&apos;ve received your request. Our support team will review it shortly.
                     {reason === 'lecturer_rejected'
                         ? ' You will be notified once approved.'
@@ -163,49 +163,49 @@ export function TopicSwitchRequestForm({ project, activeRequest }: TopicSwitchRe
 
     if (!project.isLocked) {
         return (
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
-                <p className="text-gray-400">Your project is not locked. You can edit the topic freely in the builder.</p>
+            <div className="bg-writing border border-rule rounded-md p-6 text-center">
+                <p className="text-ink-muted">Your project is not locked. You can edit the topic freely in the builder.</p>
             </div>
         );
     }
 
     return (
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-6">Request Topic Switch</h3>
+        <div className="bg-writing border border-rule rounded-md p-6">
+            <h3 className="text-lg font-bold text-ink mb-6">Request topic switch</h3>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300">Reason for Switch</label>
+                    <label className="text-sm font-medium text-ink">Reason for switch</label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                             type="button"
                             onClick={() => setReason("lecturer_rejected")}
-                            className={`p-4 rounded-lg border text-left transition-all ${reason === "lecturer_rejected"
-                                ? "bg-primary/20 border-primary text-primary"
-                                : "bg-black/20 border-white/10 text-gray-400 hover:bg-white/5"
+                            className={`p-4 rounded-md border text-left transition-colors ${reason === "lecturer_rejected"
+                                ? "bg-selection border-rust text-ink"
+                                : "bg-writing border-rule text-ink-muted hover:bg-selection"
                                 }`}
                         >
-                            <div className="font-bold mb-1">Supervisor Rejected</div>
-                            <div className="text-xs opacity-80">Free switch with proof</div>
+                            <div className="font-bold mb-1">Supervisor rejected</div>
+                            <div className="text-xs">Free switch with proof</div>
                         </button>
                         <button
                             type="button"
                             onClick={() => setReason("changed_mind")}
-                            className={`p-4 rounded-lg border text-left transition-all ${reason === "changed_mind"
-                                ? "bg-primary/20 border-primary text-primary"
-                                : "bg-black/20 border-white/10 text-gray-400 hover:bg-white/5"
+                            className={`p-4 rounded-md border text-left transition-colors ${reason === "changed_mind"
+                                ? "bg-selection border-rust text-ink"
+                                : "bg-writing border-rule text-ink-muted hover:bg-selection"
                                 }`}
                         >
-                            <div className="font-bold mb-1">Changed My Mind</div>
-                            <div className="text-xs opacity-80">Fee: ₦2,000</div>
+                            <div className="font-bold mb-1">Changed my mind</div>
+                            <div className="text-xs">Fee: ₦2,000</div>
                         </button>
                     </div>
                 </div>
 
                 {reason === "lecturer_rejected" && (
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-300">Proof of Rejection (Screenshot)</label>
-                        <div className="border-2 border-dashed border-white/10 rounded-lg p-6 text-center hover:border-white/20 transition-colors bg-black/20 group relative cursor-pointer">
+                        <label className="text-sm font-medium text-ink">Proof of rejection (screenshot)</label>
+                        <div className="border-2 border-dashed border-rule rounded-md p-6 text-center hover:border-rust transition-colors bg-paper group relative cursor-pointer">
                             <input
                                 type="file"
                                 accept="image/*"
@@ -231,13 +231,13 @@ export function TopicSwitchRequestForm({ project, activeRequest }: TopicSwitchRe
                                     <div className="mx-auto w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-2">
                                         <CheckCircle className="w-6 h-6 text-green-500" />
                                     </div>
-                                    <p className="text-green-400 text-xs font-bold">Image Selected</p>
-                                    <p className="text-gray-500 text-[10px]">Click to change</p>
+                                    <p className="text-ink text-xs font-bold">Image selected</p>
+                                    <p className="text-ink-muted text-xs">Click to change</p>
                                 </div>
                             ) : (
                                 <div className="relative z-10">
-                                    <Upload className="w-8 h-8 text-gray-500 mx-auto mb-2 group-hover:text-primary transition-colors" />
-                                    <p className="text-xs text-gray-400 group-hover:text-white transition-colors">
+                                    <Upload className="w-8 h-8 text-ink-muted mx-auto mb-2 group-hover:text-rust transition-colors" />
+                                    <p className="text-xs text-ink-muted group-hover:text-ink transition-colors">
                                         Click to upload screenshot (Max 2MB)
                                     </p>
                                 </div>
@@ -247,13 +247,13 @@ export function TopicSwitchRequestForm({ project, activeRequest }: TopicSwitchRe
                 )}
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300">Explanation</label>
+                    <label className="text-sm font-medium text-ink">Explanation</label>
                     <textarea
                         value={explanation}
                         onChange={(e) => setExplanation(e.target.value)}
                         placeholder={reason === 'lecturer_rejected' ? "Describe why it was rejected..." : "Why do you want to switch?"}
                         required
-                        className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary min-h-[100px]"
+                        className="w-full bg-writing border border-rule rounded-md p-3 text-ink focus:outline-none focus:border-rust min-h-[100px]"
                     />
                 </div>
 
@@ -261,12 +261,12 @@ export function TopicSwitchRequestForm({ project, activeRequest }: TopicSwitchRe
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                        className="w-full min-h-11 bg-rust hover:bg-rust/90 disabled:opacity-60 text-writing font-bold py-3 rounded-md flex items-center justify-center gap-2 transition-colors"
                     >
                         {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                         {reason === 'changed_mind' ? 'Proceed to Payment (₦2,000)' : 'Submit Request'}
                     </button>
-                    <p className="text-xs text-center text-gray-500 mt-3">
+                    <p className="text-xs text-center text-ink-muted mt-3">
                         {reason === 'changed_mind'
                             ? "You will be redirected to Paystack."
                             : "Requests are usually reviewed within 24 hours."}

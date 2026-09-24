@@ -97,10 +97,10 @@ export function ThreadSelector({
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="ghost"
-                        className="h-auto py-2 px-3 text-left hover:bg-white/5 data-[state=open]:bg-white/5 border border-transparent hover:border-white/10 rounded-lg transition-all"
+                        className="h-auto py-2 px-3 text-left text-ink hover:bg-selection data-[state=open]:bg-selection border border-transparent hover:border-rule rounded-md transition-colors"
                     >
                         <div className="flex flex-col items-start gap-0.5">
-                            <span className="text-[10px] font-medium text-primary flex items-center gap-1">
+                            <span className="text-xs font-medium text-rust flex items-center gap-1">
                                 {activeThreadId ? (
                                     <>
                                         {activeThread?.threadType === 'general' ? <MessageSquare className="w-3 h-3" /> : <BookOpen className="w-3 h-3" />}
@@ -114,7 +114,7 @@ export function ThreadSelector({
                                 )}
                                 <ChevronDown className="w-3 h-3 opacity-50 ml-0.5" />
                             </span>
-                            <span className="text-sm font-semibold text-white max-w-[200px] truncate leading-tight">
+                            <span className="text-sm font-semibold text-ink max-w-[200px] truncate leading-tight">
                                 {activeThreadId ? (activeThread?.threadTitle || 'Untitled Thread') : 'Global Context'}
                             </span>
                         </div>

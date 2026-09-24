@@ -115,12 +115,12 @@ export function EnhanceOptionsPopover({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-            <div className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-writing border border-rule rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                <div className="px-4 py-3 border-b border-rule flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-primary" />
-                        <h2 className="font-semibold text-white">
+                        <Sparkles className="w-5 h-5 text-rust" />
+                        <h2 className="font-semibold text-ink">
                             {stage === 'select' && 'Enhance with AI'}
                             {stage === 'streaming' && 'Enhancing...'}
                             {stage === 'preview' && 'Review Changes'}
@@ -128,7 +128,7 @@ export function EnhanceOptionsPopover({
                     </div>
                     <button
                         onClick={isStreaming ? handleCancel : onClose}
-                        className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
+                        className="p-1.5 hover:bg-selection rounded-lg text-ink-muted hover:text-ink"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -138,8 +138,8 @@ export function EnhanceOptionsPopover({
                 <div className="flex-1 overflow-y-auto p-4">
                     {stage === 'select' && (
                         <div className="space-y-4">
-                            <p className="text-gray-400 text-sm">
-                                Selected: <span className="text-white">{selectedContent.length} characters</span>
+                            <p className="text-ink-muted text-sm">
+                                Selected: <span className="text-ink">{selectedContent.length} characters</span>
                             </p>
                             <div className="grid grid-cols-2 gap-3">
                                 {enhanceOptions.map((option) => {
@@ -148,11 +148,11 @@ export function EnhanceOptionsPopover({
                                         <button
                                             key={option.type}
                                             onClick={() => handleEnhance(option.type)}
-                                            className="p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/50 rounded-xl text-left transition-all group"
+                                            className="p-4 bg-selection hover:bg-selection border border-rule hover:border-rust rounded-xl text-left transition-all group"
                                         >
-                                            <Icon className="w-5 h-5 text-primary mb-2" />
-                                            <p className="font-medium text-white">{option.label}</p>
-                                            <p className="text-xs text-gray-500">{option.description}</p>
+                                            <Icon className="w-5 h-5 text-rust mb-2" />
+                                            <p className="font-medium text-ink">{option.label}</p>
+                                            <p className="text-xs text-ink-muted">{option.description}</p>
                                         </button>
                                     );
                                 })}
@@ -162,12 +162,12 @@ export function EnhanceOptionsPopover({
 
                     {stage === 'streaming' && (
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-primary">
+                            <div className="flex items-center gap-2 text-rust">
                                 <Loader2 className="w-4 h-4 animate-spin" />
                                 <span className="text-sm font-medium">Enhancing your text...</span>
                             </div>
-                            <div className="bg-black/30 rounded-lg p-4 min-h-[200px]">
-                                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans">
+                            <div className="bg-paper rounded-lg p-4 min-h-[200px]">
+                                <pre className="text-sm text-ink whitespace-pre-wrap font-sans">
                                     {enhancedContent || 'Waiting for response...'}
                                 </pre>
                             </div>
@@ -178,17 +178,17 @@ export function EnhanceOptionsPopover({
                         <div className="space-y-4">
                             {/* Original */}
                             <div>
-                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Original</h3>
-                                <div className="bg-black/30 rounded-lg p-3 max-h-32 overflow-y-auto">
-                                    <p className="text-sm text-gray-400 whitespace-pre-wrap">{selectedContent}</p>
+                                <h3 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Original</h3>
+                                <div className="bg-paper rounded-lg p-3 max-h-32 overflow-y-auto">
+                                    <p className="text-sm text-ink-muted whitespace-pre-wrap">{selectedContent}</p>
                                 </div>
                             </div>
 
                             {/* Enhanced */}
                             <div>
-                                <h3 className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-2">Enhanced</h3>
-                                <div className="bg-green-950/30 border border-green-500/20 rounded-lg p-3 max-h-48 overflow-y-auto">
-                                    <pre className="text-sm text-gray-200 whitespace-pre-wrap font-sans">{enhancedContent}</pre>
+                                <h3 className="text-xs font-semibold text-ink uppercase tracking-wider mb-2">Enhanced</h3>
+                                <div className="bg-selection border border-rule rounded-lg p-3 max-h-48 overflow-y-auto">
+                                    <pre className="text-sm text-ink whitespace-pre-wrap font-sans">{enhancedContent}</pre>
                                 </div>
                             </div>
                         </div>
@@ -197,10 +197,10 @@ export function EnhanceOptionsPopover({
 
                 {/* Footer */}
                 {stage === 'preview' && (
-                    <div className="px-4 py-3 border-t border-white/10 flex items-center justify-between">
+                    <div className="px-4 py-3 border-t border-rule flex items-center justify-between">
                         <button
                             onClick={handleRetry}
-                            className="flex items-center gap-2 px-3 py-1.5 text-gray-400 hover:text-white transition-colors text-sm"
+                            className="flex items-center gap-2 px-3 py-1.5 text-ink-muted hover:text-ink transition-colors text-sm"
                         >
                             <RotateCcw className="w-4 h-4" />
                             Try Again
@@ -208,13 +208,13 @@ export function EnhanceOptionsPopover({
                         <div className="flex gap-2">
                             <button
                                 onClick={onClose}
-                                className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm"
+                                className="px-4 py-2 text-ink-muted hover:text-ink transition-colors text-sm"
                             >
                                 Discard
                             </button>
                             <button
                                 onClick={handleAccept}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors text-sm font-medium"
+                                className="flex items-center gap-2 px-4 py-2 bg-rust text-writing rounded-lg hover:bg-rust/90 transition-colors text-sm font-medium"
                             >
                                 <Check className="w-4 h-4" />
                                 Apply Changes

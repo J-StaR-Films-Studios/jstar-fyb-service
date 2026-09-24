@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, Space_Grotesk } from "next/font/google";
+import { Outfit, Space_Grotesk, DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
@@ -22,13 +22,16 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
 });
 
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
+const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-plex-mono", display: "swap" });
+
 export const metadata: Metadata = {
   title: {
-    default: "J-Star FYB Service",
-    template: "%s | J-Star FYB",
+    default: "J-Star Projects",
+    template: "%s | J-Star Projects",
   },
   description:
-    "Dominating Final Year Projects. The ultimate tool for researching, outlining, and writing your final year project.",
+    "Plan, research and write your final year project with J-Star Projects.",
   keywords: [
     "Final Year Project",
     "Research Assistant",
@@ -42,15 +45,15 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://fyb.jstarstudios.com",
-    title: "J-Star FYB Service - Dominate Your Project",
+    title: "J-Star Projects",
     description:
-      "The AI-powered platform to streamline your final year project workflow.",
-    siteName: "J-Star FYB",
+      "Plan, research and write your final year project.",
+    siteName: "J-Star Projects",
   },
   twitter: {
     card: "summary_large_image",
-    title: "J-Star FYB Service",
-    description: "Dominating Final Year Projects with AI.",
+    title: "J-Star Projects",
+    description: "Plan, research and write your final year project.",
     creator: "@jstarfilms",
   },
   metadataBase: new URL("https://fyb.jstarstudios.com"),
@@ -67,7 +70,7 @@ export default function RootLayout({
         <MetaPixel />
       </head>
       <body
-        className={`${outfit.variable} ${spaceGrotesk.variable} font-sans antialiased bg-dark`}
+        className={`${outfit.variable} ${spaceGrotesk.variable} ${dmSans.variable} ${plexMono.variable} font-sans antialiased bg-dark`}
         suppressHydrationWarning
       >
         <SkipLink />
@@ -86,14 +89,9 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "J-Star FYB Service",
+              name: "J-Star Projects",
               applicationCategory: "EducationalApplication",
               operatingSystem: "Web",
-              offers: {
-                "@type": "Offer",
-                price: "0",
-                priceCurrency: "NGN",
-              },
               author: {
                 "@type": "Organization",
                 name: "J-Star Films",

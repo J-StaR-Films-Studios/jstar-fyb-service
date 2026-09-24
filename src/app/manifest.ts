@@ -2,19 +2,13 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'J-Star FYB Service',
-        short_name: 'J-Star FYB',
-        description: 'Dominating Final Year Projects with Ease',
+        name: 'J-Star Projects',
+        short_name: 'J-Star Projects',
+        description: 'Plan, research and write your final year project.',
         start_url: '/',
         display: 'standalone',
-        background_color: '#000000',
-        theme_color: '#000000',
-        icons: [
-            {
-                src: '/icon.png',
-                sizes: 'any',
-                type: 'image/png',
-            },
-        ],
+        background_color: '#EDF1ED',
+        theme_color: '#193E35',
+        icons: [{ src: '/icon.png', sizes: '512x512', type: 'image/png' }],
     }
 }

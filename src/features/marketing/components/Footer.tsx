@@ -5,43 +5,19 @@ import { useSupport } from '@/features/support/context/SupportContext';
 
 export function Footer() {
     const { openSupport } = useSupport();
-
-    return (
-        <footer className="border-t border-white/5 bg-black py-20">
-            <div className="container mx-auto px-6 text-center">
-                <h2 className="text-3xl font-display font-bold mb-8">Ready to graduate in style?</h2>
-                <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-12">
-                    <Link
-                        href="/auth/register"
-                        className="px-8 py-4 bg-primary text-white rounded-xl font-bold uppercase tracking-wider hover:scale-105 transition-transform"
-                    >
-                        Get Started Now
-                    </Link>
-                    <Link
-                        href="/project/consult"
-                        className="px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-bold uppercase tracking-wider hover:bg-white/10 transition-colors text-white"
-                    >
-                        Full Agency Service
-                    </Link>
-                </div>
-                <div className="flex justify-center gap-6 mb-8 items-center">
-                    <button
-                        onClick={() => openSupport()}
-                        className="text-gray-500 hover:text-white transition-colors text-sm"
-                    >
-                        Contact Support
-                    </button>
-                    <span className="text-gray-700 select-none">•</span>
-                    <a
-                        href="mailto:hey@jstarstudios.com"
-                        className="text-gray-500 hover:text-white transition-colors text-sm"
-                    >
-                        hey@jstarstudios.com
-                    </a>
-                </div>
-                <p className="text-gray-500">J StaR Films Studios © 2026. All rights reserved.</p>
+    return <footer className="border-t border-rule bg-writing py-14 pb-24 sm:pb-14">
+        <div className="mx-auto max-w-[1200px] px-5 md:px-8">
+            <h2 className="text-2xl font-bold text-ink md:text-3xl">Ready to start your project?</h2>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Link href="/auth/register" className="inline-flex min-h-11 items-center justify-center rounded-md bg-rust px-6 font-semibold text-writing hover:bg-[#953D2C]">Get started</Link>
+                <Link href="/project/consult" className="inline-flex min-h-11 items-center justify-center rounded-md border border-rule px-6 font-semibold text-ink hover:bg-selection">Explore agency help</Link>
             </div>
-        </footer>
-    );
+            <div className="mt-12 flex flex-wrap items-center gap-6 border-t border-rule pt-6 text-sm text-ink-muted">
+                <span className="font-bold text-ink">J-Star Projects</span>
+                <button type="button" onClick={() => openSupport()} className="min-h-11 text-rust hover:underline">Contact support</button>
+                <a href="mailto:hey@jstarstudios.com" className="text-rust">hey@jstarstudios.com</a>
+                <span>J StaR Films Studios © 2026. All rights reserved.</span>
+            </div>
+        </div>
+    </footer>;
 }
-

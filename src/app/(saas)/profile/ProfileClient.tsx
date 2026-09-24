@@ -27,10 +27,10 @@ export function ProfileClient() {
         <button
             onClick={handleSignOut}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-red-400 font-bold transition-all disabled:opacity-50"
+            className="w-full flex min-h-11 items-center justify-center gap-2 rounded-md border border-rule bg-writing px-6 py-3 font-bold text-ink transition-colors hover:bg-selection disabled:cursor-not-allowed disabled:opacity-60"
         >
             <LogOut className="w-5 h-5" />
-            {isLoading ? "Signing out..." : "Sign Out"}
+            {isLoading ? "Signing out..." : "Sign out"}
         </button>
     );
 }

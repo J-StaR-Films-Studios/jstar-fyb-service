@@ -129,18 +129,18 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
 
   return (
     <div
-      className={`relative border rounded-lg p-4 bg-white/5 overflow-auto min-h-[200px] flex items-center justify-center ${className || ''}`}
+      className={`relative border border-rule rounded-lg p-4 bg-writing overflow-auto min-h-[200px] flex items-center justify-center ${className || ''}`}
       ref={containerRef}
       onClick={onClick}
     >
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px] z-10">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <div className="absolute inset-0 flex items-center justify-center bg-writing/80 backdrop-blur-[1px] z-10">
+          <Loader2 className="h-6 w-6 animate-spin text-rust" />
         </div>
       )}
 
       {error ? (
-        <div className="text-red-400 text-sm p-4 text-center">
+        <div className="text-ink text-sm p-4 text-center">
           <p className="font-bold mb-1">Rendering Error</p>
           <code className="text-xs break-all">{error}</code>
           {isChunkError && (
@@ -149,7 +149,7 @@ export function DiagramPreview({ code, theme = 'default', className, onClick }: 
                 e.stopPropagation();
                 handleRetry();
               }}
-              className="mt-3 flex items-center gap-2 mx-auto px-4 py-2 rounded-md bg-primary/20 hover:bg-primary/30 text-primary text-xs font-medium transition-colors"
+              className="mt-3 flex items-center gap-2 mx-auto px-4 py-2 rounded-md bg-selection hover:bg-selection text-rust text-xs font-medium transition-colors"
             >
               <RefreshCw className="w-3 h-3" />
               Retry

@@ -79,22 +79,22 @@ export function DiffViewer({ oldText, newText, mode = 'unified', className }: Di
 
     if (mode === 'split') {
         return (
-            <div className={cn("font-mono text-xs w-full overflow-x-auto border rounded border-white/5", className)}>
-                <div className="flex min-w-full sticky top-0 bg-gray-900 border-b border-white/5 z-10">
-                    <div className="w-1/2 px-4 py-2 text-gray-400 border-r border-white/5 text-center font-bold uppercase tracking-wider text-[10px]">Previous</div>
-                    <div className="w-1/2 px-4 py-2 text-gray-400 text-center font-bold uppercase tracking-wider text-[10px]">Current</div>
+            <div className={cn("font-mono text-xs w-full overflow-x-auto border rounded border-rule", className)}>
+                <div className="flex min-w-full sticky top-0 bg-writing border-b border-rule z-10">
+                    <div className="w-1/2 px-4 py-2 text-ink-muted border-r border-rule text-center font-bold uppercase tracking-wider text-[10px]">Previous</div>
+                    <div className="w-1/2 px-4 py-2 text-ink-muted text-center font-bold uppercase tracking-wider text-[10px]">Current</div>
                 </div>
                 {splitRows.map((row, idx) => (
-                    <div key={idx} className="flex min-w-full hover:bg-white/5 group">
+                    <div key={idx} className="flex min-w-full hover:bg-selection group">
                         {/* Left Column */}
                         <div className={cn(
-                            "w-1/2 px-2 py-0.5 border-r border-white/5 overflow-hidden",
-                            row.left?.type === 'removed' ? "bg-red-500/20" : "",
-                            row.left?.type === 'empty' ? "bg-black/10" : ""
+                            "w-1/2 px-2 py-0.5 border-r border-rule overflow-hidden",
+                            row.left?.type === 'removed' ? "bg-paper" : "",
+                            row.left?.type === 'empty' ? "bg-paper" : ""
                         )}>
                             <span className={cn(
                                 "whitespace-pre-wrap break-all",
-                                row.left?.type === 'removed' ? "text-red-300" : "text-gray-400",
+                                row.left?.type === 'removed' ? "text-ink" : "text-ink-muted",
                                 row.left?.type === 'empty' ? "select-none" : ""
                             )}>
                                 {row.left?.text || ' '}
@@ -103,12 +103,12 @@ export function DiffViewer({ oldText, newText, mode = 'unified', className }: Di
                         {/* Right Column */}
                         <div className={cn(
                             "w-1/2 px-2 py-0.5 overflow-hidden",
-                            row.right?.type === 'added' ? "bg-green-500/20" : "",
-                            row.right?.type === 'empty' ? "bg-black/10" : ""
+                            row.right?.type === 'added' ? "bg-selection" : "",
+                            row.right?.type === 'empty' ? "bg-paper" : ""
                         )}>
                             <span className={cn(
                                 "whitespace-pre-wrap break-all",
-                                row.right?.type === 'added' ? "text-green-300" : "text-gray-400",
+                                row.right?.type === 'added' ? "text-ink" : "text-ink-muted",
                                 row.right?.type === 'empty' ? "select-none" : ""
                             )}>
                                 {row.right?.text || ' '}
@@ -121,11 +121,11 @@ export function DiffViewer({ oldText, newText, mode = 'unified', className }: Di
     }
 
     return (
-        <div className={cn("font-mono text-xs overflow-x-auto border rounded border-white/5 bg-black/20", className)}>
+        <div className={cn("font-mono text-xs overflow-x-auto border rounded border-rule bg-paper", className)}>
             {unifiedChunks.map((part, index) => {
-                const color = part.added ? 'bg-green-500/10 text-green-300 border-l-2 border-green-500' :
-                    part.removed ? 'bg-red-500/10 text-red-300 border-l-2 border-red-500' :
-                        'text-gray-400 border-l-2 border-transparent';
+                const color = part.added ? 'bg-selection text-ink border-l-2 border-ink' :
+                    part.removed ? 'bg-paper text-ink border-l-2 border-rust' :
+                        'text-ink-muted border-l-2 border-transparent';
 
                 const prefix = part.added ? '+' : part.removed ? '-' : ' ';
 
@@ -135,9 +135,9 @@ export function DiffViewer({ oldText, newText, mode = 'unified', className }: Di
                 return (
                     <div key={index} className={cn("w-full py-1", color)}>
                         {lines.map((line, lineIdx) => (
-                            <div key={lineIdx} className="flex min-w-full px-2 hover:bg-white/5">
+                            <div key={lineIdx} className="flex min-w-full px-2 hover:bg-selection">
                                 <span className={cn("w-6 shrink-0 select-none opacity-40 font-bold",
-                                    part.added ? "text-green-500" : part.removed ? "text-red-500" : ""
+                                    part.added ? "text-ink" : part.removed ? "text-rust" : ""
                                 )}>{prefix}</span>
                                 <span className="whitespace-pre-wrap break-all">{line}</span>
                             </div>

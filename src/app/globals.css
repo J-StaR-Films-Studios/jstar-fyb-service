@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Margin is scoped to public screens; the legacy dark tokens remain for other routes. */
+.margin-public {
+  background: #EDF1ED;
+  color: #193E35;
+  font-family: var(--font-dm-sans), Arial, sans-serif;
+}
+.margin-public :is(a, button, input):focus-visible {
+  outline: 3px solid #B34D39;
+  outline-offset: 3px;
+}
+.margin-public a:not([class*="bg-"]):hover { text-decoration: underline; text-underline-offset: 3px; }
+.margin-public button:disabled { cursor: not-allowed; background: #52685F; color: #FFFEFA; }
+
+.margin-public .auth-card { color: #193E35; }
+.margin-public .auth-card :is(.text-gray-400, .text-gray-500, .text-gray-600) { color: #52685F; }
+.margin-public .auth-card .text-primary { color: #B34D39; }
+.margin-public .auth-card .text-white { color: #193E35; }
+.margin-public .auth-card :is(.border-white\/10, .border-white\/20) { border-color: #C9D3CA; }
+.margin-public .auth-card :is(.bg-white\/5, .bg-dark) { background: #FFFEFA; }
+.margin-public .auth-card input { min-height: 44px; border: 1px solid #C9D3CA; border-radius: 5px; background: #FFFEFA; color: #193E35; }
+.margin-public .auth-card input::placeholder { color: #52685F; }
+.margin-public .auth-card :is(form button[type="submit"], button.bg-primary) { min-height: 44px; border-radius: 5px; background: #B34D39; color: #FFFEFA; }
+.margin-public .auth-card button:disabled { background: #52685F; color: #FFFEFA; }
+.margin-public .auth-card button.bg-white { min-height: 44px; border: 1px solid #C9D3CA; border-radius: 5px; background: #FFFEFA; color: #193E35; }
+.margin-public .auth-card a { text-decoration: underline; text-underline-offset: 3px; }
+
 /* React-PDF text layer styles */
 .react-pdf__Page__textContent {
   line-height: 1;

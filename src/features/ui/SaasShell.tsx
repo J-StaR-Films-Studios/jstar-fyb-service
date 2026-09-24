@@ -24,7 +24,7 @@ const SupportButton = ({ onClose }: { onClose: () => void }) => {
                 openSupport();
                 onClose();
             }}
-            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-ink hover:text-rust hover:bg-selection transition-colors text-left"
         >
             <HelpCircle className="w-4 h-4" />
             Contact Support
@@ -114,7 +114,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
             {
                 id: 'welcome',
                 targetId: 'shell-header-title',
-                title: 'Welcome to J-Star',
+                title: 'Welcome to J-Star Projects',
                 content: 'This is your creative dashboard. Manage your projects and research here.',
                 position: 'bottom'
             },
@@ -138,26 +138,26 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
     };
 
     return (
-        <div className={cn("bg-dark min-h-screen text-white font-sans md:pb-0", !hideBottomNav && "pb-[calc(6rem+env(safe-area-inset-bottom))]")}>
+        <div className={cn("bg-paper min-h-screen text-ink font-margin md:pb-0", !hideBottomNav && "pb-[calc(6rem+env(safe-area-inset-bottom))]")}>
             {/* Header */}
-            <header className="flex justify-between items-center px-4 py-3 md:px-6 md:py-6 sticky top-0 bg-dark/80 backdrop-blur-md z-40 border-b border-white/5">
+            <header className="flex justify-between items-center px-4 py-3 md:px-6 md:py-6 sticky top-0 bg-writing/95 backdrop-blur-md z-40 border-b border-rule">
                 <div className="flex items-center gap-4">
                     <div>
-                        <h1 className="text-xl font-bold font-display" id="shell-header-title">
+                        <h1 className="text-xl font-bold font-margin" id="shell-header-title">
                             {headerContent ? (
                                 <div className="flex items-center gap-2">
-                                    <Link href="/dashboard" className="hidden md:block font-normal text-gray-400 hover:text-white transition-colors">
+                                    <Link href="/dashboard" className="hidden md:block font-normal text-ink-muted hover:text-rust transition-colors">
                                         My Projects
                                     </Link>
-                                    <Link href="/dashboard" aria-label="My Projects" className="md:hidden text-gray-400 hover:text-white transition-colors">
+                                    <Link href="/dashboard" aria-label="My Projects" className="md:hidden text-ink-muted hover:text-rust transition-colors">
                                         <LayoutDashboard className="w-5 h-5" aria-hidden="true" />
                                     </Link>
-                                    <span className="text-gray-600">/</span>
+                                    <span className="text-ink-muted">/</span>
                                 </div>
-                            ) : "My Projects"}
+                            ) : "J-Star Projects"}
                         </h1>
                         {!headerContent && (
-                            <p className="text-xs text-gray-400">Welcome back, {user.name?.split(" ")[0]}</p>
+                            <p className="text-xs text-ink-muted">Welcome back, {user.name?.split(" ")[0]}</p>
                         )}
                     </div>
                 </div>
@@ -170,7 +170,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             variant="ghost"
                             size="sm"
                             id="shell-chat-hub-btn"
-                            className="hidden md:flex text-gray-400 hover:text-white hover:bg-white/5"
+                            className="hidden md:flex text-ink hover:text-rust hover:bg-selection"
                         >
                             <Link href={hasActiveProject ? "/hub" : "/chat"}>
                                 <MessageSquare className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -185,7 +185,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             asChild
                             variant="ghost"
                             size="sm"
-                            className="hidden md:flex text-gray-400 hover:text-white hover:bg-white/5"
+                            className="hidden md:flex text-ink hover:text-rust hover:bg-selection"
                         >
                             <Link href="/dashboard">
                                 <LayoutDashboard className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -201,7 +201,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                             variant="default"
                             size="sm"
                             id="shell-new-project-btn"
-                            className="hidden md:flex bg-primary hover:bg-primary/90 text-white font-bold"
+                            className="hidden md:flex bg-rust hover:bg-rust/90 text-writing font-bold"
                         >
                             <Link href="/project/builder">
                                 {hasActiveProject ? (
@@ -227,25 +227,25 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                         <button
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                             aria-label="Open user menu"
-                            className="focus:outline-none focus:ring-2 focus:ring-accent/50 rounded-full"
+                            className="focus:outline-none focus:ring-[3px] focus:ring-rust focus:ring-offset-[3px] rounded-full"
                         >
                             <UserAvatar
                                 name={user.name}
                                 image={user.image}
                                 size="md"
-                                className="w-8 h-8 text-xs md:w-10 md:h-10 md:text-sm"
+                                className="w-8 h-8 text-xs md:w-10 md:h-10 md:text-sm bg-none bg-rust text-writing ring-rule"
                             />
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute right-0 mt-2 w-48 bg-dark/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl py-2 animate-in fade-in zoom-in-95 duration-200 z-50">
-                                <div className="px-4 py-2 border-b border-white/5 mb-1">
-                                    <p className="text-sm font-bold text-white truncate">{user.name}</p>
-                                    <p className="text-xs text-gray-500 truncate">User</p>
+                            <div className="absolute right-0 mt-2 w-48 bg-writing border border-rule rounded-md shadow-xl py-2 animate-in fade-in zoom-in-95 duration-200 z-50">
+                                <div className="px-4 py-2 border-b border-rule mb-1">
+                                    <p className="text-sm font-bold text-ink truncate">{user.name}</p>
+                                    <p className="text-xs text-ink-muted truncate">User</p>
                                 </div>
                                 <Link
                                     href="/profile"
-                                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 text-sm text-ink hover:text-rust hover:bg-selection transition-colors"
                                     onClick={() => setIsDropdownOpen(false)}
                                 >
                                     <UserIcon className="w-4 h-4" />
@@ -254,7 +254,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                                 
                                 <button
                                     onClick={handleStartTour}
-                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-ink hover:text-rust hover:bg-selection transition-colors text-left"
                                 >
                                     <PlayCircle className="w-4 h-4" />
                                     Start Tour
@@ -265,7 +265,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                                         setShowShortcuts(true);
                                         setIsDropdownOpen(false);
                                     }}
-                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-ink hover:text-rust hover:bg-selection transition-colors text-left"
                                 >
                                     <Keyboard className="w-4 h-4" />
                                     Shortcuts
@@ -274,7 +274,7 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
                                 <SupportButton onClose={() => setIsDropdownOpen(false)} />
                                 <button
                                     onClick={handleSignOut}
-                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors text-left"
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-ink hover:text-rust hover:bg-selection transition-colors text-left"
                                 >
                                     <LogOut className="w-4 h-4" />
                                     Sign Out
@@ -288,8 +288,8 @@ export const SaasShell = ({ children, user, headerContent, fullWidth = false, ha
             {/* Main Content */}
             <main className={cn(
                 "mx-auto",
-                !noPadding && "px-6 py-6 space-y-8",
-                fullWidth ? "w-full" : "max-w-lg md:max-w-4xl"
+                !noPadding && "px-4 md:px-8 py-8 space-y-8",
+                fullWidth ? "w-full" : "max-w-[1200px]"
             )}>
                 {children}
             </main>
