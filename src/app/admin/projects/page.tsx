@@ -50,9 +50,14 @@ export default async function AdminProjectsPage() {
     return (
         <div className="min-h-screen bg-dark text-white p-4 md:p-8 pb-32">
             <div className="max-w-6xl mx-auto">
-                <header className="mb-6 md:mb-8">
-                    <h1 className="text-2xl md:text-3xl font-display font-bold">Projects Dashboard</h1>
-                    <p className="text-gray-400 text-sm md:text-base">Manage all paid projects</p>
+                <header className="mb-6 flex flex-col gap-3 md:mb-8 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-display font-bold">Projects Dashboard</h1>
+                        <p className="text-gray-400 text-sm md:text-base">Manage all paid projects</p>
+                    </div>
+                    <Link href="/admin/tester-access" className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white hover:bg-white/10">
+                        Manage tester access
+                    </Link>
                 </header>
 
                 {/* Mobile Card View */}

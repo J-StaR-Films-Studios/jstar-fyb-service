@@ -136,6 +136,7 @@ model Project {
   status                   String                @default("OUTLINE_GENERATED")
   assignedTo               String?
   isUnlocked               Boolean               @default(false)
+  testerAccess             Boolean               @default(false)
   outlineGenerated         Boolean               @default(false)
   isLocked                 Boolean               @default(false)
   lockedAt                 DateTime?
