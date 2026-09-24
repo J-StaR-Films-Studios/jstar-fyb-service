@@ -2,6 +2,7 @@ import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth-server';
+import { canAccessWorkspace } from '@/lib/workspace-access';
 
 // Use Groq with Llama for fast enhancement
 const groqApiKey = process.env.GROQ_API_KEY;
@@ -51,7 +52,10 @@ export async function POST(
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 
-        const { id: projectId, chapterNumber } = await params;
+        const { id: projectId } = await params;
+        if (!await canAccessWorkspace(projectId, user.id)) {
+            return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+        }
         const body = await req.json();
         const validation = requestSchema.safeParse(body);
 

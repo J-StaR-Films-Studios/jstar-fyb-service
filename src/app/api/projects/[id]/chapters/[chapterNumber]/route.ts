@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
+import { canAccessWorkspace } from '@/lib/workspace-access';
 import { z } from 'zod';
 
 const patchSchema = z.object({
@@ -47,6 +48,10 @@ export async function GET(
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 
+        if (!await canAccessWorkspace(id, user.id)) {
+            return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+        }
+
         const chapter = await prisma.chapter.findUnique({
             where: {
                 projectId_number: {
@@ -58,16 +63,6 @@ export async function GET(
 
         if (!chapter) {
             return new Response(JSON.stringify({ error: 'Chapter not found' }), { status: 404 });
-        }
-
-        // Verify ownership via project
-        const project = await prisma.project.findUnique({
-            where: { id },
-            select: { userId: true }
-        });
-
-        if (project?.userId !== user.id) {
-            return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
         }
 
         return new Response(JSON.stringify(chapter), { status: 200 });
@@ -99,13 +94,7 @@ export async function PATCH(
 
         const { content, sectionTitle, sectionContent } = body as any; // simplified for now
 
-        // Check ownership
-        const project = await prisma.project.findUnique({
-            where: { id },
-            select: { userId: true }
-        });
-
-        if (project?.userId !== user.id) {
+        if (!await canAccessWorkspace(id, user.id)) {
             return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
         }
 

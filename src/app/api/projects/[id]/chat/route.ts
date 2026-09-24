@@ -10,6 +10,7 @@
 import { createAgentUIStreamResponse, generateId } from 'ai';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth-server';
+import { hasWorkspaceAccess } from '@/lib/workspace-access';
 import { ProjectContextService } from '@/features/builder/services/projectContextService';
 import {
     academicAgent,
@@ -55,7 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const project = await prisma.project.findUnique({
         where: { id: projectId },
-        select: { userId: true },
+        select: { userId: true, isUnlocked: true, testerAccess: true },
     });
 
     if (!project) {
@@ -65,7 +66,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         );
     }
 
-    if (project.userId !== session.user.id) {
+    if (!hasWorkspaceAccess(project, session.user.id)) {
         return new Response(
             JSON.stringify({ error: 'Access denied' }),
             { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -136,15 +137,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     let activeThreadTitle = 'General Chat';
 
     if (activeConversationId) {
-        const thread = await prisma.projectConversation.findUnique({
-            where: { id: activeConversationId },
+        const thread = await prisma.projectConversation.findFirst({
+            where: { id: activeConversationId, projectId },
         });
 
         if (!thread) {
-            activeConversationId = null;
-        } else {
-            activeThreadTitle = thread.threadTitle || 'Chat';
+            return new Response(JSON.stringify({ error: 'Thread not found' }), { status: 404 });
         }
+        activeThreadTitle = thread.threadTitle || 'Chat';
     }
 
     if (!activeConversationId) {
@@ -341,7 +341,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const project = await prisma.project.findUnique({
         where: { id: projectId },
-        select: { userId: true },
+        select: { userId: true, isUnlocked: true, testerAccess: true },
     });
 
     if (!project) {
@@ -351,7 +351,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         );
     }
 
-    if (project.userId !== session.user.id) {
+    if (!hasWorkspaceAccess(project, session.user.id)) {
         return new Response(
             JSON.stringify({ error: 'Access denied' }),
             { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -365,8 +365,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         return new Response(JSON.stringify({ messages: [] }), { status: 200 });
     }
 
+    const thread = await prisma.projectConversation.findFirst({
+        where: { id: threadId, projectId },
+        select: { id: true }
+    });
+    if (!thread) return new Response(JSON.stringify({ error: 'Thread not found' }), { status: 404 });
+
     const dbMessages = await prisma.projectChatMessage.findMany({
-        where: { conversationId: threadId },
+        where: { conversationId: thread.id },
         orderBy: { createdAt: 'asc' },
         select: {
             id: true,
@@ -444,7 +450,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     const project = await prisma.project.findUnique({
         where: { id: projectId },
-        select: { userId: true },
+        select: { userId: true, isUnlocked: true, testerAccess: true },
     });
 
     if (!project) {
@@ -454,7 +460,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         );
     }
 
-    if (project.userId !== session.user.id) {
+    if (!hasWorkspaceAccess(project, session.user.id)) {
         return new Response(
             JSON.stringify({ error: 'Access denied' }),
             { status: 403, headers: { 'Content-Type': 'application/json' } }

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { WorkspaceLockScreen } from '@/features/builder/components/WorkspaceLockScreen';
 import { WORKSPACE_UNLOCK_PRICE } from '@/config/pricing';
 import { getCurrentUser } from '@/lib/auth-server';
+import { notFound, redirect } from 'next/navigation';
 
 interface WorkspacePageProps {
     params: Promise<{
@@ -30,8 +31,11 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
         return <div className="min-h-screen flex items-center justify-center text-white">Project not found</div>;
     }
 
-    const tester = project.testerAccess ? await getCurrentUser() : null;
-    if (!project.isUnlocked && !(project.testerAccess && tester?.id === project.userId)) {
+    const user = await getCurrentUser();
+    if (!user) redirect('/auth/login');
+    if (project.userId !== user.id) notFound();
+
+    if (!project.isUnlocked && !project.testerAccess) {
         // Check if user is referred (to disable discount codes)
         let isReferred = false;
         if (project?.userId) {

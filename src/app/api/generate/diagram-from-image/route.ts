@@ -2,6 +2,8 @@ import { generateDiagramFromImage } from '@/lib/ai/diagramService';
 import { NextResponse } from 'next/server';
 import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { getCurrentUser } from '@/lib/auth-server';
+import { canAccessWorkspace } from '@/lib/workspace-access';
 
 export async function POST(req: Request) {
     try {
@@ -11,7 +13,15 @@ export async function POST(req: Request) {
         );
         if (rateLimitResponse) return rateLimitResponse;
 
-        const { image, prompt } = await req.json();
+        const { projectId, image, prompt } = await req.json();
+        if (typeof projectId !== 'string' || !projectId) {
+            return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+        }
+        const user = await getCurrentUser();
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!await canAccessWorkspace(projectId, user.id)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
 
         if (!image) {
             return NextResponse.json({ error: 'Image is required' }, { status: 400 });

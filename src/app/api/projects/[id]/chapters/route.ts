@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
+import { hasWorkspaceAccess } from '@/lib/workspace-access';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -41,7 +42,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             });
         }
 
-        if (project.userId !== user.id) {
+        if (!hasWorkspaceAccess(project, user.id)) {
             return new Response(JSON.stringify({ error: 'Forbidden' }), {
                 status: 403,
                 headers: { 'Content-Type': 'application/json' }

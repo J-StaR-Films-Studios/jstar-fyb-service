@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } from 'docx';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth-server';
+import { hasWorkspaceAccess } from '@/lib/workspace-access';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const session = await getSession();
-    if (!session) return new NextResponse('Unauthorized', { status: 401 });
+    if (!session?.user?.id) return new NextResponse('Unauthorized', { status: 401 });
 
     const { diagrams, options } = await req.json(); // Map of { diagramId: base64String } and ExportOptions
 
@@ -17,6 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     if (!project) return new NextResponse('Project not found', { status: 404 });
+    if (!hasWorkspaceAccess(project, session.user.id)) return new NextResponse('Forbidden', { status: 403 });
 
     const docSections = [
       {

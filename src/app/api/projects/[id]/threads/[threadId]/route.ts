@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth-server';
+import { canAccessWorkspace } from '@/lib/workspace-access';
 
 export async function DELETE(
     req: Request,
@@ -7,19 +9,20 @@ export async function DELETE(
 ) {
     try {
         const { id: projectId, threadId } = await params;
+        const user = await getCurrentUser();
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!await canAccessWorkspace(projectId, user.id)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        // 1. Delete all messages first (manual cascade)
-        await prisma.projectChatMessage.deleteMany({
-            where: { conversationId: threadId }
+        const thread = await prisma.projectConversation.findFirst({
+            where: { id: threadId, projectId },
+            select: { id: true }
         });
+        if (!thread) return NextResponse.json({ error: 'Thread not found' }, { status: 404 });
 
-        // 2. Delete the conversation
-        await prisma.projectConversation.delete({
-            where: {
-                id: threadId,
-                projectId // Security check: ensure it belongs to this project
-            }
-        });
+        await prisma.$transaction([
+            prisma.projectChatMessage.deleteMany({ where: { conversationId: thread.id } }),
+            prisma.projectConversation.delete({ where: { id: thread.id, projectId } })
+        ]);
 
         return NextResponse.json({ success: true });
 

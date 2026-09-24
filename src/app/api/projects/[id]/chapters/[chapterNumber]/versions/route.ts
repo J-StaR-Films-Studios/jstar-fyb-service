@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
+import { canAccessWorkspace } from '@/lib/workspace-access';
 
 export async function GET(
     req: Request,
@@ -12,6 +13,9 @@ export async function GET(
         const user = await getCurrentUser();
         if (!user) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+        }
+        if (!await canAccessWorkspace(id, user.id)) {
+            return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
         }
 
         const chapter = await prisma.chapter.findUnique({
@@ -48,6 +52,9 @@ export async function POST(
         const user = await getCurrentUser();
         if (!user) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+        }
+        if (!await canAccessWorkspace(id, user.id)) {
+            return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
         }
 
         // Get current chapter state
@@ -101,6 +108,9 @@ export async function PATCH(
         const user = await getCurrentUser();
         if (!user) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+        }
+        if (!await canAccessWorkspace(id, user.id)) {
+            return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
         }
 
         const { content } = await req.json();
