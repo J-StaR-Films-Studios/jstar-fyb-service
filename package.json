@@ -7,8 +7,9 @@
   "author": "J StaR Films Studios",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
+    "db:migrate:deploy": "prisma migrate deploy",
     "lint": "eslint",
     "db:backup": "npx tsx scripts/backup-database.ts backup",
     "db:restore": "npx tsx scripts/backup-database.ts restore",

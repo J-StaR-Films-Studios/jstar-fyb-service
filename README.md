@@ -98,19 +98,18 @@ cp .env.example .env
 
 # Configure your .env file (see Configuration section below)
 
-# Generate Prisma client and run migrations
-pnpm prisma generate
-pnpm prisma migrate dev
+# On a new local database only, apply migrations
+pnpm exec prisma migrate dev
 
-# Start development server
+# Start development server, or build first and use pnpm start
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the application.
+Open [http://localhost:3000](http://localhost:3000) to see the application. `pnpm dev` compiles pages on first access. For a prebuilt local run, use `pnpm build` followed by `pnpm start` instead. `pnpm build` generates the Prisma client but never applies migrations.
 
 ### Configuration
 
-Create a `.env` file with the following variables:
+Create a `.env` file with the following variables. Prisma CLI reads `.env`; Next.js also reads `.env.local`, which overrides shared keys in `.env`. Keep application configuration in `.env` and use `.env.local` only for intentional local overrides or separate tooling. Do not overwrite an existing `.env.local` without checking it for unique credentials.
 
 ```env
 # ==============================================
@@ -124,6 +123,8 @@ DATABASE_PROVIDER="postgresql"
 # ==============================================
 BETTER_AUTH_SECRET="your-secret-key"   # Generate: openssl rand -base64 32
 BETTER_AUTH_URL="http://localhost:3000"
+# When serving remotely, set BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL to the HTTPS origin.
+# TRUSTED_ORIGINS="http://localhost:3000,https://your-machine.your-tailnet.ts.net:3447"
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
@@ -324,15 +325,15 @@ erDiagram
 
 ```bash
 # Development
-pnpm dev              # Start dev server
-pnpm build            # Production build
-pnpm start            # Start production server
-pnpm lint             # Run ESLint
+pnpm dev                      # Dev server, compiles pages on demand
+pnpm build                    # Generate Prisma client and compile, no migrations
+pnpm start                    # Serve the prebuilt app
+pnpm lint                     # Run ESLint
 
-# Database
-pnpm prisma generate  # Generate Prisma client
-pnpm prisma migrate dev  # Run migrations
-pnpm prisma studio    # Open Prisma Studio
+# Database (confirm target and back up existing data before migrating)
+pnpm exec prisma migrate dev  # New local development database only
+pnpm db:migrate:deploy        # Explicit migration step for approved deployments
+pnpm exec prisma studio       # Open Prisma Studio
 
 # Admin Scripts
 npx tsx scripts/promote-admin.ts <email>  # Promote user to admin
@@ -356,7 +357,7 @@ The `vercel.json` is pre-configured:
 ```json
 {
   "framework": "nextjs",
-  "buildCommand": "npx prisma generate && next build",
+  "buildCommand": "pnpm build",
   "installCommand": "pnpm install"
 }
 ```
@@ -366,7 +367,7 @@ The `vercel.json` is pre-configured:
 1. Create a Neon project at [neon.tech](https://neon.tech)
 2. Get connection string
 3. Update `DATABASE_URL` and set `DATABASE_PROVIDER="postgresql"`
-4. Run `pnpm prisma migrate deploy`
+4. Confirm the target database and take a backup, then run `pnpm db:migrate:deploy` as a separate deployment step
 
 ---
 
