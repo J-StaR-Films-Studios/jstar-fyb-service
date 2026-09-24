@@ -87,31 +87,29 @@ export const ReferralService = {
         const commissionRate = influencer.commissionRate || 0.10; // Default 10%
         const commissionAmount = paymentAmount * commissionRate;
 
-        // Create commission record and update influencer earnings atomically
+        // Update only an active partner. Checking in the transaction prevents
+        // a deactivation between the lookup and commission creation from accruing earnings.
         const commission = await prisma.$transaction(async (tx) => {
-            // Create commission
-            const newCommission = await tx.commission.create({
-                data: {
-                    influencerId: influencer.id,
-                    paymentId: paymentId,
-                    amount: commissionAmount,
-                    status: "PENDING"
-                }
-            });
-
-            // Update influencer totals
-            await tx.influencer.update({
-                where: { id: influencer.id },
+            const updated = await tx.influencer.updateMany({
+                where: { id: influencer.id, isActive: true },
                 data: {
                     totalEarnings: { increment: commissionAmount },
                     pendingPayout: { increment: commissionAmount }
                 }
             });
+            if (updated.count === 0) return null;
 
-            return newCommission;
+            return tx.commission.create({
+                data: {
+                    influencerId: influencer.id,
+                    paymentId,
+                    amount: commissionAmount,
+                    status: "PENDING"
+                }
+            });
         });
 
-        console.log(`[ReferralService] Recorded commission ₦${commissionAmount} for influencer ${influencer.name}`);
+        if (commission) console.log(`[ReferralService] Recorded commission ₦${commissionAmount} for influencer ${influencer.name}`);
         return commission;
     },
 
