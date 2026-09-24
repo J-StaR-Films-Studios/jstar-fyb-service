@@ -9,7 +9,7 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const user = await getCurrentUser() as any;
+    const user = await getCurrentUser();
 
     // Auth & RBAC Protection
     if (!user) redirect('/auth/login');
@@ -20,6 +20,7 @@ export default async function AdminLayout({
         { href: '/admin/projects', label: 'Projects', icon: LayoutDashboard },
         { href: '/admin/leads', label: 'Leads', icon: Users },
         { href: '/admin/influencers', label: 'Influencers', icon: Megaphone },
+        { href: '/admin/users', label: 'Users', icon: Users },
         { href: '/admin/discounts', label: 'Discounts', icon: Percent },
         { href: '/admin/requests', label: 'Switch Requests', icon: FileText },
         { href: '/admin/settings', label: 'Settings', icon: BadgeDollarSign },

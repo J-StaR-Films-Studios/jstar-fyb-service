@@ -97,7 +97,7 @@ Access via: `/admin/influencers` and `/admin/discounts`
 ### Influencer Management
 - View all influencers with referral counts, earnings
 - Grant free credits (for demo content)
-- Toggle active/inactive
+- Toggle active/inactive. Inactive partners cannot accept new referrals or earn commissions on later payments; existing commissions remain payable.
 - Mark commissions as paid
 
 ### Discount Management
