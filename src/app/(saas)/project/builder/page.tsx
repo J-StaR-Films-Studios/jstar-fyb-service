@@ -15,7 +15,7 @@ export default async function BuilderPage({ searchParams }: PageProps) {
     const targetProjectId = params?.projectId; // From upgrade callback URL
 
     let serverProject: Partial<ProjectData> | null = null;
-    let isUnlocked = false; // Track payment status from the fetched project
+    let isUnlocked = false; // Track effective workspace access for builder hydration
 
     if (user) {
         let recentProject = null;
@@ -34,11 +34,11 @@ export default async function BuilderPage({ searchParams }: PageProps) {
             }
         }
 
-        // Priority 2: Try to load the user's UNLOCKED (paid) project first
+        // Priority 2: Try a paid or tester-access project first
         // This prevents accidentally loading a stale unpaid draft if multiple projects exist
         if (!recentProject) {
             recentProject = await prisma.project.findFirst({
-                where: { userId: user.id, isUnlocked: true },
+                where: { userId: user.id, OR: [{ isUnlocked: true }, { testerAccess: true }] },
                 orderBy: { updatedAt: 'desc' },
                 include: { outline: true }
             });
@@ -60,9 +60,8 @@ export default async function BuilderPage({ searchParams }: PageProps) {
         }
 
         if (recentProject) {
-            // OPTIMIZATION: Capture isUnlocked from the already-fetched project
-            // No separate DB query needed - Prisma includes all scalar fields by default
-            isUnlocked = recentProject.isUnlocked || false;
+            // Use the fetched project's paid unlock or revocable tester pass
+            isUnlocked = recentProject.isUnlocked || recentProject.testerAccess;
 
             // Map to ProjectData
             let parsedOutline: Chapter[] = [];

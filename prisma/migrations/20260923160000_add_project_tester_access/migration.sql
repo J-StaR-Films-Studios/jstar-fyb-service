@@ -1,0 +1,1 @@
+ALTER TABLE "Project" ADD COLUMN "testerAccess" BOOLEAN NOT NULL DEFAULT false;

@@ -108,6 +108,9 @@ flowchart TD
 - **Problem:** `/api/projects/[id]/unlock/route.ts` only set `isUnlocked: true` without setting `isLocked: true`, creating potential inconsistent state.
 - **Solution:** Added `isLocked: true` and `lockedAt` to the same atomic update.
 
+### Security change 2026-09-24: Remove direct unlock route
+- The old `/api/projects/[id]/unlock` endpoint could set `isUnlocked` without verified payment. No application code calls it, so the route has been removed. Payment and discount fulfillment still unlock projects through the billing flow.
+
 ### Hotfix 2026-01-05: Redundant DB Query in Builder Page
 - **Problem:** `builder/page.tsx` made a second DB query for `isUnlocked` when it was already available on the `recentProject` object from the first query.
 - **Solution:** Captured `isUnlocked` directly from `recentProject` during mapping, eliminating the redundant query and potential race condition.

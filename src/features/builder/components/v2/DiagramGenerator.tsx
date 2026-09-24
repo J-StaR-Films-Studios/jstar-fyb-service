@@ -48,7 +48,7 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
       const res = await fetch('/api/generate/diagram', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, diagramType, context }),
+        body: JSON.stringify({ projectId, prompt, diagramType, context }),
       });
 
       if (!res.ok) throw new Error('Generation failed');
@@ -126,6 +126,7 @@ export function DiagramGenerator({ projectId, onSave, onCancel, onInsert, initia
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              projectId,
               image: base64,
               prompt: prompt || 'Convert this image to a mermaid diagram'
             }),

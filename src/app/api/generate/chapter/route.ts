@@ -2,6 +2,7 @@ import { streamText } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
+import { hasWorkspaceAccess } from '@/lib/workspace-access';
 import { BuilderAiService } from '@/features/builder/services/builderAiService';
 import { GeminiFileSearchService } from '@/lib/gemini-file-search';
 import { selectModel } from '@/lib/ai';
@@ -173,7 +174,7 @@ export async function POST(req: Request) {
             });
         }
 
-        if (project.userId !== user.id) {
+        if (!hasWorkspaceAccess(project, user.id)) {
             return new Response(JSON.stringify({ error: 'Forbidden' }), {
                 status: 403,
                 headers: { 'Content-Type': 'application/json' }

@@ -2,6 +2,8 @@ import { ChapterEditor } from '@/features/builder/components/v2/ChapterEditor';
 import { prisma } from '@/lib/prisma';
 import { WorkspaceLockScreen } from '@/features/builder/components/WorkspaceLockScreen';
 import { WORKSPACE_UNLOCK_PRICE } from '@/config/pricing';
+import { getCurrentUser } from '@/lib/auth-server';
+import { notFound, redirect } from 'next/navigation';
 
 interface WorkspacePageProps {
     params: Promise<{
@@ -14,12 +16,12 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
     const { id } = await params;
     const { reference, tab } = await searchParams; // Extract Paystack reference and tab
 
-    // CANONICAL UNLOCK CHECK: Use `isUnlocked` field as the single source of truth.
-    // This supports: normal payments, 100% discounts, admin overrides, etc.
+    // Paid unlocks remain separate from revocable tester access.
     const project = await prisma.project.findUnique({
         where: { id },
         select: {
             isUnlocked: true,
+            testerAccess: true,
             topic: true,
             userId: true
         }
@@ -29,7 +31,11 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
         return <div className="min-h-screen flex items-center justify-center text-white">Project not found</div>;
     }
 
-    if (!project.isUnlocked) {
+    const user = await getCurrentUser();
+    if (!user) redirect('/auth/login');
+    if (project.userId !== user.id) notFound();
+
+    if (!project.isUnlocked && !project.testerAccess) {
         // Check if user is referred (to disable discount codes)
         let isReferred = false;
         if (project?.userId) {
