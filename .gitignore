@@ -45,5 +45,6 @@ next-env.d.ts
 .jstar/
 .env.local
 
-# Worktrees
+# Local worktrees and Pi agent state
 ux-worktree/
+/.pi/
