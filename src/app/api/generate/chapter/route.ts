@@ -141,7 +141,7 @@ export async function POST(req: Request) {
         }
 
         // 1b. Rate limiting
-        const rateLimitResponse = await applyRateLimit(user.id, 'ai');
+        const rateLimitResponse = await applyRateLimit(user.id, 'ai', { failClosed: true });
         if (rateLimitResponse) return rateLimitResponse;
 
         // 2. Parse and validate request

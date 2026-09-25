@@ -133,7 +133,7 @@ UPSTASH_REDIS_REST_URL=your_upstash_redis_url
 UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_token
 ```
 
-Most legacy routes still allow requests without Redis. The seven paid public AI endpoints listed above, plus document extraction, chapter enhancement and hub chat, return 503 if Redis is missing or unavailable. Anonymous requests across those seven endpoints share a 20/min cap in addition to a per-reported-IP cap; forged forwarding headers cannot bypass the shared cap. Authenticated abstract and outline requests use a separate per-user cap.
+Most legacy routes still allow requests without Redis. The seven paid public AI endpoints listed above return 503 if Redis is missing or unavailable. So do project chat, chapter generation, research-plan generation, document extraction, chapter enhancement and hub chat. Anonymous requests across the seven public endpoints share a 20/min cap in addition to a per-reported-IP cap; forged forwarding headers cannot bypass the shared cap. Authenticated abstract and outline requests use a separate per-user cap.
 
 ---
 
