@@ -1,25 +1,11 @@
 import { convertToModelMessages, streamText, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { SYSTEM_PROMPT, buildJayPrompt } from '@/features/bot/prompts/system';
-import { validateService, getEnv } from '@/lib/env-validation';
 import { sanitizeInput, MAX_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH as MAX_MSG_LEN_EXPORT } from '@/features/bot/utils/security';
 import { chatTools } from '@/features/bot/tools/definitions';
 import { selectModel } from '@/lib/ai/router';
-import { Models } from '@/lib/ai/providers';
 import { logger } from '@/lib/logger';
-import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
-
-// Validate AI service configuration at startup
-// We keep this check but make it non-blocking if other providers are available
-// For now, we assume at least one provider is needed.
-try {
-    validateService('ai');
-} catch (e) {
-    logger.warn('Groq AI service not fully configured, falling back to router logic.', '[Chat API]');
-}
-
-// Get validated environment variables
-const env = getEnv();
+import { applyAnonymousAiRateLimit } from '@/lib/rate-limit';
 
 // Allow streaming responses up to 120 seconds
 export const maxDuration = 120;
@@ -38,8 +24,6 @@ const chatSchema = z.object({
     userId: z.string().uuid().optional(),
     id: z.string().optional(),
     trigger: z.string().optional(),
-    modelOverride: z.string().optional(),
-    quality: z.string().optional(),
     // Context fields for Jay
     tierContext: z.string().optional(),
     existingTopic: z.string().optional(),
@@ -48,10 +32,7 @@ const chatSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        const rateLimitResponse = await applyRateLimit(
-            getClientIdentifier(req),
-            'ai'
-        );
+        const rateLimitResponse = await applyAnonymousAiRateLimit(req);
         if (rateLimitResponse) return rateLimitResponse;
 
         const body = await req.json();
@@ -62,7 +43,7 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ error: 'Invalid input', details: validation.error }), { status: 400 });
         }
 
-        const { messages, modelOverride, quality, tierContext, existingTopic, userName } = validation.data;
+        const { messages, tierContext, existingTopic, userName } = validation.data;
 
         // Defensive check
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -103,18 +84,13 @@ export async function POST(req: Request) {
         // Debug Log
         logger.info(`Processing ${modelMessages.length} messages.`, '[Chat API]');
 
-        // Select model using Router
-        // Note: Tool loop is handled by streamText, not the router
-        const { model: selectedModel, modelId } = selectModel({
-            quality: (quality as any) || 'standard',
-            // Default to Groq gpt-oss-120b for Jay, unless override is present (Retry)
-            forceModel: modelOverride || Models.GROQ.GPT_OSS_120B,
-        });
+        const { model: selectedModel, modelId, providerOptions } = selectModel();
 
         logger.info(`Using model: ${modelId}`, '[Chat API]');
 
         const result = streamText({
             model: selectedModel,
+            providerOptions,
             maxRetries: 3,
             stopWhen: stepCountIs(5),
             system: dynamicSystemPrompt,

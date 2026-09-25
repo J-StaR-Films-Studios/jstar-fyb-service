@@ -224,8 +224,8 @@ src/
 ### 4. AI Integration
 
 #### Models and Providers
-- **OpenAI GPT-4o**: Primary AI model for content generation
-- **Google Gemini**: Alternative model for specific use cases
+- **OpenRouter GPT-6 Luna**: Text, vision, tool calls and structured output, with reasoning effort selected by task
+- **Google Gemini 2.5 Flash**: Native Google Search and File Search grounding for research and uploaded documents
 - **Structured Output**: Using Zod schemas for consistent data
 
 #### AI Services

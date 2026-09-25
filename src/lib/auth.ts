@@ -48,6 +48,7 @@ if (process.env.NODE_ENV === "production" && isActuallyDeployed) {
 logger.info(`Database provider configured: ${dbProvider} (Environment: ${process.env.NODE_ENV || 'development'})`, "[Auth]");
 
 export const auth = betterAuth({
+    trustedOrigins: process.env.TRUSTED_ORIGINS?.split(',').map(origin => origin.trim()).filter(Boolean),
     database: prismaAdapter(prisma, {
         provider: dbProvider,
     }),

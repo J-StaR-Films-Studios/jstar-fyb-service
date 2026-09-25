@@ -141,7 +141,7 @@ export async function POST(req: Request) {
         }
 
         // 1b. Rate limiting
-        const rateLimitResponse = await applyRateLimit(user.id, 'ai');
+        const rateLimitResponse = await applyRateLimit(user.id, 'ai', { failClosed: true });
         if (rateLimitResponse) return rateLimitResponse;
 
         // 2. Parse and validate request
@@ -224,18 +224,18 @@ export async function POST(req: Request) {
         const hasDocuments = project.documents && project.documents.length > 0;
         const useGroundedParams = !!fileSearchStoreId && hasDocuments;
 
-        logger.info(`Mode: ${useGroundedParams ? 'GROUNDED (Gemini)' : 'STANDARD (FREE Tier)'}`, '[GenerateChapter]');
+        logger.info(`Mode: ${useGroundedParams ? 'GROUNDED (Gemini)' : 'STANDARD (OpenRouter)'}`, '[GenerateChapter]');
 
         // ==========================================================
-        // MODE A: STANDARD GENERATION (FREE/OpenRouter tier or Groq fallback)
+        // MODE A: STANDARD GENERATION (OpenRouter GPT-6 Luna)
         // ==========================================================
         if (!useGroundedParams) {
-            // Use FREE tier model for cost savings
-            const { model, modelId, provider, isFree, reason } = selectModel({ quality: 'high' });
-            logger.info(`Router selected: ${modelId} via ${provider} (free: ${isFree}) - ${reason}`, '[GenerateChapter]');
+            const { model, modelId, provider, providerOptions } = selectModel({ quality: 'high' });
+            logger.info(`Router selected: ${modelId} via ${provider}`, '[GenerateChapter]');
 
             const result = streamText({
                 model,
+                providerOptions,
                 system: `You are an expert academic writer specializing in Final Year Project (FYP) documentation.
                 
                 ## COMMON ACADEMIC GUIDELINES

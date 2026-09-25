@@ -81,6 +81,11 @@ export async function checkRateLimit(
 
     try {
         const result = await limiter.limit(key);
+        // Upstash treats timeouts as success; paid routes must not do so.
+        if (result.reason === "timeout") {
+            logger.error("Rate limit check timed out", "[RateLimit]");
+            return null;
+        }
         return {
             success: result.success,
             limit: result.limit,
@@ -95,12 +100,15 @@ export async function checkRateLimit(
 
 export async function applyRateLimit(
     identifier: string,
-    type: RateLimitType = "ai"
+    type: RateLimitType = "ai",
+    options: { failClosed?: boolean } = {}
 ): Promise<NextResponse | null> {
     const result = await checkRateLimit(identifier, type);
 
     if (!result) {
-        return null;
+        return options.failClosed
+            ? NextResponse.json({ error: "Rate limiting unavailable. Please try again later." }, { status: 503 })
+            : null;
     }
 
     if (!result.success) {
@@ -123,6 +131,14 @@ export async function applyRateLimit(
     }
 
     return null;
+}
+
+// All public AI endpoints share this key, so forged IP headers cannot bypass the total cap.
+export async function applyAnonymousAiRateLimit(request: Request): Promise<NextResponse | null> {
+    const perIpResponse = await applyRateLimit(getClientIdentifier(request), "ai", { failClosed: true });
+    if (perIpResponse) return perIpResponse;
+
+    return applyRateLimit("anonymous:shared", "ai", { failClosed: true });
 }
 
 export function getClientIdentifier(request: Request, userId?: string): string {

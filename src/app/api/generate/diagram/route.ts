@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateDiagramCode } from '@/lib/ai/diagramService';
-import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { applyAnonymousAiRateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
   try {
-    const rateLimitResponse = await applyRateLimit(
-      getClientIdentifier(req),
-      'ai'
-    );
+    const rateLimitResponse = await applyAnonymousAiRateLimit(req);
     if (rateLimitResponse) return rateLimitResponse;
 
     const { prompt, diagramType, context } = await req.json();

@@ -7,8 +7,9 @@
   "author": "J StaR Films Studios",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
+    "db:migrate:deploy": "prisma migrate deploy",
     "lint": "eslint",
     "db:backup": "npx tsx scripts/backup-database.ts backup",
     "db:restore": "npx tsx scripts/backup-database.ts restore",
@@ -18,8 +19,6 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.82",
-    "@ai-sdk/groq": "^3.0.41",
-    "@ai-sdk/openai": "^3.0.71",
     "@ai-sdk/react": "^3.0.207",
     "@google/genai": "^2.8.0",
     "@openrouter/ai-sdk-provider": "^2.9.1",
