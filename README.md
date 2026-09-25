@@ -71,7 +71,9 @@ J-Star FYB Service is a comprehensive SaaS platform designed to help final year 
 | OpenRouter | `openai/gpt-6-luna` | Jay and Nengi chat, Monji's tool-using assistant, abstracts, outlines, chapters, research analysis, metadata extraction and image-to-diagram generation |
 | Google (native API) | `gemini-2.5-flash` | Google Search grounding and File Search over uploaded documents, including grounded chapter generation |
 
-GPT-6 Luna is a paid OpenRouter model. The app requests low reasoning for chat, topic extraction and snippets; medium for research, outlines, abstracts, enhancements, metadata and diagrams; and high for chapter writing and Monji's academic assistant. Google grounding still requires `GEMINI_API_KEY`; OpenRouter cannot access the app's Google File Search stores. Configure both Upstash Redis REST variables for public Jay chat, agency topic analysis and topic extraction, and for document extraction, chapter enhancement and hub chat: these endpoints return 503 when rate limiting is unavailable. Public AI calls are capped at 20/min per reported IP and at 20/min total across the three endpoints.
+GPT-6 Luna is a paid OpenRouter model. The app requests low reasoning for chat, topic extraction and snippets; medium for research, outlines, abstracts, enhancements, metadata and diagrams; and high for chapter writing and Monji's academic assistant. Google grounding still requires `GEMINI_API_KEY`; OpenRouter cannot access the app's Google File Search stores.
+
+Configure both Upstash Redis REST variables for public Jay chat, agency topic analysis, topic extraction, abstract and outline generation, both diagram endpoints, document extraction, chapter enhancement and hub chat. These routes return 503 when rate limiting is unavailable. The seven public endpoints share a 20/min total cap and a 20/min per-reported-IP cap. Authenticated abstract and outline requests have a separate 20/min per-user cap; diagram requests always use the public cap.
 
 ---
 

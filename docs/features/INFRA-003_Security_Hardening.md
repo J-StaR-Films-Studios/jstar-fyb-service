@@ -92,17 +92,18 @@ if (!isOwner && !isAdmin) {
 - `src/app/api/generate/abstract/route.ts`
 - `src/app/api/pay/initialize/route.ts`
 
-**Code Pattern**:
-```typescript
-import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+**Paid public AI routes**: `/api/chat`, `/api/analyze-topic`, `/api/extract-topic`, `/api/generate/abstract`, `/api/generate/outline`, `/api/generate/diagram`, and `/api/generate/diagram-from-image` share a 20/min anonymous cap plus a 20/min per-reported-IP cap. Authenticated abstract and outline requests instead use a 20/min per-user cap; both diagram routes use the anonymous cap even with a session (the diagram route runs on Edge). These checks return 503 if Redis is missing or unavailable. The outline's client-supplied project ID is looked up by both ID and authenticated user ID; a missing or non-owned ID falls back to the user's topic match or new project.
 
-// At start of route handler
-const rateLimitResponse = await applyRateLimit(
-    user?.id || getClientIdentifier(req),
-    'ai' // or 'payment', 'auth', 'upload'
-);
+**Code pattern for abstract and outline**:
+```typescript
+const user = await getCurrentUser();
+const rateLimitResponse = user
+    ? await applyRateLimit(user.id, 'ai', { failClosed: true })
+    : await applyAnonymousAiRateLimit(req);
 if (rateLimitResponse) return rateLimitResponse;
 ```
+
+Other public routes call `applyAnonymousAiRateLimit(req)` directly.
 
 ---
 
@@ -132,7 +133,7 @@ UPSTASH_REDIS_REST_URL=your_upstash_redis_url
 UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_token
 ```
 
-Most legacy routes still allow requests without Redis. Public Jay chat, agency topic analysis and topic extraction, plus document extraction, chapter enhancement and hub chat, now return 503 if Redis is missing or unavailable. The public routes share a 20/min anonymous cap in addition to a per-IP cap; forged forwarding headers cannot bypass the shared cap.
+Most legacy routes still allow requests without Redis. The seven paid public AI endpoints listed above, plus document extraction, chapter enhancement and hub chat, return 503 if Redis is missing or unavailable. Anonymous requests across those seven endpoints share a 20/min cap in addition to a per-reported-IP cap; forged forwarding headers cannot bypass the shared cap. Authenticated abstract and outline requests use a separate per-user cap.
 
 ---
 

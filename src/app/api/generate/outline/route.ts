@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { BuilderAiService } from '@/features/builder/services/builderAiService';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
-import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { applyAnonymousAiRateLimit, applyRateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 export const maxDuration = 120;
@@ -20,8 +20,9 @@ const requestSchema = z.object({
 export async function POST(req: Request) {
     // Rate limiting (apply before heavy processing)
     const user = await getCurrentUser();
-    const identifier = user?.id || getClientIdentifier(req);
-    const rateLimitResponse = await applyRateLimit(identifier, 'ai');
+    const rateLimitResponse = user
+        ? await applyRateLimit(user.id, 'ai', { failClosed: true })
+        : await applyAnonymousAiRateLimit(req);
     if (rateLimitResponse) return rateLimitResponse;
 
     const body = await req.json();
@@ -76,8 +77,8 @@ Ensure the content descriptions are specific to the project's domain (e.g., if b
                     if (user) {
                         // PRIORITY 1: Use projectId from client if provided
                         let project = clientProjectId
-                            ? await prisma.project.findUnique({
-                                where: { id: clientProjectId }
+                            ? await prisma.project.findFirst({
+                                where: { id: clientProjectId, userId: user.id }
                             })
                             : null;
 
