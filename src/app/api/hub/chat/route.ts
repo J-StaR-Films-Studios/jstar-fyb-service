@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { NENGI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 120; // 2 minutes max
 
@@ -48,6 +49,18 @@ export async function POST(req: Request) {
         }
 
         const { messages, conversationId } = validation.data;
+        if (conversationId) {
+            const conversation = await prisma.conversation.findFirst({
+                where: { id: conversationId, userId: user.id },
+                select: { id: true },
+            });
+            if (!conversation) {
+                return Response.json({ error: 'Conversation not found' }, { status: 404 });
+            }
+        }
+
+        const rateLimitResponse = await applyRateLimit(user.id, 'ai', { failClosed: true });
+        if (rateLimitResponse) return rateLimitResponse;
 
         // 3. Fetch User Context (Active Projects)
         const projects = await prisma.project.findMany({

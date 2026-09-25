@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { extractPdfText } from '@/lib/pdf-parser';
 import mammoth from 'mammoth';
+import { getCurrentUser } from '@/lib/auth-server';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 300; // 5 minutes max for extraction
 
@@ -12,13 +14,28 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const user = await getCurrentUser();
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { id } = await params;
-
-        // 1. Fetch document with file data
-        const doc = await prisma.researchDocument.findUnique({
+        const documentOwner = await prisma.researchDocument.findUnique({
             where: { id },
+            select: { project: { select: { userId: true } } },
         });
+        if (!documentOwner) {
+            return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+        }
+        if (documentOwner.project.userId !== user.id && user.role !== 'ADMIN') {
+            return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        }
 
+        const rateLimitResponse = await applyRateLimit(user.id, 'ai', { failClosed: true });
+        if (rateLimitResponse) return rateLimitResponse;
+
+        // Fetch file data only after authorization and rate limiting
+        const doc = await prisma.researchDocument.findUnique({ where: { id } });
         if (!doc) {
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
         }

@@ -98,7 +98,7 @@ export const ChapterService = {
         }
 
         // 2. Generate Outline using AI
-        const { model, providerOptions } = selectModel({ quality: 'high' });
+        const { model, providerOptions } = selectModel({ effort: 'medium' });
 
         const prompt = `
         Create a detailed academic chapter outline for a project titled: "${context.topic || ''}".

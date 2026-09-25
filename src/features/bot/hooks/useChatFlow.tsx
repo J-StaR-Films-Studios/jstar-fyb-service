@@ -23,6 +23,7 @@ import { useChatSync } from "./useChatSync";
 import { useChatToolHandlers, detectPhoneNumber } from "./useChatTools";
 import { useSearchParams } from "next/navigation";
 import { useBuilderStore } from "@/features/builder/store/useBuilderStore";
+import { MAX_MESSAGE_LENGTH } from "@/features/bot/utils/security";
 
 // Re-export types for consumers (e.g. SuggestionChips)
 export type { Message, ChatState, ConfirmedTopic };
@@ -225,8 +226,8 @@ export function useChatFlow(userId?: string, userName?: string) {
                 // Build history for extraction
                 const messageHistory = aiMessages.map((m: any) => ({
                     role: m.role,
-                    content: m.content || m.parts?.find((p: any) => p.type === 'text')?.text || ''
-                })).filter((m: any) => m.content);
+                    content: (m.content || m.parts?.find((p: any) => p.type === 'text')?.text || '').slice(0, MAX_MESSAGE_LENGTH)
+                })).filter((m: any) => m.content).slice(-15);
 
                 // Default data
                 let extractedData = {

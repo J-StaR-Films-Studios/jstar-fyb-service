@@ -1,6 +1,7 @@
 import { generateText } from 'ai';
 import { z } from 'zod';
 import { selectModel } from '@/lib/ai/router';
+import { applyAnonymousAiRateLimit } from '@/lib/rate-limit';
 
 // Schema for input validation
 const inputSchema = z.object({
@@ -52,6 +53,9 @@ NO preamble or markdown. Just valid JSON.
 
 export async function POST(req: Request) {
     try {
+        const rateLimitResponse = await applyAnonymousAiRateLimit(req);
+        if (rateLimitResponse) return rateLimitResponse;
+
         const body = await req.json();
         const { topic, department } = inputSchema.parse(body);
 

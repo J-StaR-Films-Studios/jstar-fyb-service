@@ -5,7 +5,7 @@ import { sanitizeInput, MAX_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH as MAX_MSG_LEN_EX
 import { chatTools } from '@/features/bot/tools/definitions';
 import { selectModel } from '@/lib/ai/router';
 import { logger } from '@/lib/logger';
-import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { applyAnonymousAiRateLimit } from '@/lib/rate-limit';
 
 // Allow streaming responses up to 120 seconds
 export const maxDuration = 120;
@@ -32,10 +32,7 @@ const chatSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        const rateLimitResponse = await applyRateLimit(
-            getClientIdentifier(req),
-            'ai'
-        );
+        const rateLimitResponse = await applyAnonymousAiRateLimit(req);
         if (rateLimitResponse) return rateLimitResponse;
 
         const body = await req.json();

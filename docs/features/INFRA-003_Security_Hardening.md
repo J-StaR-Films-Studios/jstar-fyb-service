@@ -123,7 +123,7 @@ if (rateLimitResponse) return rateLimitResponse;
 
 ## Environment Configuration
 
-### Required for Rate Limiting (Optional)
+### Redis Rate Limiting
 
 Get free tier at [upstash.com](https://upstash.com):
 
@@ -132,7 +132,7 @@ UPSTASH_REDIS_REST_URL=your_upstash_redis_url
 UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_token
 ```
 
-If not configured, rate limiting silently degrades (no blocking).
+Most legacy routes still allow requests without Redis. Public Jay chat, agency topic analysis and topic extraction, plus document extraction, chapter enhancement and hub chat, now return 503 if Redis is missing or unavailable. The public routes share a 20/min anonymous cap in addition to a per-IP cap; forged forwarding headers cannot bypass the shared cap.
 
 ---
 

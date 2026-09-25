@@ -2,6 +2,8 @@ import { streamText } from 'ai';
 import { selectModel } from '@/lib/ai/router';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth-server';
+import { prisma } from '@/lib/prisma';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 60;
 
@@ -40,7 +42,21 @@ export async function POST(
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 
-        const { id: projectId, chapterNumber } = await params;
+        const { id: projectId } = await params;
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            select: { userId: true },
+        });
+        if (!project) {
+            return Response.json({ error: 'Project not found' }, { status: 404 });
+        }
+        if (project.userId !== user.id) {
+            return Response.json({ error: 'Access denied' }, { status: 403 });
+        }
+
+        const rateLimitResponse = await applyRateLimit(user.id, 'ai', { failClosed: true });
+        if (rateLimitResponse) return rateLimitResponse;
+
         const body = await req.json();
         const validation = requestSchema.safeParse(body);
 
