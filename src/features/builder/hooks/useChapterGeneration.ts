@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { generateMarkdownBlob, generateDocxBlob, downloadFile, sanitizeFilename, ExportOptions } from '@/lib/export-service';
 import { ChapterStatus } from '../components/ChapterCard';
+import { documentMarkdown, fetchSavedExportDocument, requireReadyToExport } from '@/lib/writing/client-export';
 
 export interface GeneratedChapter {
     number: number;
@@ -148,33 +149,47 @@ export function useChapterGeneration(projectId: string) {
     }, [projectId]);
 
     const handleDownloadConfirm = useCallback(async (format: 'markdown' | 'docx', options: ExportOptions) => {
-        const { target, chapter } = downloadModal;
+        try { await requireReadyToExport(projectId); }
+        catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not check export readiness'); return; }
+        const { target } = downloadModal;
+        let chapter = downloadModal.chapter;
+        if (target === 'single' && chapter && process.env.NEXT_PUBLIC_ACADEMIC_PIPELINE_ENABLED === 'true') {
+            const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chapters/${chapter.number}`);
+            if (!response.ok) { setError('Could not fetch saved chapter'); return; }
+            const saved = await response.json();
+            chapter = { ...chapter, content: saved.content };
+        }
 
         // Refresh chapters from DB to ensure we have the latest content (fixes sync issues with Workspace)
         let currentChapters = chapters;
+        let savedAbstract: string | null = null;
         try {
             if (target === 'all') {
-                const response = await fetch(`/api/projects/${projectId}/chapters`);
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.chapters && Array.isArray(result.chapters)) {
-                        const storedChapters: Record<number, GeneratedChapter> = {};
-                        result.chapters.forEach((c: { number: number; title?: string; content: string }) => {
-                            if (c.number >= 1 && c.number <= 5) {
-                                storedChapters[c.number] = {
-                                    number: c.number,
-                                    title: c.title || CHAPTER_INFO[c.number - 1].title,
-                                    content: c.content,
-                                    isGenerating: false
-                                };
-                            }
-                        });
-                        setChapters(storedChapters); // Update UI
-                        currentChapters = storedChapters; // Use for export
-                    }
+                const pipelineEnabled = process.env.NEXT_PUBLIC_ACADEMIC_PIPELINE_ENABLED === 'true';
+                let result: { abstract?: string; chapters?: { number: number; title?: string; content: string }[] };
+                if (pipelineEnabled) result = await fetchSavedExportDocument(projectId);
+                else {
+                    const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chapters`);
+                    if (!response.ok) throw new Error('Could not fetch saved chapters');
+                    result = await response.json();
                 }
+                if (!Array.isArray(result.chapters)) throw new Error('Saved chapters are unavailable');
+                savedAbstract = pipelineEnabled ? result.abstract ?? null : null;
+                const storedChapters: Record<number, GeneratedChapter> = {};
+                result.chapters.forEach((c: { number: number; title?: string; content: string }) => {
+                    if (c.number >= 1 && c.number <= 5) storedChapters[c.number] = {
+                        number: c.number, title: c.title || CHAPTER_INFO[c.number - 1].title,
+                        content: c.content, isGenerating: false
+                    };
+                });
+                setChapters(storedChapters);
+                currentChapters = storedChapters;
             }
         } catch (err) {
+            if (process.env.NEXT_PUBLIC_ACADEMIC_PIPELINE_ENABLED === 'true') {
+                setError(err instanceof Error ? err.message : 'Could not fetch saved document');
+                return;
+            }
             console.error('Failed to sync chapters before export', err);
         }
 
@@ -194,7 +209,7 @@ export function useChapterGeneration(projectId: string) {
                 if (generatedChapters.length === 0) return;
 
                 const sortedChapters = generatedChapters.sort((a, b) => a.number - b.number);
-                const fullContent = sortedChapters
+                const fullContent = savedAbstract ? documentMarkdown(savedAbstract, sortedChapters) : sortedChapters
                     .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
                     .join('\n\n');
 

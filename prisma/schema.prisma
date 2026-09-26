@@ -164,6 +164,8 @@ model Project {
   diagrams                 ProjectDiagram[]
   messages                 ProjectMessage[]
   documents                ResearchDocument[]
+  facts                    ProjectFact[]
+  writingRuns              WritingRun[]
 
   @@index([userId])
   @@index([anonymousId])
@@ -232,11 +234,75 @@ model ResearchDocument {
   authors              String? // Comma-separated author names
   venue                String? // Journal/conference name
   semanticScholarId    String? // Paper ID for deduplication
+  doi                  String?
+  sourceUrl            String?
+  evidencePassage      String?
+  evidenceLocation     String?
+  materialLevel        String? // UPLOADED_TEXT, ABSTRACT, SNIPPET, METADATA
+  verification         String? // User-supplied verification, never inferred
+  evidenceLimitations  String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   project              Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+}
+
+model ProjectFact {
+  id                String   @id @default(cuid())
+  projectId         String
+  kind              String // planned, completed, user_reported, artifact_backed, unknown, conflicting
+  description       String
+  evidenceReference String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model WritingRun {
+  id             String                @id @default(cuid())
+  projectId      String
+  idempotencyKey String
+  requestHash    String
+  sourceRunId    String?
+  chapterNumber  Int?                  // null means a document-wide run
+  variant        String
+  pipelineVersion String               @default("academic-v1")
+  settings       Json                  @default("{}")
+  status         String                @default("PENDING")
+  snapshot       Json
+  snapshotHash   String
+  stages         Json                  @default("{}")
+  findings       Json                  @default("[]")
+  versions       Json                  @default("[]")
+  published      Json                  @default("{}")
+  metrics        Json                  @default("{}")
+  error          String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  project        Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  measurements   DetectorMeasurement[]
+
+  @@unique([projectId, idempotencyKey])
+  @@index([projectId, createdAt])
+}
+
+model DetectorMeasurement {
+  id              String     @id @default(cuid())
+  runId           String
+  detectorName    String
+  detectorVersion String?
+  measuredAt      DateTime
+  rawResult       Json
+  testedTextHash  String
+  testedVersion   String
+  limitations     String?
+  createdAt       DateTime   @default(now())
+  run             WritingRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
 }
 
 model ChapterOutline {
