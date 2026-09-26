@@ -33,8 +33,8 @@ export async function POST(req: Request, { params }: Context) {
   const source = input.snapshotRunId ? await prisma.writingRun.findFirst({ where: { id: input.snapshotRunId, projectId: id } }) : null;
   if (input.snapshotRunId && !source) return invalid('Snapshot run not found');
   const sourceSnapshot = source?.snapshot as Snapshot | undefined;
-  if (sourceSnapshot && input.scope && hash(input.scope) !== hash(sourceSnapshot.scope)) return invalid('Scope differs from snapshot');
-  const scope = sourceSnapshot?.scope ?? input.scope ?? {};
+  const scope = input.scope ?? {};
+  if (sourceSnapshot && hash(scope) !== hash(sourceSnapshot.scope)) return invalid('Scope differs from snapshot');
   if (sourceSnapshot && input.tonePreference && input.tonePreference !== sourceSnapshot.tonePreference) return invalid('Tone differs from snapshot');
   const requestHash = hash({ variant: input.variant, scope, snapshotRunId: input.snapshotRunId ?? null, tonePreference: input.tonePreference ?? null });
   const key = { projectId_idempotencyKey: { projectId: id, idempotencyKey: input.idempotencyKey } };

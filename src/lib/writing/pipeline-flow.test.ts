@@ -3,7 +3,7 @@ import { equal, ok, rejects } from 'node:assert/strict';
 import type { Prisma } from '@prisma/client';
 import { checkBibliography, checkExport } from './export-readiness';
 import { publishRun } from './publish';
-import { execute, hashText, PIPELINE_VERSION, type Finding, type Generate, type Snapshot, type Stages } from './pipeline';
+import { execute, hashText, renderCitations, PIPELINE_VERSION, type Finding, type Generate, type Snapshot, type Stages } from './pipeline';
 import { prisma } from '@/lib/prisma';
 
 function fixture(facts: Snapshot['facts'] = []) {
@@ -33,8 +33,10 @@ function fixture(facts: Snapshot['facts'] = []) {
   const chapters: { id: string; number: number; title: string; content: string; version: number; previousVersions: Prisma.JsonValue }[] = [];
   const project: { abstract: string | null } = { abstract: null };
   const chapter = {
-    findUnique: async ({ where }: { where: { projectId_number: { number: number } } }) =>
-      chapters.find(item => item.number === where.projectId_number.number) ?? null,
+    findUnique: async ({ where }: { where: { projectId_number: { number: number } } }) => {
+      const found = chapters.find(item => item.number === where.projectId_number.number);
+      return found ? structuredClone(found) : null;
+    },
     create: async ({ data }: { data: { number: number; title: string; content: string; version: number } }) => {
       const saved = { id: `chapter-${data.number}`, number: data.number, title: data.title, content: data.content,
         version: data.version, previousVersions: [] }; chapters.push(saved); return saved;
@@ -101,7 +103,70 @@ test('synthetic project flows through draft, targeted review, revision, validati
     supported.chapters.map(chapter => chapter.number === 5 ? { ...chapter,
       content: chapter.content.replace('Lee. (2022). Synthetic paper', 'Lee. (2022). Different paper') } : chapter)));
   ok(!checkExport(supported.run, supported.chapters, 'A changed abstract').ready);
+  const blank = '   ';
+  const published = supported.run.published;
+  const blankRun = { ...supported.run, published: {
+    ...(published && typeof published === 'object' && !Array.isArray(published) ? published : {}),
+    abstract: { version: 0, hash: hashText(blank) } } };
+  ok(!checkExport(blankRun, supported.chapters, blank).ready);
   ok(!checkExport(supported.run, supported.chapters.map(chapter => chapter.number === 2 ? { ...chapter, content: `${chapter.content} user edit` } : chapter), supported.project.abstract).ready);
+});
+
+test('comparison drafts never publish automatically', async () => {
+  const { run, db, chapters } = fixture();
+  run.variant = 'baseline'; run.status = 'COMPLETED';
+  run.stages.final = [{ number: 1, text: 'Comparison draft [SRC:paper].', references: [] }];
+  await publishRun(run.id, db);
+  equal(chapters.length, 0);
+});
+
+test('a whitespace-only snapshot abstract cannot become a verified abstract', async () => {
+  const { run, snapshot, db, project } = fixture([
+    { kind: 'artifact_backed', description: 'Results supplied', evidenceReference: 'results' }
+  ]);
+  snapshot.abstract = '   ';
+  const draft: Generate = (stage, prompt) => Promise.resolve(stage === 'plan' ? plan
+    : stage === 'abstract' ? 'A supported description of the study.'
+      : stage === 'editorialReview' || stage === 'factualReview' ? '{"issues":[]}'
+        : `Chapter ${prompt.match(/"number":(\d+)/)?.[1]} compares methods [SRC:paper].`);
+  await execute(run.id, draft, db);
+  await publishRun(run.id, db);
+  equal(project.abstract, 'A supported description of the study.');
+});
+
+test('Chapter 5 references refresh after a prior chapter is explicitly applied', async () => {
+  const { run, snapshot, db, chapters, project } = fixture([
+    { kind: 'artifact_backed', description: 'Results supplied', evidenceReference: 'results' }
+  ]);
+  snapshot.sources.push({ ...snapshot.sources[0], id: 'other', title: 'Other paper', author: 'Kim' });
+  const edited = { id: 'chapter-1', number: 1, title: 'Introduction', content: 'My saved edits',
+    version: 1, previousVersions: [] };
+  chapters.push(edited);
+  snapshot.chapters[0].version = 1;
+  snapshot.chapters[0].contentHash = hashText(edited.content);
+  const draft: Generate = async (stage, prompt) => {
+    if (stage === 'plan') return plan;
+    if (stage === 'abstract') return 'The project compares methods.';
+    if (stage === 'editorialReview' || stage === 'factualReview') return '{"issues":[]}';
+    const number = Number(prompt.match(/Write an academic draft for \{"number":(\d+)/)?.[1]);
+    return `Chapter ${number} compares methods [SRC:${number === 1 ? 'other' : 'paper'}].`;
+  };
+  await execute(run.id, draft, db);
+  await publishRun(run.id, db);
+  ok(run.findings.some(finding => finding.code === 'EDIT_CONFLICT' && finding.chapter === 1));
+  ok(!chapters.find(chapter => chapter.number === 5)?.content.includes('Other paper'));
+  const applied = renderCitations(run.stages.final?.[0]?.text ?? '', snapshot);
+  edited.content = applied;
+  edited.version++;
+  const existing = run.published;
+  run.published = { ...(existing && typeof existing === 'object' && !Array.isArray(existing) ? existing : {}),
+    1: { version: edited.version, hash: hashText(applied) } };
+  run.findings = run.findings.filter(finding => !(finding.code === 'EDIT_CONFLICT' && finding.chapter === 1));
+  run.status = 'COMPLETED';
+  await publishRun(run.id, db);
+  ok(chapters.find(chapter => chapter.number === 5)?.content.includes('Other paper'));
+  ok(checkBibliography(snapshot, run.stages, chapters));
+  ok(checkExport(run, chapters, project.abstract).ready);
 });
 
 test('an abstract-only citation renders and appears in the saved bibliography', async () => {

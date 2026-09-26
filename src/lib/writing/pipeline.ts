@@ -348,11 +348,11 @@ export async function execute(runId: string, generate: Generate = liveGenerate, 
       findings.push({ code: 'MISSING_PROJECT_RESULTS', severity: 'warning', chapter: 4,
         detail: 'Chapter 4 results and Chapter 5 conclusions require the measured results or evaluation artifact. Add an artifact-backed project fact, then rerun affected chapters.' });
     if (!snapshot.scope.chapterNumber && variant === 'full' && !stages.abstract && !findings.some(finding => finding.severity === 'error')) {
-      stages.abstract = snapshot.abstract || await call('abstract', `Write a concise academic abstract from the supported portions of these chapters. Only describe completed methods and results if supplied project facts and artifacts support them. Do not invent methods, metrics or citations. Do not put missing-evidence workflow notes in the abstract. Use stored [SRC:id] markers if citing a source. Facts: ${JSON.stringify(snapshot.facts)} Chapters: ${JSON.stringify(stages.final)}`);
+      stages.abstract = snapshot.abstract?.trim() ? snapshot.abstract : await call('abstract', `Write a concise academic abstract from the supported portions of these chapters. Only describe completed methods and results if supplied project facts and artifacts support them. Do not invent methods, metrics or citations. Do not put missing-evidence workflow notes in the abstract. Use stored [SRC:id] markers if citing a source. Facts: ${JSON.stringify(snapshot.facts)} Chapters: ${JSON.stringify(stages.final)}`);
       await save();
     }
     if (!snapshot.scope.chapterNumber && variant === 'full') {
-      if (!stages.abstract) findings.push({ code: 'MISSING_ABSTRACT', severity: 'warning', detail: 'The abstract cannot be assembled until draft errors are resolved.' });
+      if (!stages.abstract?.trim()) findings.push({ code: 'MISSING_ABSTRACT', severity: 'warning', detail: 'The abstract cannot be assembled until draft errors are resolved.' });
       else findings.push(...[...validate(stages.abstract, snapshot), ...references(stages.abstract, snapshot).findings]
         .map(finding => ({ ...finding, chapter: 0 })));
     }

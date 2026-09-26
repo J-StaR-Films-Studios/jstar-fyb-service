@@ -16,7 +16,7 @@ export function checkExport(run: { status: string; findings: Prisma.JsonValue; p
     })) return { ready: false, reason: 'The saved document differs from the validated run. Preserve the edits and run validation again before submission export.' };
   if (abstract !== undefined) {
     const savedAbstract = published.abstract;
-    if (!abstract || !savedAbstract || typeof savedAbstract !== 'object' || Array.isArray(savedAbstract) ||
+    if (!abstract?.trim() || !savedAbstract || typeof savedAbstract !== 'object' || Array.isArray(savedAbstract) ||
       !('hash' in savedAbstract) || savedAbstract.hash !== hashText(abstract))
       return { ready: false, reason: 'The abstract is missing or differs from the validated run.' };
   }

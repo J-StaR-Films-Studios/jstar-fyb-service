@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { authorize } from '@/lib/writing/api';
 import { hashText, references, renderCitations, validate, type Snapshot, type Stages } from '@/lib/writing/pipeline';
+import { publishRun } from '@/lib/writing/publish';
 
 // Applying a draft is an explicit edit. Never replace content changed since its input snapshot.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; runId: string }> }) {
@@ -28,21 +29,35 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const bibliography = references([stages.abstract ?? '', ...(stages.final?.map(item => item.text) ?? [])].join('\n'), snapshot).lines
     .map(line => line.replace(/^\[SRC:[^\]]+\] /, ''));
   const content = renderCitations(output.text, snapshot) +
-    (!run.chapterNumber && output.number === 5 && bibliography.length ? `\n\n## References\n\n${bibliography.join('\n')}` : '');
+    (run.variant === 'full' && !run.chapterNumber && output.number === 5 && bibliography.length ? `\n\n## References\n\n${bibliography.join('\n')}` : '');
   const updated = await prisma.$transaction(async tx => {
     const chapter = await tx.chapter.findUnique({ where: { projectId_number: { projectId: id, number: output.number } } });
-    if (!chapter || !expected) return null;
-    const prior = run.published && typeof run.published === 'object' && !Array.isArray(run.published)
-      ? run.published[output.number] : null;
-    const previouslyPublished = output.number === 5 && prior && typeof prior === 'object' && !Array.isArray(prior) &&
-      'hash' in prior && prior.hash === hashText(chapter.content) && 'version' in prior && prior.version === chapter.version;
-    if (!previouslyPublished && (chapter.version !== expected.version || hashText(chapter.content) !== expected.contentHash)) return null;
-    const previousVersions = Array.isArray(chapter.previousVersions) ? chapter.previousVersions : [];
-    const changed = await tx.chapter.updateMany({ where: { id: chapter.id, version: chapter.version, content: chapter.content },
-      data: { content, version: { increment: 1 }, status: 'NEEDS_REVIEW',
-        previousVersions: [...previousVersions, { version: chapter.version, content: chapter.content, createdAt: new Date().toISOString() }].slice(-10),
-        wordCount: content.trim().split(/\s+/).length, lastEditedAt: new Date() } });
-    if (!changed.count) return null;
+    if (!expected) return null;
+    let version: number;
+    if (!chapter) {
+      if (expected.version !== 0 || expected.contentHash !== hashText('')) return null;
+      try {
+        await tx.chapter.create({ data: { projectId: id, number: output.number, title: expected.title,
+          content, version: 1, status: 'NEEDS_REVIEW', wordCount: content.trim().split(/\s+/).length, lastEditedAt: new Date() } });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return null;
+        throw error;
+      }
+      version = 1;
+    } else {
+      const prior = run.published && typeof run.published === 'object' && !Array.isArray(run.published)
+        ? run.published[output.number] : null;
+      const previouslyPublished = output.number === 5 && prior && typeof prior === 'object' && !Array.isArray(prior) &&
+        'hash' in prior && prior.hash === hashText(chapter.content) && 'version' in prior && prior.version === chapter.version;
+      if (!previouslyPublished && (chapter.version !== expected.version || hashText(chapter.content) !== expected.contentHash)) return null;
+      const previousVersions = Array.isArray(chapter.previousVersions) ? chapter.previousVersions : [];
+      const changed = await tx.chapter.updateMany({ where: { id: chapter.id, version: chapter.version, content: chapter.content },
+        data: { content, version: { increment: 1 }, status: 'NEEDS_REVIEW',
+          previousVersions: [...previousVersions, { version: chapter.version, content: chapter.content, createdAt: new Date().toISOString() }].slice(-10),
+          wordCount: content.trim().split(/\s+/).length, lastEditedAt: new Date() } });
+      if (!changed.count) return null;
+      version = chapter.version + 1;
+    }
     const current = await tx.writingRun.findUniqueOrThrow({ where: { id: runId } });
     const published = current.published && typeof current.published === 'object' && !Array.isArray(current.published)
       ? current.published : {};
@@ -50,10 +65,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       !(item && typeof item === 'object' && !Array.isArray(item) &&
         'code' in item && item.code === 'EDIT_CONFLICT' && 'chapter' in item && item.chapter === output.number)) : [];
     await tx.writingRun.update({ where: { id: runId }, data: {
-      published: { ...published, [output.number]: { version: chapter.version + 1, hash: hashText(content) } } as Prisma.InputJsonValue,
+      published: { ...published, [output.number]: { version, hash: hashText(content) } } as Prisma.InputJsonValue,
       findings: findings as Prisma.InputJsonValue, status: findings.length ? 'NEEDS_REVIEW' : 'COMPLETED' } });
-    return { version: chapter.version + 1 };
+    return { version };
   });
   if (!updated) return Response.json({ error: 'Chapter changed since the run started. Save your edits and generate a new draft.' }, { status: 409 });
+  if (run.variant === 'full' && !run.chapterNumber && output.number !== 5) await publishRun(runId);
   return Response.json({ applied: true, chapterNumber: output.number, ...updated });
 }

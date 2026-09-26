@@ -5,7 +5,7 @@ import { hashText, references, renderCitations, validate, type Finding, type Out
 // The generated draft is never allowed to replace existing editor content. A retry is idempotent.
 export async function publishRun(runId: string, db: typeof prisma = prisma) {
   const run = await db.writingRun.findUniqueOrThrow({ where: { id: runId } });
-  if (!['COMPLETED', 'NEEDS_REVIEW'].includes(run.status)) return;
+  if (run.variant !== 'full' || !['COMPLETED', 'NEEDS_REVIEW'].includes(run.status)) return;
   const snapshot = run.snapshot as Snapshot;
   const stages = run.stages as Stages;
   if (!stages.final?.length) return;
@@ -43,7 +43,18 @@ export async function publishRun(runId: string, db: typeof prisma = prisma) {
           ? run.published[output.number] : null;
         if (!output.section && chapter.content === content) return { version: chapter.version, hash: hashText(chapter.content) };
         if (previous && typeof previous === 'object' && !Array.isArray(previous) &&
-          'hash' in previous && previous.hash === hashText(chapter.content)) return { version: chapter.version, hash: hashText(chapter.content) };
+          'hash' in previous && previous.hash === hashText(chapter.content) &&
+          'version' in previous && previous.version === chapter.version) {
+          if (isCompleteDocument && output.number === 5 && chapter.content !== content) {
+            const previousVersions = Array.isArray(chapter.previousVersions) ? chapter.previousVersions : [];
+            const changed = await tx.chapter.updateMany({ where: { id: chapter.id, version: chapter.version, content: chapter.content },
+              data: { content, version: { increment: 1 },
+                previousVersions: [...previousVersions, { version: chapter.version, content: chapter.content, createdAt: new Date().toISOString() }].slice(-10),
+                wordCount: content.trim().split(/\s+/).length, generatedAt: new Date() } });
+            return changed.count ? { version: chapter.version + 1, hash: hashText(content) } : null;
+          }
+          return { version: chapter.version, hash: hashText(chapter.content) };
+        }
         const expected = snapshot.chapters.find(item => item.number === output.number);
         if (!expected || chapter.version !== expected.version || hashText(chapter.content) !== expected.contentHash) return null;
         if (!output.section && chapter.content.trim()) return null;
