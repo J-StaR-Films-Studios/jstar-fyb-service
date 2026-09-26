@@ -48,8 +48,8 @@ export const liveGenerate: Generate = async (stage, prompt, effort) => {
     inputTokens: result.usage?.inputTokens, outputTokens: result.usage?.outputTokens };
 };
 
-export async function assemble(projectId: string, scope: Scope, tonePreference?: string): Promise<Snapshot> {
-  const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId },
+export async function assemble(projectId: string, scope: Scope, tonePreference?: string, db: typeof prisma = prisma): Promise<Snapshot> {
+  const project = await db.project.findUniqueOrThrow({ where: { id: projectId },
     select: { topic: true, abstract: true, outline: { select: { content: true } },
       chapters: { orderBy: { number: 'asc' }, select: { number: true, title: true, content: true, version: true } },
       facts: { orderBy: { id: 'asc' }, select: { kind: true, description: true, evidenceReference: true } },
@@ -73,7 +73,7 @@ export async function assemble(projectId: string, scope: Scope, tonePreference?:
   chapters.sort((a, b) => a.number - b.number);
   if (scope.chapterNumber && !chapters.some(c => c.number === scope.chapterNumber)) throw new Error('Chapter not found');
   if (scope.section && !scope.chapterNumber) throw new Error('A section needs a chapter number');
-  return { topic: compact(project.topic, 500), abstract: project.abstract ? compact(project.abstract, 1200) : null,
+  return { topic: compact(project.topic, 500), abstract: project.abstract,
     outline: project.outline?.content ? compact(project.outline.content, 5000) : null, scope,
     ...(tonePreference ? { tonePreference: compact(tonePreference, 500) } : {}), chapters,
     facts: project.facts.slice(0, 100).map(f => ({ kind: f.kind, description: compact(f.description, 600),
@@ -187,8 +187,9 @@ function targets(snapshot: Snapshot): { number: number; section?: string; title:
     .map(c => ({ number: c.number, title: c.title, ...(snapshot.scope.section ? { section: snapshot.scope.section } : {}) }));
 }
 function promptContext(snapshot: Snapshot, variant: Variant) {
-  if (variant === 'baseline') return JSON.stringify({ topic: snapshot.topic, abstract: snapshot.abstract, chapters: snapshot.chapters, sources: snapshot.sources.map(s => ({ id: s.id, title: s.title, level: s.level })) });
-  return JSON.stringify(snapshot);
+  const abstract = snapshot.abstract ? compact(snapshot.abstract, 1200) : null;
+  if (variant === 'baseline') return JSON.stringify({ topic: snapshot.topic, abstract, chapters: snapshot.chapters, sources: snapshot.sources.map(s => ({ id: s.id, title: s.title, level: s.level })) });
+  return JSON.stringify({ ...snapshot, abstract });
 }
 function asStages(value: Prisma.JsonValue): Stages { return value && typeof value === 'object' && !Array.isArray(value) ? value as Stages : {}; }
 const planSchema = z.object({ chapters: z.array(z.object({ number: z.number().int().min(1).max(5),
@@ -247,7 +248,7 @@ export async function execute(runId: string, generate: Generate = liveGenerate, 
     if (!stages.plan) {
       const planned = targets(snapshot);
       if (planned.length > 1) {
-        const response = await call('plan', `Return JSON only: {"chapters":[{"number":1,"argument":"precise chapter argument","sourceIds":["stored-id"]}]}. Plan the argument of each requested chapter, compare literature rather than list papers, and distinguish planned work from completed facts. Do not invent results, citations or implementation. Use only supplied source IDs. Targets: ${JSON.stringify(planned)} Materials: ${JSON.stringify(snapshot)}`);
+        const response = await call('plan', `Return JSON only: {"chapters":[{"number":1,"argument":"precise chapter argument","sourceIds":["stored-id"]}]}. Plan the argument of each requested chapter, compare literature rather than list papers, and distinguish planned work from completed facts. Do not invent results, citations or implementation. Use only supplied source IDs. Targets: ${JSON.stringify(planned)} Materials: ${promptContext(snapshot, 'full')}`);
         const parsed = planSchema.parse(JSON.parse(response.replace(/^```(?:json)?\s*|\s*```$/g, '')));
         if (planned.some(target => !parsed.chapters.some(chapter => chapter.number === target.number)) ||
           parsed.chapters.some(chapter => chapter.sourceIds.some(id => !snapshot.sources.some(source => source.id === id))))
@@ -291,7 +292,7 @@ export async function execute(runId: string, generate: Generate = liveGenerate, 
     if (await cancelled()) return;
     const candidate = stages.editorial ?? stages.draft ?? [];
     if (variant === 'full' && !stages.factualReview) {
-      stages.factualReview = await call('factualReview', `Return JSON only: {"issues":[{"chapter":1,"excerpt":"exact phrase","problem":"why source or project facts do not support it","uncertain":true}]}. Compare each claim against the supplied passages, source availability levels and approved facts. Look for unsupported claims even when an existing citation ID resolves, invented implementation and results, unwarranted quotations and contradictions. A model judgment is uncertain, not proof. Evidence: ${JSON.stringify(snapshot)} Drafts: ${JSON.stringify(candidate)}`);
+      stages.factualReview = await call('factualReview', `Return JSON only: {"issues":[{"chapter":1,"excerpt":"exact phrase","problem":"why source or project facts do not support it","uncertain":true}]}. Compare each claim against the supplied passages, source availability levels and approved facts. Look for unsupported claims even when an existing citation ID resolves, invented implementation and results, unwarranted quotations and contradictions. A model judgment is uncertain, not proof. Evidence: ${promptContext(snapshot, 'full')} Drafts: ${JSON.stringify(candidate)}`);
       reviewIssues(stages.factualReview); await save();
     }
     if (await cancelled()) return;
@@ -313,7 +314,7 @@ export async function execute(runId: string, generate: Generate = liveGenerate, 
     if (await cancelled()) return;
     stages.final = stages.revision ?? candidate;
     if (variant === 'full' && stages.revision?.some((output, index) => output.text !== candidate[index]?.text) && !stages.postRevisionReview) {
-      stages.postRevisionReview = await call('postRevisionReview', `Return JSON only: {"issues":[{"chapter":1,"excerpt":"exact phrase","problem":"unsupported claim introduced by the revision","uncertain":true}]}. Independently recheck only the revised passages against the supplied passages and approved facts. A model judgment is uncertain, not proof. Evidence: ${JSON.stringify(snapshot)} Before: ${JSON.stringify(candidate)} After: ${JSON.stringify(stages.final)}`);
+      stages.postRevisionReview = await call('postRevisionReview', `Return JSON only: {"issues":[{"chapter":1,"excerpt":"exact phrase","problem":"unsupported claim introduced by the revision","uncertain":true}]}. Independently recheck only the revised passages against the supplied passages and approved facts. A model judgment is uncertain, not proof. Evidence: ${promptContext(snapshot, 'full')} Before: ${JSON.stringify(candidate)} After: ${JSON.stringify(stages.final)}`);
       reviewIssues(stages.postRevisionReview); await save();
     }
     const remainingIssues = stages.postRevisionReview ? reviewIssues(stages.postRevisionReview) : [];

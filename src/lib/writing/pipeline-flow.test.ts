@@ -3,7 +3,7 @@ import { equal, ok, rejects } from 'node:assert/strict';
 import type { Prisma } from '@prisma/client';
 import { checkBibliography, checkExport } from './export-readiness';
 import { publishRun } from './publish';
-import { execute, hashText, renderCitations, PIPELINE_VERSION, type Finding, type Generate, type Snapshot, type Stages } from './pipeline';
+import { assemble, execute, hashText, renderCitations, PIPELINE_VERSION, type Finding, type Generate, type Snapshot, type Stages } from './pipeline';
 import { prisma } from '@/lib/prisma';
 
 function fixture(facts: Snapshot['facts'] = []) {
@@ -132,6 +132,35 @@ test('a whitespace-only snapshot abstract cannot become a verified abstract', as
   await execute(run.id, draft, db);
   await publishRun(run.id, db);
   equal(project.abstract, 'A supported description of the study.');
+});
+
+test('a saved abstract over 1,200 characters stays intact from snapshot through export', async () => {
+  const longAbstract = 'The submitted abstract describes the planned comparison of methods. '.repeat(27) + 'UNIQUE_ABSTRACT_TAIL';
+  const snapshotDb = { project: { findUniqueOrThrow: async () => ({
+    topic: 'Synthetic study', abstract: longAbstract, outline: null, chapters: [], facts: [], documents: []
+  }) } } as unknown as typeof prisma;
+  const assembled = await assemble('project', {}, undefined, snapshotDb);
+  equal(assembled.abstract, longAbstract);
+
+  const { run, snapshot, db, chapters, project } = fixture([
+    { kind: 'artifact_backed', description: 'Results supplied', evidenceReference: 'results' }
+  ]);
+  snapshot.abstract = assembled.abstract;
+  project.abstract = longAbstract;
+  const modelPrompts: string[] = [];
+  const draft: Generate = async (stage, prompt) => {
+    modelPrompts.push(prompt);
+    if (stage === 'plan') return plan;
+    if (stage === 'abstract') throw new Error('An existing abstract must not be regenerated');
+    if (stage === 'editorialReview' || stage === 'factualReview') return '{"issues":[]}';
+    return `Chapter ${prompt.match(/"number":(\d+)/)?.[1]} compares methods [SRC:paper].`;
+  };
+  await execute(run.id, draft, db);
+  await publishRun(run.id, db);
+  equal(run.stages.abstract, longAbstract);
+  equal(project.abstract, longAbstract);
+  ok(modelPrompts.every(prompt => !prompt.includes('UNIQUE_ABSTRACT_TAIL')));
+  ok(checkExport(run, chapters, project.abstract).ready);
 });
 
 test('Chapter 5 references refresh after a prior chapter is explicitly applied', async () => {
