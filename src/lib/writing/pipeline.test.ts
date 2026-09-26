@@ -11,6 +11,16 @@ test('only cited stored sources appear in references; unresolved IDs are flagged
   deepStrictEqual(references(text, snapshot).lines, ['[SRC:one] A. Author. (2020). Example']);
   ok(validate(text, snapshot).some(f => f.code === 'UNRESOLVED_SOURCE'));
 });
+test('references sort by author rather than opaque source IDs', () => {
+  const sources = { ...snapshot, sources: [
+    { ...snapshot.sources[0], id: 'a-source', author: 'Zulu', title: 'Later paper' },
+    { ...snapshot.sources[0], id: 'z-source', author: 'Alpha', title: 'Earlier paper' },
+  ] };
+  deepStrictEqual(references('First [SRC:a-source], then [SRC:z-source].', sources).lines, [
+    '[SRC:z-source] Alpha. (2020). Earlier paper',
+    '[SRC:a-source] Zulu. (2020). Later paper',
+  ]);
+});
 test('narrative and two-author citations cannot bypass stored source IDs', () => {
   for (const citation of ['Smith (2021)', 'Smith and Jones (2021)', '(Smith & Jones, 2021)', '(Smith et al., 2021)'])
     ok(validate(`The method follows ${citation}.`, snapshot).some(finding => finding.code === 'UNTRACKED_CITATION'), citation);

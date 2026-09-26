@@ -112,6 +112,26 @@ test('synthetic project flows through draft, targeted review, revision, validati
   ok(!checkExport(supported.run, supported.chapters.map(chapter => chapter.number === 2 ? { ...chapter, content: `${chapter.content} user edit` } : chapter), supported.project.abstract).ready);
 });
 
+test('baseline planning never sees facts or source passages used by context planning', async () => {
+  const facts: Snapshot['facts'] = [{ kind: 'artifact_backed', description: 'Private results for context only', evidenceReference: 'results' }];
+  const runVariant = async (variant: 'baseline' | 'context') => {
+    const { run, db } = fixture(facts);
+    run.variant = variant;
+    let planningPrompt = '';
+    await execute(run.id, async (stage, prompt) => {
+      if (stage === 'plan') { planningPrompt = prompt; return plan; }
+      return `Chapter ${prompt.match(/"number":(\d+)/)?.[1]} discusses the planned study [SRC:paper].`;
+    }, db);
+    return planningPrompt;
+  };
+  const baseline = await runVariant('baseline');
+  const context = await runVariant('context');
+  ok(!baseline.includes('Private results for context only'));
+  ok(!baseline.includes('The study compares two methods.'));
+  ok(context.includes('Private results for context only'));
+  ok(context.includes('The study compares two methods.'));
+});
+
 test('comparison drafts never publish automatically', async () => {
   const { run, db, chapters } = fixture();
   run.variant = 'baseline'; run.status = 'COMPLETED';

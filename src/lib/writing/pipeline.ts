@@ -150,16 +150,16 @@ export function validate(text: string, snapshot: Snapshot, before?: string): Fin
   return findings;
 }
 export function references(text: string, snapshot: Snapshot): { lines: string[]; findings: Finding[] } {
-  const lines: string[] = []; const findings: Finding[] = [];
+  const entries: { id: string; text: string }[] = []; const findings: Finding[] = [];
   for (const id of new Set(ids(text))) {
     const source = snapshot.sources.find(s => s.id === id);
     if (!source) continue;
     if (!source.title || !source.author || !source.year) {
       findings.push({ code: 'INCOMPLETE_REFERENCE', detail: `Source ${id} needs title, author and year before it can be cited`, severity: 'error' });
     }
-    lines.push(`[SRC:${id}] ${[source.author, source.year && `(${source.year})`, source.title, source.venue, source.doi && `doi:${source.doi}`, source.url].filter(Boolean).join('. ')}`);
+    entries.push({ id, text: [source.author, source.year && `(${source.year})`, source.title, source.venue, source.doi && `doi:${source.doi}`, source.url].filter(Boolean).join('. ') });
   }
-  return { lines: lines.sort((a, b) => a.localeCompare(b)), findings };
+  return { lines: entries.sort((a, b) => a.text.localeCompare(b.text)).map(({ id, text }) => `[SRC:${id}] ${text}`), findings };
 }
 export function renderCitations(text: string, snapshot: Snapshot): string {
   return text.replace(/\[SRC:([^\]]+)\]/g, (marker, id: string) => {
@@ -249,7 +249,7 @@ export async function execute(runId: string, generate: Generate = liveGenerate, 
     if (!stages.plan) {
       const planned = targets(snapshot);
       if (planned.length > 1) {
-        const response = await call('plan', `Return JSON only: {"chapters":[{"number":1,"argument":"precise chapter argument","sourceIds":["stored-id"]}]}. Plan the argument of each requested chapter, compare literature rather than list papers, and distinguish planned work from completed facts. Do not invent results, citations or implementation. Use only supplied source IDs. Targets: ${JSON.stringify(planned)} Materials: ${promptContext(snapshot, 'full')}`);
+        const response = await call('plan', `Return JSON only: {"chapters":[{"number":1,"argument":"precise chapter argument","sourceIds":["stored-id"]}]}. Plan the argument of each requested chapter, compare literature rather than list papers, and distinguish planned work from completed facts. Do not invent results, citations or implementation. Use only supplied source IDs. Targets: ${JSON.stringify(planned)} Materials: ${promptContext(snapshot, variant)}`);
         const parsed = planSchema.parse(JSON.parse(response.replace(/^```(?:json)?\s*|\s*```$/g, '')));
         if (planned.some(target => !parsed.chapters.some(chapter => chapter.number === target.number)) ||
           parsed.chapters.some(chapter => chapter.sourceIds.some(id => !snapshot.sources.some(source => source.id === id))))
