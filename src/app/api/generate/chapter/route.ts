@@ -8,6 +8,8 @@ import { selectModel } from '@/lib/ai';
 import { getChapterSpecificPrompt, COMMON_ACADEMIC_RULES } from '@/features/bot/prompts/chapterPrompts';
 import { logger } from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rate-limit';
+import { assemble, execute, hash, writingSettings, PIPELINE_VERSION } from '@/lib/writing/pipeline';
+import { publishRun } from '@/lib/writing/publish';
 
 export const maxDuration = 300; // Increased duration for RAG
 
@@ -20,7 +22,7 @@ const requestSchema = z.object({
 
 // Helper to parse sections from markdown
 function parseSections(markdown: string) {
-    const sections: any[] = [];
+    const sections: { title: string; content: string; order: number }[] = [];
     const lines = markdown.split('\n');
     let currentSection: { title: string; content: string } | null = null;
     let order = 0;
@@ -50,83 +52,21 @@ function parseSections(markdown: string) {
     return sections;
 }
 
-// Helper to build APA-style References section from grounding chunks
-function buildReferencesSection(groundingChunks: any[]): string {
-    if (!groundingChunks || groundingChunks.length === 0) return '';
-
-    const seen = new Set<string>();
-    const references: string[] = [];
-
-    for (const chunk of groundingChunks) {
-        const ctx = chunk.retrievedContext;
-        if (!ctx) continue;
-
-        // Extract title/filename and URI
-        const title = ctx.title || ctx.displayName || 'Unknown Source';
-        const uri = ctx.uri || '';
-
-        // Avoid duplicates
-        const key = title.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        // Format as APA-style reference
-        // Try to extract author/year from title if possible (e.g., "Smith2023_Paper.pdf")
-        const match = title.match(/^([A-Za-z]+)(\d{4})/);
-        if (match) {
-            const author = match[1];
-            const year = match[2];
-            references.push(`- ${author}, (${year}). *${title}*.`);
-        } else {
-            references.push(`- *${title}*.`);
-        }
-    }
-
-    if (references.length === 0) return '';
-
-    return `## References\n\n${references.join('\n')}`;
-}
-
 // Database saving helper
 async function saveChapterToDb(projectId: string, chapterNumber: number, text: string) {
     const sections = parseSections(text);
     const wordCount = text.split(/\s+/).length;
 
-    try {
-        await prisma.chapter.upsert({
-            where: {
-                projectId_number: {
-                    projectId,
-                    number: chapterNumber
-                }
-            },
-            update: {
-                content: text,
-                sections: sections,
-                wordCount,
-                status: 'GENERATED',
-                lastEditedAt: new Date(),
-            },
-            create: {
-                projectId,
-                number: chapterNumber,
-                title: `Chapter ${chapterNumber}`,
-                content: text,
-                sections: sections,
-                wordCount,
-                status: 'GENERATED',
-                version: 1,
-            }
-        });
-
-        await prisma.project.update({
-            where: { id: projectId },
-            data: { updatedAt: new Date() }
-        });
-        logger.info('Chapter saved successfully', '[GenerateChapter]');
-    } catch (dbError) {
-        logger.error(dbError, '[GenerateChapter]');
+    const existing = await prisma.chapter.findUnique({ where: { projectId_number: { projectId, number: chapterNumber } } });
+    if (existing) {
+        const updated = await prisma.chapter.updateMany({ where: { id: existing.id, version: existing.version, content: '' },
+            data: { content: text, sections, wordCount, status: 'GENERATED', generatedAt: new Date() } });
+        if (!updated.count) throw new Error('Chapter was edited while generation was running');
+    } else {
+        await prisma.chapter.create({ data: { projectId, number: chapterNumber, title: `Chapter ${chapterNumber}`,
+            content: text, sections, wordCount, status: 'GENERATED', version: 1 } });
     }
+    logger.info('Chapter saved successfully', '[GenerateChapter]');
 }
 
 export async function POST(req: Request) {
@@ -180,6 +120,37 @@ export async function POST(req: Request) {
             });
         }
 
+        if (process.env.ACADEMIC_PIPELINE_ENABLED === 'true') {
+            const snapshot = await assemble(projectId, { chapterNumber });
+            const idempotencyKey = hash({ projectId, chapterNumber, snapshot });
+            let run = await prisma.writingRun.findUnique({ where: { projectId_idempotencyKey: { projectId, idempotencyKey } } });
+            if (!run) {
+                try {
+                    run = await prisma.writingRun.create({ data: { projectId, idempotencyKey,
+                        requestHash: idempotencyKey, variant: 'full', chapterNumber, pipelineVersion: PIPELINE_VERSION,
+                        settings: writingSettings(), snapshot, snapshotHash: hash(snapshot) } });
+                } catch {
+                    run = await prisma.writingRun.findUnique({ where: { projectId_idempotencyKey: { projectId, idempotencyKey } } });
+                    if (!run) throw new Error('Could not create writing run');
+                }
+            }
+            if (run.status === 'PENDING') {
+                try { await execute(run.id); await publishRun(run.id); }
+                catch { /* run keeps its failed stage for explicit resume */ }
+            }
+            const latest = await prisma.writingRun.findUniqueOrThrow({ where: { id: run.id } });
+            const chapter = await prisma.chapter.findUnique({ where: { projectId_number: { projectId, number: chapterNumber } } });
+            if (latest.status === 'FAILED') return Response.json({ error: 'Writing provider failed; resume the run', runId: run.id }, { status: 503 });
+            const published = latest.published;
+            if (!chapter || !published || typeof published !== 'object' || Array.isArray(published) || !published[chapterNumber])
+                return Response.json({ error: 'Draft needs review before it can replace the saved chapter', runId: run.id, findings: latest.findings }, { status: 409 });
+            return new Response(chapter.content, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+        }
+
+        const existingChapter = await prisma.chapter.findUnique({ where: { projectId_number: { projectId, number: chapterNumber } }, select: { content: true } });
+        if (existingChapter?.content.trim())
+            return Response.json({ error: 'Chapter has existing edits. Preserve it and use a writing run to compare a new draft.' }, { status: 409 });
+
         // 4. Use Builder AI service to generate chapter context string
         // This now includes injected summaries if available
         const aiGeneratedContext = await BuilderAiService.generateChapterContent(
@@ -190,9 +161,7 @@ export async function POST(req: Request) {
 
         // 4b. Format Project Outline for Context
         // This ensures the AI knows the global structure (what came before, what comes after)
-        const outlineContext = Array.isArray(project.outline)
-            ? (project.outline as any[]).map((c: any) => `Chapter ${c.number}: ${c.title}`).join('\n')
-            : "No outline available.";
+        const outlineContext = project.outline?.content || 'No outline available.';
 
         // 4c. Fetch Neighboring Chapters for "Vibe" Continuity
         // We get the previous chapter (to flow from) and next chapter (to lead into)
@@ -311,13 +280,12 @@ export async function POST(req: Request) {
 
         const encoder = new TextEncoder();
         let fullText = '';
-        let groundingChunks: any[] = [];
 
         const stream = new ReadableStream({
             async start(controller) {
                 try {
                     for await (const chunk of geminiStreamResult) {
-                        const candidate = (chunk as any).candidates?.[0];
+                        const candidate = chunk.candidates?.[0];
 
                         // Manually extract text from parts to avoid SDK warnings about executableCode
                         // and to ensure we get all text content
@@ -330,28 +298,11 @@ export async function POST(req: Request) {
                             }
                         }
 
-                        // Extract grounding metadata (typically in final chunk or when relevant)
-                        if (candidate?.groundingMetadata?.groundingChunks) {
-                            groundingChunks = candidate.groundingMetadata.groundingChunks;
-                        }
                     }
 
-                    // Build References section from grounding chunks
-                    // FIX: Only append References for the final chapter (Chapter 5)
-                    let finalContent = fullText;
-                    if (groundingChunks.length > 0 && chapterNumber >= 5) {
-                        const references = buildReferencesSection(groundingChunks);
-                        if (references) {
-                            finalContent = fullText + '\n\n' + references;
-                            // Stream the references section to client
-                            controller.enqueue(encoder.encode('\n\n' + references));
-                        }
-                    }
-
-                    // Save on completion with references included
-                    if (finalContent) {
-                        await saveChapterToDb(projectId, chapterNumber, finalContent);
-                    }
+                    // Grounding metadata has no dependable author/year or document-wide citation set.
+                    // Never synthesize a bibliography from retrieved filenames.
+                    if (fullText) await saveChapterToDb(projectId, chapterNumber, fullText);
 
                     controller.close();
                 } catch (err) {

@@ -62,7 +62,7 @@ export class BuilderAiService {
         } catch (error) {
             console.error('[BuilderAiService] Error generating abstract:', error);
             // Fallback to simple abstract
-            return `This project titled "${topic}" aims to solve critical challenges in the domain by leveraging modern web technologies. The system utilizes a microservices architecture to ensure scalability and robustness. Key features include real-time data processing, an intuitive user interface, and secure authentication mechanisms. The expected outcome is a fully functional prototype that demonstrates the efficacy of the proposed solution in improving operational efficiency by 40%.`;
+            return `This project examines "${topic}". Methods, implementation details and evaluation results must be supplied before they can be reported as completed work.`;
         }
     }
 

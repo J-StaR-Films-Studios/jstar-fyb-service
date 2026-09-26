@@ -6,6 +6,7 @@ import { Download, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import mermaid from 'mermaid';
 import { downloadPdf, PdfExportOptions } from '@/lib/pdf-export-service';
+import { documentMarkdown, fetchSavedExportDocument, requireReadyToExport } from '@/lib/writing/client-export';
 
 interface ExportPanelProps {
   projectId: string;
@@ -32,8 +33,14 @@ export function ExportPanel({ projectId, projectTitle, content }: ExportPanelPro
     }
 
     try {
+      await requireReadyToExport(projectId);
       if (exportType === 'pdf') {
-        // PDF Export (Client-side)
+        // When validation is enabled, export exactly the saved chapters checked by the server.
+        let pdfContent = content || '';
+        if (process.env.NEXT_PUBLIC_ACADEMIC_PIPELINE_ENABLED === 'true') {
+          const saved = await fetchSavedExportDocument(projectId);
+          pdfContent = documentMarkdown(saved.abstract, saved.chapters);
+        }
         const pdfFilename = projectTitle 
           ? `${projectTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`
           : `project-${projectId.slice(0, 6)}`;
@@ -47,7 +54,7 @@ export function ExportPanel({ projectId, projectTitle, content }: ExportPanelPro
           includeTitle: !!projectTitle,
         };
 
-        await downloadPdf(content || '', pdfFilename, projectTitle, pdfOptions);
+        await downloadPdf(pdfContent, pdfFilename, projectTitle, pdfOptions);
         toast.success('PDF exported successfully!');
       } else {
         // DOCX Export (existing logic)
@@ -138,7 +145,7 @@ export function ExportPanel({ projectId, projectTitle, content }: ExportPanelPro
 
     } catch (error) {
       console.error(error);
-      toast.error('Failed to export document');
+      toast.error(error instanceof Error ? error.message : 'Failed to export document');
     } finally {
       setIsExporting(false);
     }

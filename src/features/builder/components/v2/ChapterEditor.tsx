@@ -23,6 +23,8 @@ import { generateMarkdownBlob, downloadFile, sanitizeFilename, ExportOptions } f
 import { type Editor as TipTapEditor } from '@tiptap/core';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { WritingComparisonPanel } from './WritingComparisonPanel';
+import { documentMarkdown, fetchSavedExportDocument, requireReadyToExport } from '@/lib/writing/client-export';
 
 interface Chapter {
     id: string;
@@ -59,6 +61,8 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
     // State
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [activeChapterNumber, setActiveChapterNumber] = useState(1);
+    const activeChapterNumberRef = useRef(activeChapterNumber);
+    useEffect(() => { activeChapterNumberRef.current = activeChapterNumber; }, [activeChapterNumber]);
     const [projectTitle, setProjectTitle] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
@@ -86,6 +90,9 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
     // Export State
     const [showExportModal, setShowExportModal] = useState(initialTab === 'export');
     const [isExporting, setIsExporting] = useState(false);
+    const [showWritingComparison, setShowWritingComparison] = useState(false);
+    const [comparisonHasUnsavedEdits, setComparisonHasUnsavedEdits] = useState(false);
+    const writingEnabled = process.env.NEXT_PUBLIC_ACADEMIC_PIPELINE_ENABLED === 'true';
 
     // Editor Ref for Inline Insertion
     const editorRef = useRef<TipTapEditor | null>(null);
@@ -100,12 +107,22 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
     }, []);
 
     const handleServerSideExport = async (format: 'markdown' | 'docx', options: ExportOptions) => {
+        try { await requireReadyToExport(projectId); }
+        catch (error) { toast.error(error instanceof Error ? error.message : 'Could not check export readiness'); return; }
         if (format === 'markdown') {
-            // Fallback to client-side for MD as it's simple
-            const fullContent = chapters
-                .sort((a, b) => a.number - b.number)
-                .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`)
-                .join('\n\n');
+            let fullContent: string;
+            try {
+                if (writingEnabled) {
+                    const saved = await fetchSavedExportDocument(projectId);
+                    fullContent = documentMarkdown(saved.abstract, saved.chapters);
+                } else {
+                    fullContent = [...chapters].sort((a, b) => a.number - b.number)
+                        .map(c => `# Chapter ${c.number}: ${c.title}\n\n${c.content}`).join('\n\n');
+                }
+            } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Could not fetch saved document');
+                return;
+            }
             const title = projectTitle || 'Project Export';
             const blob = generateMarkdownBlob(fullContent, title);
             downloadFile(blob, `${sanitizeFilename(title)}.md`);
@@ -260,7 +277,17 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                 // Only update state if different to prevent re-renders/cursor jumps? 
                 // React handles this usually, but strictly speaking deep comparison would be better.
                 // For now, straight set is safely handled by React batching.
-                setChapters(mappedChapters);
+                setChapters(previous => mappedChapters.map(chapter => {
+                    // Polling must not replace text still in the editor or awaiting a save.
+                    const local = previous.find(c => c.number === chapter.number);
+                    const active = chapter.number === activeChapterNumberRef.current;
+                    const editorText = active ? editorRef.current?.storage.markdown?.getMarkdown?.() : undefined;
+                    if (isPolling && local && active &&
+                        (pendingContentRef.current === local.content || editorText !== undefined && editorText !== local.content)) {
+                        return { ...chapter, content: local.content, wordCount: local.wordCount, subsections: local.subsections };
+                    }
+                    return chapter;
+                }));
             } else {
                 // ... (Empty logic same as before)
                 const emptyChapters: Chapter[] = Array.from({ length: 5 }, (_, i) => ({
@@ -321,6 +348,7 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
             });
 
             if (response.ok) {
+                if (pendingContentRef.current === content) pendingContentRef.current = null;
                 setSaveStatus('saved');
                 setLastSavedAt(new Date());
             } else {
@@ -438,6 +466,13 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
     }, [projectId, saveChapterContent]);
 
     const activeChapter = chapters.find(c => c.number === activeChapterNumber);
+    const openWritingComparison = () => {
+        const editorText = editorRef.current?.storage.markdown?.getMarkdown?.();
+        setComparisonHasUnsavedEdits(saveStatus === 'saving' || saveStatus === 'error' || pendingContentRef.current !== null
+            || (mobileView === 'editor' && !isDesktop)
+            || (isDesktop && !!activeChapter && editorText !== undefined && editorText !== activeChapter.content));
+        setShowWritingComparison(true);
+    };
 
     const handleMobileTabChange = (tab: 'write' | 'research' | 'chat' | 'diagrams' | 'settings') => {
         if (tab === 'write') {
@@ -489,6 +524,10 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                                         }}
                                     />
                                 )}
+                                {writingEnabled && <button onClick={openWritingComparison}
+                                    className="px-3 py-1.5 rounded-full border border-white/10 text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5">
+                                    Writing runs
+                                </button>}
                                 <button
                                     onClick={() => setShowExportModal(true)}
                                     className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"
@@ -604,6 +643,8 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                         onClose={() => setShowEnhancePopover(false)}
                     />
                 )}
+                {writingEnabled && showWritingComparison && <WritingComparisonPanel projectId={projectId}
+                    hasUnsavedEdits={comparisonHasUnsavedEdits} onClose={() => { setShowWritingComparison(false); if (!comparisonHasUnsavedEdits) void fetchData(); }} />}
                 <DownloadOptionsModal
                     isOpen={showExportModal}
                     onClose={() => setShowExportModal(false)}
@@ -623,6 +664,7 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                         <ChevronLeft className="w-3 h-3" /> Back to Dashboard
                     </Link>
                     <h1 className="font-display font-bold text-2xl leading-tight text-white line-clamp-2 max-w-[200px]">{projectTitle || "Workspace"}</h1>
+                    {writingEnabled && <button onClick={openWritingComparison} className="self-start text-xs text-primary underline mt-2">Writing runs</button>}
                 </div>
                 <div className="pointer-events-auto mt-2 shrink-0">
                     <SaveStatusBadge
@@ -738,6 +780,8 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                 />
             )}
 
+            {writingEnabled && showWritingComparison && <WritingComparisonPanel projectId={projectId}
+                hasUnsavedEdits={comparisonHasUnsavedEdits} onClose={() => { setShowWritingComparison(false); if (!comparisonHasUnsavedEdits) void fetchData(); }} />}
             <DownloadOptionsModal
                 isOpen={showExportModal}
                 onClose={() => setShowExportModal(false)}
