@@ -25,7 +25,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       references(output.text, snapshot).findings.some(finding => finding.severity === 'error'))
     return Response.json({ error: 'Unresolved citation or evidence errors prevent applying this draft' }, { status: 409 });
   const expected = snapshot.chapters.find(chapter => chapter.number === output.number);
-  const bibliography = references(stages.final?.map(item => item.text).join('\n') ?? '', snapshot).lines
+  const bibliography = references([stages.abstract ?? '', ...(stages.final?.map(item => item.text) ?? [])].join('\n'), snapshot).lines
     .map(line => line.replace(/^\[SRC:[^\]]+\] /, ''));
   const content = renderCitations(output.text, snapshot) +
     (!run.chapterNumber && output.number === 5 && bibliography.length ? `\n\n## References\n\n${bibliography.join('\n')}` : '');

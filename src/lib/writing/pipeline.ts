@@ -309,8 +309,6 @@ export async function execute(runId: string, generate: Generate = liveGenerate, 
         stages.revision.push({ ...output, text: safe, references: references(safe, snapshot).lines });
         await save();
       }
-      for (const issue of issues) findings.push({ code: 'MODEL_EVIDENCE_CONCERN', chapter: issue.chapter,
-        detail: `${issue.excerpt}: ${issue.problem}. Model assessment needs human review.`, severity: 'warning' });
     }
     if (await cancelled()) return;
     stages.final = stages.revision ?? candidate;
@@ -318,9 +316,19 @@ export async function execute(runId: string, generate: Generate = liveGenerate, 
       stages.postRevisionReview = await call('postRevisionReview', `Return JSON only: {"issues":[{"chapter":1,"excerpt":"exact phrase","problem":"unsupported claim introduced by the revision","uncertain":true}]}. Independently recheck only the revised passages against the supplied passages and approved facts. A model judgment is uncertain, not proof. Evidence: ${JSON.stringify(snapshot)} Before: ${JSON.stringify(candidate)} After: ${JSON.stringify(stages.final)}`);
       reviewIssues(stages.postRevisionReview); await save();
     }
-    if (stages.postRevisionReview) for (const issue of reviewIssues(stages.postRevisionReview))
+    const remainingIssues = stages.postRevisionReview ? reviewIssues(stages.postRevisionReview) : [];
+    for (const issue of remainingIssues)
       findings.push({ code: 'POST_REVISION_CONCERN', chapter: issue.chapter, severity: 'error',
         detail: `${issue.excerpt}: ${issue.problem}. Model concern needs review; this chapter was not published.` });
+    if (variant === 'full' && stages.factualReview) for (const issue of reviewIssues(stages.factualReview)) {
+      const revised = stages.final.find(output => output.number === issue.chapter);
+      const repaired = revised && stages.postRevisionReview && issue.excerpt.trim() &&
+        candidate.find(output => output.number === issue.chapter)?.text.includes(issue.excerpt) &&
+        !revised.text.includes(issue.excerpt) && !remainingIssues.some(item => item.chapter === issue.chapter) &&
+        !findings.some(finding => finding.code === 'REVISION_REJECTED' && finding.chapter === issue.chapter);
+      if (!repaired) findings.push({ code: 'MODEL_EVIDENCE_CONCERN', chapter: issue.chapter,
+        detail: `${issue.excerpt}: ${issue.problem}. Model assessment needs human review.`, severity: 'warning' });
+    }
     for (const output of stages.final) {
       findings.push(...[...validate(output.text, snapshot), ...references(output.text, snapshot).findings]
         .map(finding => ({ ...finding, chapter: output.number })));
@@ -345,7 +353,8 @@ export async function execute(runId: string, generate: Generate = liveGenerate, 
     }
     if (!snapshot.scope.chapterNumber && variant === 'full') {
       if (!stages.abstract) findings.push({ code: 'MISSING_ABSTRACT', severity: 'warning', detail: 'The abstract cannot be assembled until draft errors are resolved.' });
-      else findings.push(...validate(stages.abstract, snapshot).map(finding => ({ ...finding, chapter: 0 })));
+      else findings.push(...[...validate(stages.abstract, snapshot), ...references(stages.abstract, snapshot).findings]
+        .map(finding => ({ ...finding, chapter: 0 })));
     }
     await db.writingRun.updateMany({ where: { id: runId, status: 'RUNNING' }, data: { stages: stages as Prisma.InputJsonValue,
       findings: findings as Prisma.InputJsonValue,

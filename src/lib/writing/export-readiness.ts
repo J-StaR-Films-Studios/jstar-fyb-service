@@ -26,7 +26,7 @@ export function checkExport(run: { status: string; findings: Prisma.JsonValue; p
 export function checkBibliography(snapshot: Snapshot, stages: Stages,
   chapters: { number: number; content: string }[]) {
   if (!stages.final?.length) return false;
-  const cited = references(stages.final.map(output => output.text).join('\n'), snapshot);
+  const cited = references([stages.abstract ?? '', ...stages.final.map(output => output.text)].join('\n'), snapshot);
   if (cited.findings.some(finding => finding.severity === 'error')) return false;
   const expected = cited.lines.map(line => line.replace(/^\[SRC:[^\]]+\] /, ''));
   const last = chapters.find(chapter => chapter.number === 5)?.content ?? '';

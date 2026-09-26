@@ -11,6 +11,11 @@ export async function publishRun(runId: string, db: typeof prisma = prisma) {
   if (!stages.final?.length) return;
   const findings: Finding[] = Array.isArray(run.findings) ? run.findings as Finding[] : [];
   const published: Record<string, { hash: string; version: number }> = {};
+  const savedAbstract = run.variant === 'full' && stages.abstract
+    ? (await db.project.findUniqueOrThrow({ where: { id: run.projectId }, select: { abstract: true } })).abstract : null;
+  const renderedAbstract = stages.abstract ? renderCitations(stages.abstract, snapshot) : null;
+  const citedAbstract = renderedAbstract && !findings.some(finding => finding.severity === 'error' && finding.chapter === 0) &&
+    (!savedAbstract || savedAbstract === renderedAbstract) ? stages.abstract : '';
   const publishedOutputs: Output[] = [];
   for (const output of [...stages.final].sort((a, b) => a.number - b.number)) {
     if (findings.some(finding => finding.severity === 'error' && (!finding.chapter || finding.chapter === output.number)) ||
@@ -18,7 +23,7 @@ export async function publishRun(runId: string, db: typeof prisma = prisma) {
       references(output.text, snapshot).findings.some(finding => finding.severity === 'error')) continue;
     const isCompleteDocument = !snapshot.scope.chapterNumber && stages.final.length === 5;
     const bibliography = isCompleteDocument && output.number === 5
-      ? references([...publishedOutputs, output].map(item => item.text).join('\n'), snapshot).lines
+      ? references([citedAbstract, ...[...publishedOutputs, output].map(item => item.text)].join('\n'), snapshot).lines
         .map(line => line.replace(/^\[SRC:[^\]]+\] /, '')) : [];
     const content = renderCitations(output.text, snapshot) +
       (bibliography.length ? `\n\n## References\n\n${bibliography.join('\n')}` : '');
@@ -69,13 +74,13 @@ export async function publishRun(runId: string, db: typeof prisma = prisma) {
           detail: `Chapter ${output.number} has content or was edited since this run started. Generated draft remains in the comparison view.`, severity: 'warning' });
     }
   }
-  if (run.variant === 'full' && !snapshot.scope.chapterNumber && stages.abstract &&
+  if (run.variant === 'full' && !snapshot.scope.chapterNumber && renderedAbstract &&
     !findings.some(finding => finding.severity === 'error' && finding.chapter === 0)) {
     const project = await db.project.findUniqueOrThrow({ where: { id: run.projectId }, select: { abstract: true } });
-    if (project.abstract === stages.abstract) published.abstract = { hash: hashText(stages.abstract), version: 0 };
+    if (project.abstract === renderedAbstract) published.abstract = { hash: hashText(renderedAbstract), version: 0 };
     else if (!project.abstract) {
-      const result = await db.project.updateMany({ where: { id: run.projectId, abstract: project.abstract }, data: { abstract: stages.abstract } });
-      if (result.count) published.abstract = { hash: hashText(stages.abstract), version: 0 };
+      const result = await db.project.updateMany({ where: { id: run.projectId, abstract: project.abstract }, data: { abstract: renderedAbstract } });
+      if (result.count) published.abstract = { hash: hashText(renderedAbstract), version: 0 };
     }
     if (!published.abstract) findings.push({ code: 'ABSTRACT_EDIT_CONFLICT', severity: 'warning',
       detail: 'The saved abstract changed during generation. It was preserved; inspect and rerun validation.' });

@@ -130,6 +130,13 @@ Return ONLY a valid JSON object with the following fields. Do not include markdo
         const authors = Array.isArray(metadata.authors) ? metadata.authors.filter(visible) : [];
         const year = typeof metadata.year === 'string' && /^(19|20)\d{2}$/.test(metadata.year) &&
             normalizedText.includes(metadata.year) ? metadata.year : null;
+        const analysis = {
+            objective: metadata.objective, motivation: metadata.motivation,
+            methodology: metadata.methodology, contribution: metadata.contribution,
+            limitations: metadata.limitations
+        };
+        const analysisSummary = Object.values(analysis).some(value => typeof value === 'string' && value.trim())
+            ? JSON.stringify(analysis) : null;
         const updatedDoc = await prisma.researchDocument.update({
             where: { id },
             data: {
@@ -143,7 +150,7 @@ Return ONLY a valid JSON object with the following fields. Do not include markdo
                 limitations: doc.limitations || metadata.limitations || null,
                 documentType: doc.documentType || metadata.documentType || null,
                 category: doc.category || metadata.category || null,
-                summary: doc.summary || (typeof metadata.objective === 'string' ? metadata.objective.slice(0, 1500) : null),
+                summary: doc.summary || analysisSummary,
                 verification: doc.verification ?? 'UNVERIFIED',
                 evidenceLimitations: doc.evidenceLimitations || 'Bibliographic fields were extracted by a model from uploaded text and need confirmation.',
                 status: 'PROCESSED',

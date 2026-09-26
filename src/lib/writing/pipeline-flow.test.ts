@@ -104,6 +104,55 @@ test('synthetic project flows through draft, targeted review, revision, validati
   ok(!checkExport(supported.run, supported.chapters.map(chapter => chapter.number === 2 ? { ...chapter, content: `${chapter.content} user edit` } : chapter), supported.project.abstract).ready);
 });
 
+test('an abstract-only citation renders and appears in the saved bibliography', async () => {
+  const { run, snapshot, db, chapters, project } = fixture([
+    { kind: 'artifact_backed', description: 'Results supplied', evidenceReference: 'results' }
+  ]);
+  snapshot.sources.push({ ...snapshot.sources[0], id: 'other', title: 'Abstract-only paper', author: 'Kim' });
+  const draft: Generate = (stage, prompt) => Promise.resolve(stage === 'plan' ? plan
+    : stage === 'abstract' ? 'The analysis compares methods [SRC:other].'
+      : stage === 'editorialReview' || stage === 'factualReview' ? '{"issues":[]}'
+        : `Chapter ${prompt.match(/"number":(\d+)/)?.[1]} compares methods [SRC:paper].`);
+  await execute(run.id, draft, db);
+  await publishRun(run.id, db);
+  ok(project.abstract?.includes('(Kim, 2022)'));
+  ok(!project.abstract?.includes('[SRC:other]'));
+  ok(chapters[4].content.includes('Abstract-only paper'));
+  ok(checkExport(run, chapters, project.abstract).ready);
+  ok(checkBibliography(snapshot, run.stages, chapters));
+});
+
+test('an abstract citation with incomplete source metadata is not published', async () => {
+  const { run, snapshot, db, project } = fixture([
+    { kind: 'artifact_backed', description: 'Results supplied', evidenceReference: 'results' }
+  ]);
+  snapshot.sources.push({ ...snapshot.sources[0], id: 'incomplete', author: null });
+  const draft: Generate = (stage, prompt) => Promise.resolve(stage === 'plan' ? plan
+    : stage === 'abstract' ? 'The analysis compares methods [SRC:incomplete].'
+      : stage === 'editorialReview' || stage === 'factualReview' ? '{"issues":[]}'
+        : `Chapter ${prompt.match(/"number":(\d+)/)?.[1]} compares methods [SRC:paper].`);
+  await execute(run.id, draft, db);
+  await publishRun(run.id, db);
+  ok(run.findings.some(finding => finding.code === 'INCOMPLETE_REFERENCE' && finding.chapter === 0));
+  equal(project.abstract, null);
+});
+
+test('a removed unsupported passage does not leave an unresolved warning', async () => {
+  const { run, db } = fixture([{ kind: 'artifact_backed', description: 'Results supplied', evidenceReference: 'results' }]);
+  const draft: Generate = async (stage, prompt) => {
+    if (stage === 'plan') return plan;
+    if (stage === 'abstract') return 'This study compares methods.';
+    if (stage === 'factualReview') return '{"issues":[{"chapter":1,"excerpt":"unsupported statement","problem":"Not supplied","uncertain":true}]}';
+    if (stage === 'editorialReview' || stage === 'postRevisionReview') return '{"issues":[]}';
+    if (stage === 'revision') return 'The supplied abstract compares methods [SRC:paper].';
+    const number = Number(prompt.match(/Write an academic draft for \{"number":(\d+)/)?.[1]);
+    return `Chapter ${number} ${number === 1 ? 'includes an unsupported statement' : 'compares methods'} [SRC:paper].`;
+  };
+  await execute(run.id, draft, db);
+  ok(!run.findings.some(finding => finding.code === 'MODEL_EVIDENCE_CONCERN'));
+  equal(run.status, 'COMPLETED');
+});
+
 test('rejected chapters cannot contribute orphaned bibliography entries', async () => {
   const { run, db, snapshot, chapters } = fixture([{ kind: 'artifact_backed', description: 'Results supplied', evidenceReference: 'results' }]);
   snapshot.sources.push({ ...snapshot.sources[0], id: 'incomplete', author: null, title: 'Incomplete metadata' });
