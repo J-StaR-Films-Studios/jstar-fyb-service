@@ -11,6 +11,11 @@ test('only cited stored sources appear in references; unresolved IDs are flagged
   deepStrictEqual(references(text, snapshot).lines, ['[SRC:one] A. Author. (2020). Example']);
   ok(validate(text, snapshot).some(f => f.code === 'UNRESOLVED_SOURCE'));
 });
+test('narrative and two-author citations cannot bypass stored source IDs', () => {
+  for (const citation of ['Smith (2021)', 'Smith and Jones (2021)', '(Smith & Jones, 2021)', '(Smith et al., 2021)'])
+    ok(validate(`The method follows ${citation}.`, snapshot).some(finding => finding.code === 'UNTRACKED_CITATION'), citation);
+  ok(!validate('The method follows [SRC:one].', snapshot).some(finding => finding.code === 'UNTRACKED_CITATION'));
+});
 test('revision rejects changed numbers and non-full-text overclaims', () => {
   const findings = validate('Table 2 shows 43% in the entire study [SRC:one].', snapshot, '42% [SRC:one]');
   ok(findings.some(f => f.code === 'CHANGED_NUMBER'));

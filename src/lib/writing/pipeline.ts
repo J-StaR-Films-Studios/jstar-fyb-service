@@ -108,7 +108,7 @@ export function validate(text: string, snapshot: Snapshot, before?: string): Fin
   const findings: Finding[] = [];
   const sourceIds = new Set(snapshot.sources.map(s => s.id));
   for (const id of new Set(ids(text))) if (!sourceIds.has(id)) findings.push({ code: 'UNRESOLVED_SOURCE', detail: id, severity: 'error' });
-  if (/\([A-Z][\p{L} -]+(?:et al\.)?,\s*\d{4}\)/u.test(text))
+  if (/\b[A-Z][\p{L}'’-]+(?:\s+(?:&|and)\s+[A-Z][\p{L}'’-]+|\s+et al\.)?\s*\(\s*(?:19|20)\d{2}[a-z]?\s*\)|\(\s*[A-Z][\p{L}'’-]+(?:\s+(?:&|and)\s+[A-Z][\p{L}'’-]+|\s+et al\.)?,\s*(?:19|20)\d{2}[a-z]?\s*\)/u.test(text))
     findings.push({ code: 'UNTRACKED_CITATION', detail: 'Use a stored [SRC:id] marker; author-year citations are rendered from source metadata', severity: 'error' });
   if (/^#{1,3}\s+(references|bibliography)\s*$/im.test(text))
     findings.push({ code: 'MODEL_REFERENCE_LIST', detail: 'Remove the generated reference list; the bibliography comes from cited source records', severity: 'error' });
@@ -242,6 +242,7 @@ export async function execute(runId: string, generate: Generate = liveGenerate, 
     };
     const cancelled = async () => {
       const current = await db.writingRun.findUniqueOrThrow({ where: { id: runId }, select: { status: true } });
+      if (current.status === 'CANCELLED') return true;
       if (current.status !== 'CANCEL_REQUESTED') return false;
       await db.writingRun.update({ where: { id: runId }, data: { status: 'CANCELLED' } }); return true;
     };

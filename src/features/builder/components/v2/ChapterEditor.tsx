@@ -21,6 +21,7 @@ import { EnhanceOptionsPopover } from './EnhanceOptionsPopover';
 import { DownloadOptionsModal } from '@/components/ui/DownloadOptionsModal';
 import { generateMarkdownBlob, downloadFile, sanitizeFilename, ExportOptions } from '@/lib/export-service';
 import { type Editor as TipTapEditor } from '@tiptap/core';
+import { type EditorInstance } from 'novel';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { WritingComparisonPanel } from './WritingComparisonPanel';
@@ -96,6 +97,10 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
 
     // Editor Ref for Inline Insertion
     const editorRef = useRef<TipTapEditor | null>(null);
+    const mobileEditorRef = useRef<EditorInstance | null>(null);
+    const handleMobileEditorReady = useCallback((editor: EditorInstance | null) => {
+        mobileEditorRef.current = editor;
+    }, []);
 
     const handleEditorReady = useCallback((editor: TipTapEditor) => {
         editorRef.current = editor;
@@ -467,10 +472,11 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
 
     const activeChapter = chapters.find(c => c.number === activeChapterNumber);
     const openWritingComparison = () => {
-        const editorText = editorRef.current?.storage.markdown?.getMarkdown?.();
+        const mobileEditor = mobileView === 'editor' ? mobileEditorRef.current : null;
+        const editorText = isDesktop ? editorRef.current?.storage.markdown?.getMarkdown?.()
+            : mobileEditor ? mobileEditor.storage.markdown?.getMarkdown?.() ?? mobileEditor.getText() : null;
         setComparisonHasUnsavedEdits(saveStatus === 'saving' || saveStatus === 'error' || pendingContentRef.current !== null
-            || (mobileView === 'editor' && !isDesktop)
-            || (isDesktop && !!activeChapter && editorText !== undefined && editorText !== activeChapter.content));
+            || (!!activeChapter && editorText != null && editorText !== activeChapter.content));
         setShowWritingComparison(true);
     };
 
@@ -704,6 +710,7 @@ export function ChapterEditor({ projectId, initialTab = 'research' }: ChapterEdi
                     wordCount={activeChapter.wordCount}
                     onClose={() => setMobileView('timeline')}
                     onSave={handleSave}
+                    onEditorReady={handleMobileEditorReady}
                     onOpenChat={() => {
                         handleMobileTabChange('chat');
                     }}

@@ -325,6 +325,18 @@ test('provider failure after one chapter resumes without regenerating saved text
   equal(run.status, 'NEEDS_REVIEW');
 });
 
+test('a stale cancellation stops the worker after its current stage', async () => {
+  const { run, db } = fixture();
+  const stages: string[] = [];
+  await execute(run.id, async stage => {
+    stages.push(stage);
+    run.status = 'CANCELLED';
+    return plan;
+  }, db);
+  equal(run.status, 'CANCELLED');
+  equal(stages.length, 1);
+});
+
 test('cancelled run makes no provider calls', async () => {
   const { run, db } = fixture();
   run.status = 'CANCELLED';

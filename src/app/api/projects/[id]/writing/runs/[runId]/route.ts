@@ -22,7 +22,10 @@ export async function PATCH(req: Request, { params }: Context) {
   const run = await prisma.writingRun.findFirst({ where: { id: runId, projectId: id } });
   if (!run) return Response.json({ error: 'Run not found' }, { status: 404 });
   if (parsed.data.action === 'cancel') {
-    const running = await prisma.writingRun.updateMany({ where: { id: runId, projectId: id, status: 'RUNNING' },
+    const stale = await prisma.writingRun.updateMany({ where: { id: runId, projectId: id,
+      status: { in: ['RUNNING', 'CANCEL_REQUESTED'] },
+      updatedAt: { lt: new Date(Date.now() - 10 * 60_000) } }, data: { status: 'CANCELLED' } });
+    const running = stale.count ? stale : await prisma.writingRun.updateMany({ where: { id: runId, projectId: id, status: 'RUNNING' },
       data: { status: 'CANCEL_REQUESTED' } });
     const idle = running.count ? running : await prisma.writingRun.updateMany({ where: { id: runId, projectId: id, status: { in: ['PENDING', 'FAILED'] } },
       data: { status: 'CANCELLED' } });
