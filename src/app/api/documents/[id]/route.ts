@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getCurrentUser } from '@/lib/auth-server';
 
 export async function DELETE(
     req: Request,
@@ -8,10 +9,10 @@ export async function DELETE(
     try {
         const { id } = await params;
 
-        // Delete the document
-        await prisma.researchDocument.delete({
-            where: { id }
-        });
+        const user = await getCurrentUser();
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const deleted = await prisma.researchDocument.deleteMany({ where: { id, project: { userId: user.id } } });
+        if (!deleted.count) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
 
         return NextResponse.json({ success: true });
     } catch (error) {

@@ -96,14 +96,12 @@ export const getChapterSpecificPrompt = (chapterNumber: number, topic: string): 
 **REQUIRED SECTIONS:**
 1.  **4.1 IMPLEMENTATION DETAILS:** Specifics of the development environment and setup.
 2.  **4.2 RESULTS/FINDINGS:** Present data, screenshots, or system outputs.
-    *   **VISUALS REQUIRED:** You must include figures/tables.
-    *   **SCREENSHOTS:** Since you cannot take screenshots, you **MUST** use the placeholder format: e.g., \`[Figure 4.1: Screenshot of Login Page - showing fields for email and password]\`.
-    *   **CHARTS:** For data results (e.g., accuracy comparison), use **Mermaid** pie/bar charts or meaningful tables.
+    *   Use figures and tables only when the project supplies the underlying screenshots, observations or data. Never invent a screenshot, chart or measurement.
 3.  **4.3 EVALUATION/DISCUSSION:** Analyze the performance (Accuracy, Usability, etc.).
 4.  **4.4 COMPARISON:** Compare findings with objectives/literatre.
 
 **RESTRICTIONS:**
-*   Use **Past Tense** (e.g., "The system achieved...").
+*   Use past tense only for confirmed completed work. If results are missing, identify the exact required artifact separately from the chapter text.
 *   **NO** Reference list at the end.
 `;
 
@@ -119,8 +117,7 @@ export const getChapterSpecificPrompt = (chapterNumber: number, topic: string): 
 3.  **5.3 RECOMMENDATIONS:** Advice for future researchers/practitioners.
 4.  **5.4 FUTURE WORK:** Specific enhancements planned.
 5.  **REFERENCES:**
-    *   Generate a full APA-style reference list of all sources cited in Chapters 1-5.
-    *   Alphabetical order.
+    *   Do not invent bibliography entries. References must be assembled from stored metadata for sources actually cited across the document.
 
 **RESTRICTIONS:**
 *   This is the **ONLY** chapter that includes a References list at the end.

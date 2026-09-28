@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { X, Bold, Heading, List, Image, Mic, Sparkles, MessageSquare, Check, Loader2, Italic, Table as TableIcon, Download } from 'lucide-react';
 import { useDebouncedCallback } from 'use-debounce';
 import { VersionHistoryDropdown } from './VersionHistoryDropdown';
@@ -16,6 +16,7 @@ interface SectionEditorProps {
     wordCount?: number;
     onClose: () => void;
     onSave: (content: string) => void;
+    onEditorReady?: (editor: EditorInstance | null) => void;
     onOpenChat?: () => void;
     projectId: string;
     chapterNumber: number;
@@ -24,7 +25,7 @@ interface SectionEditorProps {
     onExport?: () => void;
 }
 
-export function SectionEditor({ title, content: initialContent, wordCount: _initialWordCount = 0, onClose, onSave, onOpenChat, projectId, chapterNumber, currentVersion, onEnhanceClick, onExport }: SectionEditorProps) {
+export function SectionEditor({ title, content: initialContent, wordCount: _initialWordCount = 0, onClose, onSave, onEditorReady, onOpenChat, projectId, chapterNumber, currentVersion, onEnhanceClick, onExport }: SectionEditorProps) {
     const [editor, setEditor] = useState<EditorInstance | null>(null);
     const [editedContent, setEditedContent] = useState(initialContent);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -33,6 +34,7 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
     // Ref to track the latest content without triggering re-renders
     // Initialized with initialContent
     const latestContentRef = useRef(initialContent);
+    useEffect(() => () => onEditorReady?.(null), [onEditorReady]);
 
     // Calculate word count on the fly based on state (which is now debounced)
     const currentWordCount = useMemo(() => {
@@ -71,7 +73,8 @@ export function SectionEditor({ title, content: initialContent, wordCount: _init
 
     const handleEditorReady = useCallback((e: EditorInstance) => {
         setEditor(e);
-    }, []);
+        onEditorReady?.(e);
+    }, [onEditorReady]);
 
     const handleDone = () => {
         // Force immediate save on Done and cancel pending debounced saves
