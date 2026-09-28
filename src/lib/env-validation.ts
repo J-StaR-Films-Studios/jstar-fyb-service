@@ -16,8 +16,7 @@ const envSchema = z.object({
     PAYSTACK_SECRET_KEY: z.string().min(1, "PAYSTACK_SECRET_KEY is required"),
 
     // AI services
-    OPENROUTER_API_KEY: z.string().optional(), // Optional for OpenRouter free-tier fallbacks
-    GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
+    OPENROUTER_API_KEY: z.string().min(1, "OPENROUTER_API_KEY is required"),
     GEMINI_API_KEY: z.string().optional(), // For RAG/File Search features
 
     // Application configuration
@@ -50,9 +49,9 @@ export function validateEnvironment() {
 
     const securityChecks = [
         {
-            key: 'GROQ_API_KEY',
-            value: result.data.GROQ_API_KEY,
-            name: 'Groq API Key'
+            key: 'OPENROUTER_API_KEY',
+            value: result.data.OPENROUTER_API_KEY,
+            name: 'OpenRouter API Key'
         },
         {
             key: 'PAYSTACK_SECRET_KEY',
@@ -123,7 +122,7 @@ export function validateService(service: 'payment' | 'ai' | 'auth'): boolean {
         case 'payment':
             return !!env.PAYSTACK_SECRET_KEY;
         case 'ai':
-            return !!env.GROQ_API_KEY;
+            return !!env.OPENROUTER_API_KEY;
         case 'auth':
             return !!env.GOOGLE_CLIENT_ID && !!env.GOOGLE_CLIENT_SECRET;
         default:

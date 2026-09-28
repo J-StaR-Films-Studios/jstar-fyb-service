@@ -14,16 +14,11 @@ export async function GET(
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 
+        const project = await prisma.project.findFirst({ where: { id, userId: user.id }, select: { id: true } });
+        if (!project) return new Response(JSON.stringify({ error: 'Project not found' }), { status: 404 });
         const chapter = await prisma.chapter.findUnique({
-            where: {
-                projectId_number: {
-                    projectId: id,
-                    number: num
-                }
-            },
-            select: {
-                previousVersions: true
-            }
+            where: { projectId_number: { projectId: id, number: num } },
+            select: { previousVersions: true }
         });
 
         if (!chapter) {
@@ -50,14 +45,10 @@ export async function POST(
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 
-        // Get current chapter state
+        const project = await prisma.project.findFirst({ where: { id, userId: user.id }, select: { id: true } });
+        if (!project) return new Response(JSON.stringify({ error: 'Project not found' }), { status: 404 });
         const chapter = await prisma.chapter.findUnique({
-            where: {
-                projectId_number: {
-                    projectId: id,
-                    number: num
-                }
-            }
+            where: { projectId_number: { projectId: id, number: num } }
         });
 
         if (!chapter) {
@@ -108,14 +99,10 @@ export async function PATCH(
             return new Response(JSON.stringify({ error: 'Content is required' }), { status: 400 });
         }
 
-        // Get current chapter state
+        const project = await prisma.project.findFirst({ where: { id, userId: user.id }, select: { id: true } });
+        if (!project) return new Response(JSON.stringify({ error: 'Project not found' }), { status: 404 });
         const chapter = await prisma.chapter.findUnique({
-            where: {
-                projectId_number: {
-                    projectId: id,
-                    number: num
-                }
-            }
+            where: { projectId_number: { projectId: id, number: num } }
         });
 
         if (!chapter) {

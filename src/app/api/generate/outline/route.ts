@@ -1,23 +1,12 @@
 import { streamObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { selectModel } from '@/lib/ai/router';
 import { outlineSchema } from '@/features/builder/schemas/outlineSchema';
 import { z } from 'zod';
 import { BuilderAiService } from '@/features/builder/services/builderAiService';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
-import { applyRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { applyAnonymousAiRateLimit, applyRateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-
-// Validate environment variables
-const groqApiKey = process.env.GROQ_API_KEY;
-if (!groqApiKey) {
-    throw new Error('GROQ_API_KEY environment variable is required');
-}
-
-const groq = createOpenAI({
-    baseURL: 'https://api.groq.com/openai/v1',
-    apiKey: groqApiKey,
-});
 
 export const maxDuration = 120;
 
@@ -31,8 +20,9 @@ const requestSchema = z.object({
 export async function POST(req: Request) {
     // Rate limiting (apply before heavy processing)
     const user = await getCurrentUser();
-    const identifier = user?.id || getClientIdentifier(req);
-    const rateLimitResponse = await applyRateLimit(identifier, 'ai');
+    const rateLimitResponse = user
+        ? await applyRateLimit(user.id, 'ai', { failClosed: true })
+        : await applyAnonymousAiRateLimit(req);
     if (rateLimitResponse) return rateLimitResponse;
 
     const body = await req.json();
@@ -59,8 +49,10 @@ export async function POST(req: Request) {
         logger.warn('[GenerateOutline] BuilderAiService failed, proceeding without context', "[GenerateOutline]");
     }
 
+    const { model, providerOptions } = selectModel({ effort: 'medium' });
     const result = streamObject({
-        model: groq('openai/gpt-oss-120b'),
+        model,
+        providerOptions,
         schema: outlineSchema,
         system: `You are an expert academic curriculum designer.
 Create a 5-chapter distinction-grade project outline based on the verified abstract.
@@ -85,8 +77,8 @@ Ensure the content descriptions are specific to the project's domain (e.g., if b
                     if (user) {
                         // PRIORITY 1: Use projectId from client if provided
                         let project = clientProjectId
-                            ? await prisma.project.findUnique({
-                                where: { id: clientProjectId }
+                            ? await prisma.project.findFirst({
+                                where: { id: clientProjectId, userId: user.id }
                             })
                             : null;
 

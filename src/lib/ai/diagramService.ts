@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { openrouter, gemini, Models } from '@/lib/ai/providers';
+import { selectModel } from '@/lib/ai/router';
 
 export interface GenerateDiagramParams {
     diagramType: 'flowchart' | 'sequence' | 'class' | 'state' | 'er' | 'gantt' | 'mindmap';
@@ -48,15 +48,12 @@ ${projectContext ? `Relevant Project Context:\n${projectContext}` : ''}
 
     console.log('[DiagramService] Generating diagram:', { diagramType, descriptionLength: description.length });
 
-    if (!openrouter) {
-        throw new Error('OpenRouter provider not configured');
-    }
-
+    const { model, providerOptions } = selectModel({ effort: 'medium' });
     const { text } = await generateText({
-        model: openrouter(Models.FREE.NVIDIA_3_NANO),
+        model,
+        providerOptions,
         system: systemPrompt,
         prompt: userPrompt,
-        temperature: 0.2,
     });
 
     // Parse JSON from response
@@ -91,12 +88,9 @@ ${projectContext ? `Relevant Project Context:\n${projectContext}` : ''}
 
 /**
  * Generates Mermaid diagram code from an uploaded image (whiteboard, screenshot).
- * Uses Gemini Vision (multimodal) for accurate structure extraction.
+ * Uses GPT-6 Luna vision to extract the diagram structure.
  */
 export async function generateDiagramFromImage(imageBase64: string, userHint?: string): Promise<GenerateDiagramResult> {
-    if (!gemini) {
-        throw new Error('Gemini provider is not configured. This feature requires a robust vision model.');
-    }
 
     // Strip data URI prefix if present to get raw base64, usually SDK handles data URIs in 'image' part fine
     // But Vercel AI SDK expects a complete data URI string or URL for `image` part.
@@ -105,8 +99,10 @@ export async function generateDiagramFromImage(imageBase64: string, userHint?: s
     console.log('[DiagramService] Generating from image...', { hintLength: userHint?.length });
 
     try {
+        const { model, providerOptions } = selectModel({ vision: true });
         const result = await generateText({
-            model: gemini(Models.GEMINI_FLASH), // Excellent vision capabilities
+            model,
+            providerOptions,
             system: `You are a Mermaid.js Expert. 
             Analyze the provided image (chart, whiteboard sketch, or diagram) and convert it into valid Mermaid.js code.
             

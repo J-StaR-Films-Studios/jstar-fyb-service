@@ -1,18 +1,9 @@
 import { streamText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { selectModel } from '@/lib/ai/router';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth-server';
-
-// Use Groq with Llama for fast enhancement
-const groqApiKey = process.env.GROQ_API_KEY;
-if (!groqApiKey) {
-    throw new Error('GROQ_API_KEY environment variable is required');
-}
-
-const groq = createOpenAI({
-    baseURL: 'https://api.groq.com/openai/v1',
-    apiKey: groqApiKey,
-});
+import { prisma } from '@/lib/prisma';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const maxDuration = 60;
 
@@ -51,7 +42,21 @@ export async function POST(
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 
-        const { id: projectId, chapterNumber } = await params;
+        const { id: projectId } = await params;
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            select: { userId: true },
+        });
+        if (!project) {
+            return Response.json({ error: 'Project not found' }, { status: 404 });
+        }
+        if (project.userId !== user.id) {
+            return Response.json({ error: 'Access denied' }, { status: 403 });
+        }
+
+        const rateLimitResponse = await applyRateLimit(user.id, 'ai', { failClosed: true });
+        if (rateLimitResponse) return rateLimitResponse;
+
         const body = await req.json();
         const validation = requestSchema.safeParse(body);
 
@@ -84,8 +89,10 @@ OUTPUT RULES:
 
 ${chapterContext ? `CHAPTER CONTEXT (for reference):\n${chapterContext.substring(0, 500)}...` : ''}`;
 
+        const { model, providerOptions } = selectModel({ effort: 'medium' });
         const result = streamText({
-            model: groq('llama-3.3-70b-versatile'),
+            model,
+            providerOptions,
             system: systemPrompt,
             prompt: `ORIGINAL TEXT:\n\n${sectionContent}\n\nGenerate the enhanced version now:`,
         });

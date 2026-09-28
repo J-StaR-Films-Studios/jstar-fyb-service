@@ -1,9 +1,7 @@
-import { createGroq } from '@ai-sdk/groq';
+import { selectModel } from '@/lib/ai/router';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
-
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 const extractionSchema = z.object({
     topic: z.string().describe('The main project topic discussed'),
@@ -36,8 +34,10 @@ export async function extractTopicFromConversation(
             return null;
         }
 
+        const { model, providerOptions } = selectModel();
         const { object } = await generateObject({
-            model: groq('openai/gpt-oss-120b'), // Groq-hosted model for extraction
+            model,
+            providerOptions,
             schema: extractionSchema,
             prompt: `You are analyzing a conversation between a Nigerian student and an AI assistant (Jay) about their final year project.
 

@@ -18,6 +18,10 @@ import { selectModel } from '@/lib/ai/router';
 import { COMMON_ACADEMIC_RULES, getChapterSpecificPrompt } from '@/features/bot/prompts/chapterPrompts';
 import { ToolResult, toolSuccess, toolError } from './types';
 import { validateToolContext } from './context-validation';
+import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth-server';
+import { assemble, execute, hash, references, writingSettings, PIPELINE_VERSION, type Stages } from '@/lib/writing/pipeline';
+import { publishRun } from '@/lib/writing/publish';
 
 // ============================================================
 // MUTEX FOR SEQUENTIAL EXECUTION
@@ -135,6 +139,42 @@ The section will be appended to the chapter and saved to the database automatica
                 return toolError("Please provide either 'content' (Direct Mode) or 'instructions' (Agentic Mode).");
             }
 
+            if (process.env.ACADEMIC_PIPELINE_ENABLED === 'true') {
+                const user = await getCurrentUser();
+                if (!user || !await prisma.project.findFirst({ where: { id: projectId, userId: user.id }, select: { id: true } }))
+                    return toolError('Project not found');
+                const snapshot = await assemble(projectId, { chapterNumber, section: sectionTitle });
+                snapshot.instructions = [instructions, additionalContext].filter(Boolean).join('\n').slice(0, 1000);
+                const idempotencyKey = hash({ projectId, snapshot, content });
+                const key = { projectId_idempotencyKey: { projectId, idempotencyKey } };
+                let run = await prisma.writingRun.findUnique({ where: key });
+                if (!run) {
+                    try {
+                        run = await prisma.writingRun.create({ data: { projectId, idempotencyKey, requestHash: idempotencyKey,
+                            variant: 'full', chapterNumber, pipelineVersion: PIPELINE_VERSION, settings: writingSettings(),
+                            snapshot, snapshotHash: hash(snapshot),
+                            ...(content ? { stages: { draft: [{ number: chapterNumber, section: sectionTitle,
+                                text: content, references: references(content, snapshot).lines }] } } : {}) } });
+                    } catch {
+                        run = await prisma.writingRun.findUnique({ where: key });
+                        if (!run) throw new Error('Could not create writing run');
+                    }
+                }
+                if (run.status === 'PENDING') {
+                    try { await execute(run.id); await publishRun(run.id); }
+                    catch { /* failed stage is retained for explicit resume */ }
+                }
+                const saved = await prisma.writingRun.findUniqueOrThrow({ where: { id: run.id } });
+                const output = (saved.stages as Stages).final?.[0];
+                const published = saved.published;
+                if (!output || !published || typeof published !== 'object' || Array.isArray(published) || !published[chapterNumber])
+                    return toolError(`Draft needs review; run ${run.id} retained with findings in the writing comparison view.`);
+                const chapter = await ChapterService.getChapter(projectId, chapterNumber);
+                return toolSuccess<GenerateSectionOutput>({ chapterNumber, sectionTitle, generatedContent: output.text,
+                    isNewChapter: snapshot.chapters.find(chapter => chapter.number === chapterNumber)?.version === 0,
+                    totalWordCount: chapter?.content.split(/\s+/).filter(Boolean).length ?? 0 }, `Section draft saved; run ${run.id}.`);
+            }
+
             let finalContent = content;
 
             // AGENTIC MODE: Generate content using AI
@@ -153,11 +193,12 @@ The section will be appended to the chapter and saved to the database automatica
                     .join('\n');
 
                 // Select appropriate model for generation
-                const { model } = selectModel({ quality: 'high' });
+                const { model, providerOptions } = selectModel({ quality: 'high' });
 
                 // Generate the section content
                 const result = await generateText({
                     model,
+                    providerOptions,
                     prompt: `You are an expert academic writer.
 Write a section titled "${sectionTitle}" for Chapter ${chapterNumber}.
 

@@ -44,7 +44,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // 0.1. RATE LIMITING
     // --------------------------------------------------------
 
-    const rateLimitResponse = await applyRateLimit(session.user.id, 'ai');
+    const rateLimitResponse = await applyRateLimit(session.user.id, 'ai', { failClosed: true });
     if (rateLimitResponse) return rateLimitResponse;
 
     const { id: projectId } = await params;

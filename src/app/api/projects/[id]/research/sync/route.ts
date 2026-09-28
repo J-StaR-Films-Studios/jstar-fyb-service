@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { GeminiFileSearchService } from "@/lib/gemini-file-search";
 import { NextResponse } from "next/server";
 import { synthesizeDocumentText } from "@/lib/synthesize-document";
+import { getCurrentUser } from "@/lib/auth-server";
 
 export async function POST(
     req: Request,
@@ -10,9 +11,12 @@ export async function POST(
     try {
         const { id: projectId } = await params;
 
-        // 1. Get Project
-        const project = await prisma.project.findUnique({
-            where: { id: projectId },
+        const user = await getCurrentUser();
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        // 1. Get owned project before creating a remote store or uploading documents.
+        const project = await prisma.project.findFirst({
+            where: { id: projectId, userId: user.id },
             include: { documents: true }
         });
 

@@ -56,7 +56,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             success: true,
             chapters: project.chapters,
             topic: project.topic,
-            twist: project.twist
+            twist: project.twist,
+            abstract: project.abstract
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }

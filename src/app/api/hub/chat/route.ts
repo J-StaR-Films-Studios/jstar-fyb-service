@@ -1,18 +1,11 @@
-import { createGroq } from '@ai-sdk/groq';
+import { selectModel } from '@/lib/ai/router';
 import { streamText } from 'ai';
 import { z } from 'zod';
 import { NENGI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
-import { validateService, getEnv } from '@/lib/env-validation';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
+import { applyRateLimit } from '@/lib/rate-limit';
 
-// 1. Service Validation
-if (!validateService('ai')) {
-    throw new Error('AI service configuration is missing. Please set GROQ_API_KEY environment variable.');
-}
-
-const env = getEnv();
-const groq = createGroq({ apiKey: env.GROQ_API_KEY });
 export const maxDuration = 120; // 2 minutes max
 
 // 2. Schema Validation (AI SDK v5 format)
@@ -56,6 +49,18 @@ export async function POST(req: Request) {
         }
 
         const { messages, conversationId } = validation.data;
+        if (conversationId) {
+            const conversation = await prisma.conversation.findFirst({
+                where: { id: conversationId, userId: user.id },
+                select: { id: true },
+            });
+            if (!conversation) {
+                return Response.json({ error: 'Conversation not found' }, { status: 404 });
+            }
+        }
+
+        const rateLimitResponse = await applyRateLimit(user.id, 'ai', { failClosed: true });
+        if (rateLimitResponse) return rateLimitResponse;
 
         // 3. Fetch User Context (Active Projects)
         const projects = await prisma.project.findMany({
@@ -110,8 +115,10 @@ ${projectContext}
         }
 
         // 6. Stream Response
+        const { model, providerOptions } = selectModel();
         const result = streamText({
-            model: groq('llama-3.3-70b-versatile'), // Good balance of creative/smart
+            model,
+            providerOptions,
             system: systemPrompt,
             messages: messages.map((m: any) => ({
                 role: m.role as 'user' | 'assistant' | 'system',

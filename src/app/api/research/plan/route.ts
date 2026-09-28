@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth-server';
 import { ResearchService } from '@/features/research/services/researchService';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
     try {
@@ -31,6 +32,9 @@ export async function POST(req: NextRequest) {
         if (project.userId !== user.id && !isAdmin) {
             return new NextResponse('Forbidden: Access denied', { status: 403 });
         }
+
+        const rateLimitResponse = await applyRateLimit(user.id, 'ai', { failClosed: true });
+        if (rateLimitResponse) return rateLimitResponse;
 
         // Generate Plan
         const plan = await ResearchService.generateResearchPlan(projectId);

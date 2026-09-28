@@ -37,7 +37,7 @@ export class MockBuilderAi {
 
     static async generateAbstract(topic: string): Promise<string> {
         await new Promise(resolve => setTimeout(resolve, 2000));
-        return `This project titled "${topic}" aims to solve critical challenges in the domain by leveraging modern web technologies. The system utilizes a microservices architecture to ensure scalability and robustness. Key features include real-time data processing, an intuitive user interface, and secure authentication mechanisms. The expected outcome is a fully functional prototype that demonstrates the efficacy of the proposed solution in improving operational efficiency by 40%.`;
+        return `This project examines "${topic}". Methods, implementation details and evaluation results must be supplied before they can be reported as completed work.`;
     }
 
     static async generateOutline(topic: string): Promise<string[]> {

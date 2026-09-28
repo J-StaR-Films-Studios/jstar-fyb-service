@@ -15,11 +15,11 @@ This project is **proprietary software** belonging to J StaR Films Studios.
 
 ---
   
-  [![Next.js](https://img.shields.io/badge/Next.js-16.0.10-black?logo=next.js)](https://nextjs.org/)
-  [![React](https://img.shields.io/badge/React-19.2.1-blue?logo=react)](https://react.dev/)
+  [![Next.js](https://img.shields.io/badge/Next.js-16.2.9-black?logo=next.js)](https://nextjs.org/)
+  [![React](https://img.shields.io/badge/React-19.2.7-blue?logo=react)](https://react.dev/)
   [![Prisma](https://img.shields.io/badge/Prisma-5.22.0-2D3748?logo=prisma)](https://prisma.io/)
   [![Vercel AI SDK](https://img.shields.io/badge/AI%20SDK-6.0-000?logo=vercel)](https://sdk.vercel.ai/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
   [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
   
   [Live Demo](#) • [Features](#-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [API Reference](#-api-reference)
@@ -66,14 +66,14 @@ J-Star FYB Service is a comprehensive SaaS platform designed to help final year 
 
 ### 🧠 AI Integration
 
-| Provider | Model | Use Case |
+| Provider | Model | Use case |
 |----------|-------|----------|
-| Groq | `openai/gpt-oss-120b` | Jay chat and topic extraction |
-| OpenRouter | `nvidia/nemotron-3-ultra-550b-a55b:free` | High-quality standard chapter generation |
-| OpenRouter | `openai/gpt-oss-120b:free` | Research paper summarization / fallback |
-| Google | `gemini-2.5-flash` | Grounded generation with File Search |
-| Groq | `llama-3.3-70b-versatile` | Fast outline generation |
-| OpenRouter | `tngtech/tng-r1t-chimera:free` | Reasoning traces for complex tasks |
+| OpenRouter | `openai/gpt-6-luna` | Jay and Nengi chat, Monji's tool-using assistant, abstracts, outlines, chapters, research analysis, metadata extraction and image-to-diagram generation |
+| Google (native API) | `gemini-2.5-flash` | Google Search grounding and File Search over uploaded documents, including grounded chapter generation |
+
+GPT-6 Luna is a paid OpenRouter model. The app requests low reasoning for chat, topic extraction and snippets; medium for research, outlines, abstracts, enhancements, metadata and diagrams; and high for chapter writing and Monji's academic assistant. Google grounding still requires `GEMINI_API_KEY`; OpenRouter cannot access the app's Google File Search stores.
+
+Configure both Upstash Redis REST variables. Without Redis, the public AI routes, project chat, chapter generation, research-plan generation, document extraction, chapter enhancement and hub chat return 503. The seven public endpoints share a 20/min total cap and a 20/min per-reported-IP cap. Authenticated abstract and outline requests have a separate 20/min per-user cap; diagram requests always use the public cap.
 
 ---
 
@@ -82,8 +82,8 @@ J-Star FYB Service is a comprehensive SaaS platform designed to help final year 
 ### Prerequisites
 
 - **Node.js** 20+ 
-- **pnpm** (recommended) or npm
-- **PostgreSQL** (production) or SQLite (development)
+- **pnpm** (the repository tracks `pnpm-lock.yaml`)
+- **PostgreSQL** (the Prisma schema uses PostgreSQL in every environment)
 
 ### Installation
 
@@ -100,42 +100,43 @@ cp .env.example .env
 
 # Configure your .env file (see Configuration section below)
 
-# Generate Prisma client and run migrations
-pnpm prisma generate
-pnpm prisma migrate dev
+# On a new local database only, apply migrations
+pnpm exec prisma migrate dev
 
-# Start development server
+# Start development server, or build first and use pnpm start
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the application.
+Open [http://localhost:3000](http://localhost:3000) to see the application. `pnpm dev` compiles pages on first access. For a prebuilt local run, use `pnpm build` followed by `pnpm start` instead. `pnpm build` generates the Prisma client but never applies migrations.
 
 ### Configuration
 
-Create a `.env` file with the following variables:
+Create a `.env` file with the following variables. Prisma CLI reads `.env`; Next.js also reads `.env.local`, which overrides shared keys in `.env`. Keep application configuration in `.env` and use `.env.local` only for intentional local overrides or separate tooling. Do not overwrite an existing `.env.local` without checking it for unique credentials.
 
 ```env
 # ==============================================
 # DATABASE
 # ==============================================
-DATABASE_URL="file:./dev.db"           # SQLite for dev
-DATABASE_PROVIDER="sqlite"             # or "postgresql" for production
+DATABASE_URL="postgresql://user:password@localhost:5432/jstar_fyb"
+DATABASE_PROVIDER="postgresql"
 
 # ==============================================
 # BETTER AUTH
 # ==============================================
 BETTER_AUTH_SECRET="your-secret-key"   # Generate: openssl rand -base64 32
 BETTER_AUTH_URL="http://localhost:3000"
+# When serving remotely, set BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL to the HTTPS origin.
+# TRUSTED_ORIGINS="http://localhost:3000,https://your-machine.your-tailnet.ts.net:3447"
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
 # ==============================================
 # AI PROVIDERS
 # ==============================================
-GOOGLE_API_KEY="your-google-api-key"
-GROQ_API_KEY="your-groq-api-key"
-GEMINI_API_KEY="your-gemini-api-key"
-OPENROUTER_API_KEY="your-openrouter-api-key"
+OPENROUTER_API_KEY="your-openrouter-api-key" # paid GPT-6 Luna inference
+GEMINI_API_KEY="your-gemini-api-key"         # native search and file grounding
+UPSTASH_REDIS_REST_URL="your-upstash-redis-rest-url"
+UPSTASH_REDIS_REST_TOKEN="your-upstash-redis-rest-token"
 
 # ==============================================
 # PAYMENTS (Paystack)
@@ -170,9 +171,9 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 | Layer | Technology |
 |-------|------------|
 | **Framework** | Next.js 16 (App Router) |
-| **Language** | TypeScript 5 |
+| **Language** | TypeScript 6 |
 | **Styling** | Tailwind CSS 3.4 + Framer Motion |
-| **Database** | PostgreSQL (Neon) / SQLite |
+| **Database** | PostgreSQL (Neon or local) |
 | **ORM** | Prisma 5.22 |
 | **Auth** | Better-Auth with Prisma adapter |
 | **AI** | Vercel AI SDK 6.0, Google GenAI |
@@ -310,17 +311,17 @@ erDiagram
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `ai` | ^6.0.16 | Vercel AI SDK for streaming |
-| `@ai-sdk/react` | ^3.0.16 | React hooks for AI |
-| `@ai-sdk/google` | ^3.0.5 | Google AI provider |
-| `@openrouter/ai-sdk-provider` | ^1.5.4 | OpenRouter integration |
-| `better-auth` | ^1.4.9 | Authentication framework |
+| `ai` | ^6.0.205 | Vercel AI SDK for streaming |
+| `@ai-sdk/react` | ^3.0.207 | React hooks for AI |
+| `@ai-sdk/google` | ^3.0.82 | Google AI provider |
+| `@openrouter/ai-sdk-provider` | ^2.9.1 | OpenRouter integration |
+| `better-auth` | ^1.6.18 | Authentication framework |
 | `@prisma/client` | 5.22.0 | Database ORM |
-| `@tiptap/react` | ^2.11.2 | Rich text editor |
-| `framer-motion` | ^12.23.26 | Animations |
-| `docx` | ^9.5.1 | DOCX export |
-| `mermaid` | ^11.12.2 | Diagram generation |
-| `zustand` | ^5.0.9 | State management |
+| `@tiptap/react` | ^2.27.2 | Rich text editor |
+| `framer-motion` | ^12.40.0 | Animations |
+| `docx` | ^9.7.1 | DOCX export |
+| `mermaid` | ^11.15.0 | Diagram generation |
+| `zustand` | ^5.0.14 | State management |
 
 ---
 
@@ -328,15 +329,15 @@ erDiagram
 
 ```bash
 # Development
-pnpm dev              # Start dev server
-pnpm build            # Production build
-pnpm start            # Start production server
-pnpm lint             # Run ESLint
+pnpm dev                      # Dev server, compiles pages on demand
+pnpm build                    # Generate Prisma client and compile, no migrations
+pnpm start                    # Serve the prebuilt app
+pnpm lint                     # Run ESLint
 
-# Database
-pnpm prisma generate  # Generate Prisma client
-pnpm prisma migrate dev  # Run migrations
-pnpm prisma studio    # Open Prisma Studio
+# Database (confirm target and back up existing data before migrating)
+pnpm exec prisma migrate dev  # New local development database only
+pnpm db:migrate:deploy        # Explicit migration step for approved deployments
+pnpm exec prisma studio       # Open Prisma Studio
 
 # Admin Scripts
 npx tsx scripts/promote-admin.ts <email>  # Promote user to admin
@@ -360,7 +361,7 @@ The `vercel.json` is pre-configured:
 ```json
 {
   "framework": "nextjs",
-  "buildCommand": "npx prisma generate && next build",
+  "buildCommand": "pnpm build",
   "installCommand": "pnpm install"
 }
 ```
@@ -370,7 +371,7 @@ The `vercel.json` is pre-configured:
 1. Create a Neon project at [neon.tech](https://neon.tech)
 2. Get connection string
 3. Update `DATABASE_URL` and set `DATABASE_PROVIDER="postgresql"`
-4. Run `pnpm prisma migrate deploy`
+4. Confirm the target database and take a backup, then run `pnpm db:migrate:deploy` as a separate deployment step
 
 ---
 

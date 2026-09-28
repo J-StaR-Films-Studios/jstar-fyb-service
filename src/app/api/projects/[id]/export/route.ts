@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } from 'docx';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth-server';
+import { exportReadiness } from '@/lib/writing/export-readiness';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -16,7 +17,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       include: { chapters: { orderBy: { number: 'asc' } } }
     });
 
-    if (!project) return new NextResponse('Project not found', { status: 404 });
+    if (!project || project.userId !== session.user.id) return new NextResponse('Project not found', { status: 404 });
+
+    if (process.env.ACADEMIC_PIPELINE_ENABLED === 'true') {
+      const readiness = await exportReadiness(id);
+      if (!readiness.ready) return NextResponse.json({ error: readiness.reason }, { status: 409 });
+    }
 
     const docSections = [
       {

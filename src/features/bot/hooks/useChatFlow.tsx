@@ -16,7 +16,6 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { saveLeadAction } from "../actions/chat";
-import { Models } from "@/lib/ai/models";
 
 import { Message, ChatState, ConfirmedTopic } from "./types";
 import { useChatPersistence } from "./useChatPersistence";
@@ -24,6 +23,7 @@ import { useChatSync } from "./useChatSync";
 import { useChatToolHandlers, detectPhoneNumber } from "./useChatTools";
 import { useSearchParams } from "next/navigation";
 import { useBuilderStore } from "@/features/builder/store/useBuilderStore";
+import { MAX_MESSAGE_LENGTH } from "@/features/bot/utils/security";
 
 // Re-export types for consumers (e.g. SuggestionChips)
 export type { Message, ChatState, ConfirmedTopic };
@@ -104,31 +104,15 @@ export function useChatFlow(userId?: string, userName?: string) {
     // ------------------------------------------------------------------
     useEffect(() => {
         if (error && retryCount === 0) {
-            console.log("⚠️ Auto-retrying with current OpenRouter free model...");
+            console.log("Retrying Jay's response...");
             setRetryCount(1);
-            // Retry with explicit model override
-            regenerate({
-                body: {
-                    modelOverride: Models.FREE.NVIDIA_3_NANO,
-                    quality: 'free'
-                }
-            });
+            regenerate();
         }
     }, [error, retryCount, regenerate]);
 
-    /**
-     * Manual Retry Handler (for UI button)
-     * Falls back to high-quality model if initial retry failed
-     */
     const handleManualRetry = () => {
-        console.log("🔄 Manual retry triggered. Switching model...");
         setRetryCount(prev => prev + 1);
-        regenerate({
-            body: {
-                modelOverride: Models.FREE.NVIDIA_3_NANO,
-                quality: 'high'
-            }
-        });
+        regenerate();
     };
 
     // Track messages for persistence access
@@ -242,8 +226,8 @@ export function useChatFlow(userId?: string, userName?: string) {
                 // Build history for extraction
                 const messageHistory = aiMessages.map((m: any) => ({
                     role: m.role,
-                    content: m.content || m.parts?.find((p: any) => p.type === 'text')?.text || ''
-                })).filter((m: any) => m.content);
+                    content: (m.content || m.parts?.find((p: any) => p.type === 'text')?.text || '').slice(0, MAX_MESSAGE_LENGTH)
+                })).filter((m: any) => m.content).slice(-15);
 
                 // Default data
                 let extractedData = {

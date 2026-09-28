@@ -17,7 +17,7 @@ import { z } from 'zod';
 import { academicTools, type AcademicTools } from '@/lib/tools';
 import { MONJI_SYSTEM_PROMPT } from '@/features/bot/prompts/system';
 import { COMMON_ACADEMIC_RULES } from '@/features/bot/prompts/chapterPrompts';
-import { openrouter, Models } from '@/lib/ai/providers';
+import { openrouter, Models, lunaReasoning } from '@/lib/ai/providers';
 
 // ============================================================
 // AGENT CONFIGURATION TYPES
@@ -77,34 +77,19 @@ const DEFAULT_CONFIG: Required<Omit<AcademicAgentConfig, 'systemPromptAdditions'
 /**
  * Get the appropriate model based on configuration.
  */
-function getModel(config: Required<Pick<AcademicAgentConfig, 'useThinking'>>): LanguageModel {
+function getModel(): LanguageModel {
     if (!openrouter) {
         throw new Error('OpenRouter provider not available. Please configure OPENROUTER_API_KEY.');
     }
 
-    if (config.useThinking) {
-        // Use reasoning-capable free model
-        return openrouter(Models.FREE.REASONING);
-    }
-    // Use standard tool-capable model
-    return openrouter(Models.FREE.NVIDIA_3_NANO);
+    return openrouter(Models.LUNA);
 }
 
 /**
  * Get provider options for thinking models.
  */
 function getProviderOptions(config: Required<Pick<AcademicAgentConfig, 'useThinking' | 'reasoningEffort'>>) {
-    if (!config.useThinking) {
-        return undefined;
-    }
-
-    return {
-        openrouter: {
-            reasoning: {
-                effort: config.reasoningEffort,
-            },
-        },
-    };
+    return config.useThinking ? lunaReasoning[config.reasoningEffort] : lunaReasoning.low;
 }
 
 // ============================================================
@@ -179,7 +164,7 @@ export function createAcademicAgent(config: AcademicAgentConfig = {}) {
         ...config,
     };
 
-    const model = getModel(fullConfig);
+    const model = getModel();
     const providerOptions = getProviderOptions(fullConfig);
 
     return new ToolLoopAgent<AcademicAgentCallOptions, AcademicTools, any>({
@@ -193,7 +178,7 @@ export function createAcademicAgent(config: AcademicAgentConfig = {}) {
         stopWhen: stepCountIs(fullConfig.maxSteps),
 
         // Provider-specific options (for reasoning models)
-        ...(providerOptions && { providerOptions }),
+        providerOptions,
 
         // Map runtime call options to agent settings
         prepareCall: ({ options, ...settings }) => ({
